@@ -10,6 +10,12 @@ PandaLife GAN Organism Arena is an artificial-life sandbox built with Panda3D. I
 2. Start later with `run_windows.bat`, `run_windowed.bat`, or `run_safe_windowed.bat`.
 3. Open Settings/Help in the app with `F10` or `F1`.
 
+<img width="1920" height="1080" alt="pandalife_step_00000087" src="https://github.com/user-attachments/assets/3aff2a79-a356-411e-8539-5b0a24029402" />
+
+<img width="1920" height="1080" alt="pandalife_step_00000436" src="https://github.com/user-attachments/assets/abe685c5-ad4d-4ed2-ab84-e1c665fa2bfa" />
+
+<img width="1920" height="1080" alt="pandalife_step_00000750" src="https://github.com/user-attachments/assets/05f9f972-2cbc-4dd3-80ee-4c6f290a7c3a" />
+
 ## Project folders
 
 - full documentation: `docs\README.md`
