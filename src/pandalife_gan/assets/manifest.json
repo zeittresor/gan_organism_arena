@@ -1,0 +1,7 @@
+{
+  "schema_version": 1,
+  "app": "PandaLife GAN Organism Arena",
+  "version": "0.1.5",
+  "description": "No mandatory external assets in this release. Optional ONNX model entries can be added later.",
+  "files": []
+}

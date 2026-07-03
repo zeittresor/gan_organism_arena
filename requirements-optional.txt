@@ -1,0 +1,4 @@
+# Optional future dependency for real ONNX GAN models.
+# This is not installed by default because some older CPUs/Windows setups
+# can have wheel compatibility issues. Enable manually if you add ONNX models.
+# onnxruntime>=1.17

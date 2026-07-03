@@ -1,0 +1,17 @@
+[project]
+name = "pandalife-gan"
+version = "0.2.3"
+description = "Panda3D cellular automata organism arena with pseudo-GAN genomes"
+requires-python = ">=3.10"
+dependencies = [
+  "panda3d>=1.10.14,<1.12",
+  "numpy>=1.26,<3",
+  "pillow>=10,<12",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
