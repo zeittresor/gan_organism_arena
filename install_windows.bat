@@ -2,7 +2,9 @@
 setlocal EnableExtensions EnableDelayedExpansion
 cd /d "%~dp0"
 
-set "APP_NAME=PandaLife GAN Organism Arena"
+set "APP_NAME=GAN Organism Arena"
+set "APP_VERSION=0.2.8"
+set "APP_RELEASE_DATE=2026-07-03"
 set "PY_EXE=python"
 set "VENV_DIR=.venv"
 set "WHEELHOUSE_DIR=wheelhouse"
@@ -21,8 +23,10 @@ if not exist "exports\obj" mkdir "exports\obj"
 
 (
     echo ============================================================
-    echo   %APP_NAME% - Windows Installer
+    echo   %APP_NAME% v%APP_VERSION% ^(%APP_RELEASE_DATE%^) - Windows Installer
     echo ============================================================
+    echo Version: %APP_VERSION%
+    echo Release date: %APP_RELEASE_DATE%
     echo Started: %DATE% %TIME%
     echo Root: %CD%
     echo Venv: %CD%\%VENV_DIR%
@@ -32,7 +36,7 @@ if not exist "exports\obj" mkdir "exports\obj"
 ) > "%LOG_FILE%"
 
 echo ============================================================
-echo   %APP_NAME% - Windows Installer
+echo   %APP_NAME% v%APP_VERSION% ^(%APP_RELEASE_DATE%^) - Windows Installer
 echo ============================================================
 echo Log: %LOG_FILE%
 echo Local venv: %VENV_DIR%

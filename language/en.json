@@ -33,48 +33,179 @@
     "fullscreen": "fullscreen",
     "windowed": "windowed",
     "organism_mode": "Organism Mode",
-    "pure_conway": "Pure Conway"
+    "pure_conway": "Pure Conway",
+    "backend_auto": "auto hardware",
+    "backend_opengl": "OpenGL hardware",
+    "backend_directx9": "DirectX9 experimental",
+    "backend_software": "CPU/software",
+    "quality_fast": "fast",
+    "quality_balanced": "balanced",
+    "quality_detailed": "detailed",
+    "light_auto_sun": "automatic sun",
+    "light_top_left": "top-left",
+    "light_top_right": "top-right",
+    "light_bottom_left": "bottom-left",
+    "light_bottom_right": "bottom-right",
+    "light_left_mid": "left-middle",
+    "light_right_mid": "right-middle",
+    "light_center": "center/front",
+    "light_back": "back",
+    "thought_off": "off",
+    "thought_text": "text only",
+    "thought_tts": "Windows TTS only",
+    "thought_both": "text + Windows TTS"
   },
   "options": {
-    "help": {"label": "Help / key reference", "desc": "Opens the built-in project explanation, option guide and key reference. Settings stays paused while Help is visible."},
-    "language": {"label": "Language", "desc": "Selects the UI language. Language files are stored as editable JSON files under language/. English is the default fallback."},
-    "resolution": {"label": "Resolution", "desc": "Choose a display preset. Press Enter to apply the selected size. 1920 x 1080 Full HD is the default for new installations."},
-    "fullscreen": {"label": "Fullscreen / windowed", "desc": "Switches between fullscreen mode and a normal window. Use windowed mode for diagnostics if the graphics driver has trouble with fullscreen."},
-    "view": {"label": "View preset", "desc": "Changes how organisms are colored: classic identity, age glow, energy, family, traits, thermal, ghost and critic heat."},
-    "render": {"label": "Render mode", "desc": "Cycles between 2D texture, 3D terrain and true 3D organism-object view. Object mode uses mouse orbit around the organism world."},
-    "object_orgs": {"label": "3D object organism cap", "desc": "Limits how many primary organisms are generated as true 3D object meshes. Lower values improve performance in object mode."},
-    "obj_export_cap": {"label": "OBJ export cap", "desc": "Maximum number of primary organisms written when exporting current lifeforms as OBJ files."},
-    "blend": {"label": "Anti-flicker blend", "desc": "Interpolates between generations to reduce visual flicker. This makes rapid evolution easier to watch."},
-    "sim_mode": {"label": "Simulation mode", "desc": "Organism Mode adds genomes, traits, local bias and evolution. Pure Conway uses only the classic deterministic cellular rules."},
-    "speed": {"label": "Simulation speed", "desc": "Target simulation steps per second. Lower values can help older hardware and make behavior easier to observe."},
-    "history_limit": {"label": "Evolution memory depth", "desc": "Controls how many observations each organism keeps as evolutionary memory. Larger values preserve more history, smaller values protect FPS and memory."},
-    "dead_archive": {"label": "Dead organism archive cap", "desc": "Limits how many extinct organisms remain as ancestry/evolution memory. Keeping some history avoids learning only from the current moment."},
-    "scan_interval": {"label": "Tracker scan interval", "desc": "Controls how often the grid is scanned into tracked lifeforms. Higher values reduce CPU cost; lower values track identities more precisely."},
-    "memory_status": {"label": "Memory status", "desc": "Shows bounded evolution-memory counters in the detail panel and writes them to the runtime log."},
-    "prune_memory": {"label": "Prune memory now", "desc": "Immediately trims organism histories and the dead archive to the configured caps."},
-    "sound": {"label": "Organism soundscape", "desc": "Optional harmonic sound layer. Important organisms get louder; quieter organisms fade back or drop out when the voice cap is reached."},
-    "sound_volume": {"label": "Sound volume", "desc": "Master volume for generated organism melodies."},
-    "sound_voices": {"label": "Sound organism voices", "desc": "Maximum number of organisms allowed to sing at the same time."},
-    "resume_after_menu": {"label": "Resume after closing menu", "desc": "When enabled, a simulation that was running before Settings opened resumes when Settings closes. Settings itself always pauses the world."},
-    "critic": {"label": "Critic overlay", "desc": "Shows or hides the critic heat overlay in render modes that support it."},
-    "hud": {"label": "Compact HUD", "desc": "Shows a compact non-intrusive status line in the main view."},
-    "help_overlay": {"label": "F10 hint", "desc": "Shows only the small F10 Settings hint in the main view."},
-    "fps": {"label": "FPS meter", "desc": "Toggles Panda3D's frame-rate meter."},
-    "clean": {"label": "Clean view / hide normal overlays", "desc": "Hides normal main-view overlays for screenshots or uninterrupted observation."},
-    "inject": {"label": "Inject new organism", "desc": "Adds one generated organism into the world. Left click in the main view injects at the cursor."},
-    "export_obj": {"label": "Export OBJ lifeforms", "desc": "Saves the current primary lifeforms as individual OBJ files plus a combined OBJ scene."},
-    "reset": {"label": "Reset world", "desc": "Restarts the world with a fresh generated population."},
-    "close": {"label": "Close menu", "desc": "Closes Settings and restores the previous pause state unless resume-after-menu was disabled."}
+    "help": {
+      "label": "Help / key reference",
+      "desc": "Opens the built-in project explanation, option guide and key reference. Settings stays paused while Help is visible."
+    },
+    "language": {
+      "label": "Language",
+      "desc": "Selects the UI language. Language files are stored as editable JSON files under language/. English is the default fallback."
+    },
+    "resolution": {
+      "label": "Resolution",
+      "desc": "Choose a display preset. Press Enter to apply the selected size. 1920 x 1080 Full HD is the default for new installations."
+    },
+    "fullscreen": {
+      "label": "Fullscreen / windowed",
+      "desc": "Switches between fullscreen mode and a normal window. Use windowed mode for diagnostics if the graphics driver has trouble with fullscreen."
+    },
+    "view": {
+      "label": "View preset",
+      "desc": "Changes how organisms are colored: classic identity, age glow, energy, family, traits, thermal, ghost and critic heat."
+    },
+    "render": {
+      "label": "Render mode",
+      "desc": "Cycles between 2D texture, 3D terrain and true 3D organism-object view. Advanced organisms can now grow torso/spine/head/limbs/wings/fins and increasingly upright or intelligent body plans in object mode."
+    },
+    "object_orgs": {
+      "label": "3D object organism cap",
+      "desc": "Limits how many primary organisms are generated as true 3D object meshes. Lower values improve performance in object mode."
+    },
+    "obj_export_cap": {
+      "label": "OBJ export cap",
+      "desc": "Maximum number of primary organisms written when exporting current lifeforms as OBJ files."
+    },
+    "blend": {
+      "label": "Anti-flicker blend",
+      "desc": "Interpolates between generations to reduce visual flicker. This makes rapid evolution easier to watch."
+    },
+    "sim_mode": {
+      "label": "Simulation mode",
+      "desc": "Organism Mode adds genomes, traits, local bias and evolution. Pure Conway uses only the classic deterministic cellular rules."
+    },
+    "speed": {
+      "label": "Simulation speed",
+      "desc": "Target simulation steps per second. Lower values can help older hardware and make behavior easier to observe."
+    },
+    "history_limit": {
+      "label": "Evolution memory depth",
+      "desc": "Controls how many observations each organism keeps as evolutionary memory. Larger values preserve more history, smaller values protect FPS and memory."
+    },
+    "dead_archive": {
+      "label": "Dead organism archive cap",
+      "desc": "Limits how many extinct organisms remain as ancestry/evolution memory. Keeping some history avoids learning only from the current moment."
+    },
+    "scan_interval": {
+      "label": "Tracker scan interval",
+      "desc": "Controls how often the grid is scanned into tracked lifeforms. Higher values reduce CPU cost; lower values track identities more precisely."
+    },
+    "memory_status": {
+      "label": "Memory status",
+      "desc": "Shows bounded evolution-memory counters in the detail panel and writes them to the runtime log."
+    },
+    "prune_memory": {
+      "label": "Prune memory now",
+      "desc": "Immediately trims organism histories and the dead archive to the configured caps."
+    },
+    "sound": {
+      "label": "Organism soundscape",
+      "desc": "Optional harmonic sound layer. Important organisms get louder; quieter organisms fade back or drop out when the voice cap is reached. More intelligent organisms also use more speech-like proto-utterances and more structured melodic identities."
+    },
+    "sound_volume": {
+      "label": "Sound volume",
+      "desc": "Master volume for generated organism melodies."
+    },
+    "sound_voices": {
+      "label": "Sound organism voices",
+      "desc": "Maximum number of organisms allowed to sing at the same time."
+    },
+    "resume_after_menu": {
+      "label": "Resume after closing menu",
+      "desc": "When enabled, a simulation that was running before Settings opened resumes when Settings closes. Settings itself always pauses the world."
+    },
+    "critic": {
+      "label": "Critic overlay",
+      "desc": "Shows or hides the critic heat overlay in render modes that support it."
+    },
+    "hud": {
+      "label": "Compact HUD",
+      "desc": "Shows a compact non-intrusive status line in the main view."
+    },
+    "help_overlay": {
+      "label": "F10 hint",
+      "desc": "Shows only the small F10 Settings hint in the main view."
+    },
+    "fps": {
+      "label": "FPS meter",
+      "desc": "Toggles Panda3D's frame-rate meter."
+    },
+    "clean": {
+      "label": "Clean view / hide normal overlays",
+      "desc": "Hides normal main-view overlays for screenshots or uninterrupted observation."
+    },
+    "inject": {
+      "label": "Inject new organism",
+      "desc": "Adds one generated organism into the world. Left click in the main view injects at the cursor."
+    },
+    "export_obj": {
+      "label": "Export OBJ lifeforms",
+      "desc": "Saves the current primary lifeforms as individual OBJ files plus a combined OBJ scene."
+    },
+    "reset": {
+      "label": "Reset world",
+      "desc": "Restarts the world with a fresh generated population."
+    },
+    "close": {
+      "label": "Close menu",
+      "desc": "Closes Settings and restores the previous pause state unless resume-after-menu was disabled."
+    },
+    "render_backend": {
+      "label": "Render backend",
+      "desc": "Selects the Panda3D display backend used on the next restart. Auto/OpenGL use hardware acceleration when available. DirectX9 is experimental and may not exist in this Panda3D build. CPU/software uses tinydisplay for diagnostics and is slower, not faster."
+    },
+    "object_update": {
+      "label": "3D object update interval",
+      "desc": "Controls how often true-3D organism meshes are rebuilt. Higher values greatly improve FPS because mesh generation is CPU-heavy. Visual evolution still continues, but the object mesh refreshes less often."
+    },
+    "object_quality": {
+      "label": "3D object mesh quality",
+      "desc": "Controls true-3D mesh detail. Fast is recommended for many organisms or low FPS. Detailed creates more vertices and clearer anatomy but is heavier."
+    },
+    "light_mode": {
+      "label": "Light direction",
+      "desc": "Chooses where the key light comes from. Automatic sun slowly moves around the world over time."
+    },
+    "regen_render": {
+      "label": "Regenerate render/shaders",
+      "desc": "Rebuilds lighting, mesh roots and render caches. Use this after changing 3D detail/light settings or if the object view looks stale."
+    },
+    "thought_output": {
+      "label": "Organism thoughts",
+      "desc": "Controls whether advanced organisms' proto-thoughts are hidden, shown as HUD text, spoken through Windows TTS, or both. TTS uses Windows System.Speech best-effort without extra dependencies."
+    }
   },
   "help_lines": [
-    "What is PandaLife GAN Organism Arena?",
+    "What is GAN Organism Arena?",
     "  This program is an artificial-life sandbox and visualizer. It is inspired by Conway's Game of Life, but it adds organism tracking, genome-like traits, a generator/critic design, evolution memory, 3D views, OBJ export and optional harmonic sound.",
     "",
     "What is Game of Life?",
     "  Conway's Game of Life is a cellular automaton. A grid of cells is updated step by step. In the classic version, living cells survive with two or three living neighbors; dead cells are born with exactly three living neighbors; otherwise cells die or stay empty.",
     "",
     "Why this app exists",
-    "  Pure Game of Life is deterministic and beautiful, but it has no individual agents. PandaLife keeps a Life-like world and then interprets connected cell clusters as digital organisms. In Organism Mode those organisms receive genomes, traits, local influence and evolutionary scoring so the simulation can feel more like a small ecosystem than random noise.",
+    "  Pure Game of Life is deterministic and beautiful, but it has no individual agents. GAN Organism Arena keeps a Life-like world and then interprets connected cell clusters as digital organisms. In Organism Mode those organisms receive genomes, traits, local influence and evolutionary scoring so the simulation can feel more like a small ecosystem than random noise.",
     "",
     "Main modes",
     "  Pure Conway Mode: classic deterministic cellular rules, no organism intervention.",
@@ -160,6 +291,20 @@
     "  language/ contains editable translation JSON files.",
     "",
     "License",
-    "  The project is provided under the MIT License. See LICENSE.txt."
+    "  The project is provided under the MIT License. See LICENSE.txt.",
+    "",
+    "Advanced evolutionary object bodies",
+    "  In true 3D object mode, higher-complexity organisms are no longer only rounded blobs. They can now accumulate spine segments, torso segments, heads, tails, leg pairs, arm pairs, fins, feather-like wing fans and more upright postures.",
+    "  Very advanced forms can become vertebraloid, tetrapod, bipedal, aviform or sophont/transcendent variants. This is still an abstract artificial-life representation, not a biologically accurate animal simulator, but it is meant to keep evolving visibly for much longer runs.",
+    "",
+    "Emotion, desire and proto-speech",
+    "  Organisms also derive simple emotional and motivational states such as hungry, curious, aggressive, social or content. High-intelligence organisms can produce short proto-utterances that appear in the HUD and influence their melodic sound identity.",
+    "Performance notes",
+    "  True 3D object mode is heavier than 2D and 3D terrain because it rebuilds actual organism meshes. The most important performance options are 3D object organism cap, 3D object update interval and 3D object mesh quality.",
+    "  Render backend is chosen before Panda3D opens the window. Changing it in Settings saves the value, but a restart is required. Auto/OpenGL are hardware-preferred. CPU/software is mainly a diagnostic fallback.",
+    "Lighting and render refresh",
+    "  Light direction controls the key light for the 3D world. Automatic sun moves slowly over time. Regenerate render/shaders rebuilds the lighting and mesh cache when you want a clean refresh.",
+    "Organism thoughts and TTS",
+    "  Organism thoughts can be off, text-only, Windows-TTS-only, or text plus TTS. The speech layer is intentionally throttled so it does not speak every frame."
   ]
 }

@@ -1,8 +1,9 @@
-# PandaLife GAN Organism Arena
+# GAN Organism Arena
 
-Documentation for **v0.2.3**.
+Documentation for **v0.2.8**.  
+Release date: **2026-07-03**.
 
-**PandaLife GAN Organism Arena** is a Panda3D artificial-life visualizer inspired by Conway's Game of Life, GAN-style morphology generation, organism tracking, lightweight agent behavior, evolutionary scoring, generated sound and 3D export.
+**GAN Organism Arena** is a Panda3D artificial-life visualizer inspired by Conway's Game of Life, GAN-style morphology generation, organism tracking, lightweight agent behavior, evolutionary scoring, generated sound and 3D export.
 
 This release intentionally uses a **pseudo-GAN / genome generator** instead of a heavy pretrained neural model. The architecture is prepared for optional ONNX generator/critic models, but the application is immediately usable without external model files.
 
@@ -10,7 +11,7 @@ This release intentionally uses a **pseudo-GAN / genome generator** instead of a
 
 Classic Conway's Game of Life is a deterministic cellular automaton. A grid of living/dead cells evolves by simple local rules: cells survive, die or are born according to their neighbors. This can produce surprisingly complex patterns, but classic Life does not contain individual agents or intent.
 
-PandaLife uses that idea as a visual and mathematical base, then interprets connected cell clusters as **digital organisms**. In Organism Mode, those organisms receive genomes, body plans, traits, energy, local behavioral bias, memory limits, ancestry, scoring and optional melodies. The result is not pure Conway Life anymore; it is a small experimental artificial ecosystem.
+GAN Organism Arena uses that idea as a visual and mathematical base, then interprets connected cell clusters as **digital organisms**. In Organism Mode, those organisms receive genomes, body plans, traits, energy, local behavioral bias, memory limits, ancestry, scoring and optional melodies. The result is not pure Conway Life anymore; it is a small experimental artificial ecosystem.
 
 The application is useful as:
 
@@ -23,7 +24,7 @@ The application is useful as:
 
 ## License
 
-PandaLife GAN Organism Arena is released under the **MIT License**. See `LICENSE.txt` in the project root.
+GAN Organism Arena is released under the **MIT License**. See `LICENSE.txt` in the project root.
 
 ## Windows quick start
 
@@ -159,7 +160,7 @@ Optional future package:
 
 Press `F10` or `M` during runtime to open the graphical Settings menu. It is rendered as a Panda3D overlay, so it works in fullscreen and windowed mode. The simulation is paused completely while Settings or Help is open, then restores the previous running/paused state when closed. Press `F1` to open the built-in Help page directly.
 
-The Settings list is vertically scrollable. If there are more options than fit in the panel, the selected row remains visible while you move with `Up/Down` or `W/S`. The Help page has its own vertical scrolling.
+The Settings list is vertically scrollable and shows a visual scrollbar when not all rows fit in the panel. If there are more options than fit in the panel, the selected row remains visible while you move with `Up/Down` or `W/S`. Long detail/help text is wrapped to stay inside the panel. The Help page has its own vertical scrolling and scrollbar.
 
 Inside the menu:
 
@@ -192,7 +193,7 @@ The built-in Help page explains the project purpose, Game of Life basics, every 
 | Fullscreen / windowed | changes display mode |
 | View preset | changes color interpretation of the cellular world |
 | Render mode | switches 2D texture, 3D terrain and true 3D object mode |
-| 3D object organism cap | limits the number of organisms rendered as object meshes |
+| 3D object organism cap | limits how many primary organisms are rendered as object meshes; higher values show more bodies but cost more FPS |
 | OBJ export cap | limits the number of organisms exported as OBJ |
 | Anti-flicker blend | smooths visual changes between steps |
 | Simulation mode | switches Pure Conway and Organism Mode |
@@ -211,7 +212,7 @@ The built-in Help page explains the project purpose, Game of Life basics, every 
 | F10 hint | toggles the small settings hint |
 | FPS meter | toggles Panda3D FPS display |
 | Clean view | hides overlays for observation/screenshots |
-| Inject new organism | adds a generated organism |
+| Inject new organism | adds a generated organism; left click in the main view also injects at the cursor using a 3D hit test with a safe fallback |
 | Export OBJ lifeforms | writes primary lifeforms to `exports\obj\` |
 | Reset world | starts a new generated world |
 | Close menu | closes Settings |
@@ -228,7 +229,7 @@ The cellular field becomes a height/depth surface. This is useful for watching w
 
 ### 3D objects
 
-Primary lifeforms become actual x/y/z organism meshes. Shape generation uses size, age, energy, genome, body plan, sensors, eyes, limbs, manipulators and armor. This mode intentionally renders only selected primary organisms for performance.
+Primary lifeforms become actual x/y/z organism meshes. Shape generation uses size, age, energy, genome, body plan, sensors, eyes, limbs, manipulators and armor. Evolution is open-ended in visible tiers: organisms can continue past microbe/complexoid into macroform, elderform, biomech and leviathan-style body plans. This mode intentionally renders only selected primary organisms for performance; increase the 3D object organism cap if you want more bodies visible at once.
 
 ## OBJ export
 
@@ -270,3 +271,16 @@ CLI options:
 --object-mode-max-organisms 28
 --obj-export-max-organisms 32
 ```
+
+
+## Render/backend performance note
+
+True 3D object mode is the most expensive mode because it converts lifeforms into dynamic mesh geometry. Use **3D object organism cap**, **3D object update interval**, and **3D object mesh quality** in Settings to trade detail for FPS. The **Render backend** setting is selected before Panda3D creates the window, so backend changes require an app restart. Hardware/Auto or OpenGL are preferred; software rendering is only a diagnostic fallback.
+
+## Thoughts and speech
+
+The **Thought output** option can hide organism proto-thoughts, show them as text, speak them via Windows TTS, or do both. TTS is best-effort and uses Windows' built-in speech system without adding a Python dependency.
+
+## Lighting
+
+The **Light direction** option controls the 3D key light. The automatic sun mode moves over time; manual presets lock the light to fixed directions. **Regenerate render/shaders** rebuilds the light setup and mesh cache.

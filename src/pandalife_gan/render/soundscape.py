@@ -190,16 +190,21 @@ class OrganismSoundscape:
 
     def _melody_index_for(self, organism: Organism) -> int:
         family = getattr(organism.genome, "family_id", organism.id)
-        return int((family * 7 + organism.id * 3 + organism.complexity_level) % len(self.MELODY_PATTERNS))
+        speech = int(getattr(organism, "speech_level", 0))
+        emotion = getattr(organism, "emotion", "calm")
+        emotion_bias = sum(ord(ch) for ch in emotion) % len(self.MELODY_PATTERNS)
+        return int((family * 7 + organism.id * 3 + organism.complexity_level + speech * 5 + emotion_bias) % len(self.MELODY_PATTERNS))
 
     @staticmethod
     def _importance(organism: Organism) -> float:
         size_score = min(1.0, math.log1p(max(0, organism.size)) / 5.0)
         age_score = min(1.0, organism.age / 900.0)
-        complexity_score = min(1.0, organism.complexity_level / 5.0)
+        complexity_score = min(1.0, organism.complexity_level / 22.0)
         score = max(0.0, min(1.0, organism.score))
         energy = max(0.0, min(1.0, organism.energy))
-        return max(0.0, min(1.0, 0.28 * size_score + 0.20 * age_score + 0.22 * complexity_score + 0.20 * score + 0.10 * energy))
+        intelligence = max(0.0, min(1.0, float(getattr(organism, "intelligence", 0.0))))
+        speech = min(1.0, float(getattr(organism, "speech_level", 0)) / 4.0)
+        return max(0.0, min(1.0, 0.22 * size_score + 0.17 * age_score + 0.18 * complexity_score + 0.16 * score + 0.09 * energy + 0.10 * intelligence + 0.08 * speech))
 
     @staticmethod
     def _is_playing(sound: Any) -> bool:

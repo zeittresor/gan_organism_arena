@@ -33,48 +33,179 @@
     "fullscreen": "Vollbild",
     "windowed": "Fenster",
     "organism_mode": "Organismus-Modus",
-    "pure_conway": "Pure Conway"
+    "pure_conway": "Pure Conway",
+    "backend_auto": "Auto Hardware",
+    "backend_opengl": "OpenGL Hardware",
+    "backend_directx9": "DirectX9 experimentell",
+    "backend_software": "CPU/Software",
+    "quality_fast": "schnell",
+    "quality_balanced": "ausgewogen",
+    "quality_detailed": "detailliert",
+    "light_auto_sun": "automatische Sonne",
+    "light_top_left": "oben-links",
+    "light_top_right": "oben-rechts",
+    "light_bottom_left": "unten-links",
+    "light_bottom_right": "unten-rechts",
+    "light_left_mid": "links-mitte",
+    "light_right_mid": "rechts-mitte",
+    "light_center": "Mitte/vorne",
+    "light_back": "hinten",
+    "thought_off": "aus",
+    "thought_text": "nur Text",
+    "thought_tts": "nur Windows TTS",
+    "thought_both": "Text + Windows TTS"
   },
   "options": {
-    "help": {"label": "Hilfe / Tastenreferenz", "desc": "Oeffnet die eingebaute Projekterklaerung, Optionshilfe und Tastenreferenz. Die Simulation bleibt pausiert."},
-    "language": {"label": "Sprache", "desc": "Waehlt die UI-Sprache. Sprachdateien liegen als JSON unter language/. Englisch ist der Fallback."},
-    "resolution": {"label": "Aufloesung", "desc": "Waehlt ein Anzeige-Preset. Enter uebernimmt die Groesse. 1920 x 1080 Full HD ist der Standard."},
-    "fullscreen": {"label": "Vollbild / Fenster", "desc": "Wechselt zwischen Vollbild und normalem Fenster. Fenster ist hilfreich fuer Diagnose."},
-    "view": {"label": "Ansichts-Preset", "desc": "Aendert die Farbdeutung der Organismen: Identitaet, Alter, Energie, Familie, Traits, Thermal, Ghost und Critic Heat."},
-    "render": {"label": "Render-Modus", "desc": "Wechselt zwischen 2D Textur, 3D Terrain und echten 3D Organismus-Objekten."},
-    "object_orgs": {"label": "3D Objekt-Organismen", "desc": "Begrenzt, wie viele primaere Organismen als echte 3D Meshes gebaut werden. Weniger ist schneller."},
-    "obj_export_cap": {"label": "OBJ Export Limit", "desc": "Maximale Anzahl primaerer Organismen beim OBJ-Export."},
-    "blend": {"label": "Anti-Flicker Blend", "desc": "Blendet zwischen Generationen und reduziert sichtbares Flackern."},
-    "sim_mode": {"label": "Simulationsmodus", "desc": "Organismus-Modus nutzt Genome, Traits, lokale Biases und Evolution. Pure Conway nutzt klassische Regeln."},
-    "speed": {"label": "Simulationsgeschwindigkeit", "desc": "Zielwert fuer Schritte pro Sekunde. Niedriger ist besser fuer schwache Hardware und Beobachtung."},
-    "history_limit": {"label": "Evolution Memory Tiefe", "desc": "Wie viele Beobachtungen pro Organismus behalten werden. Mehr Historie kostet Speicher/FPS."},
-    "dead_archive": {"label": "Archiv toter Organismen", "desc": "Wie viele ausgestorbene Organismen als Abstammungs-/Evolutionsspeicher bleiben."},
-    "scan_interval": {"label": "Tracker Scan Intervall", "desc": "Wie oft das Grid in Lebensformen zerlegt wird. Hoeher ist schneller; niedriger genauer."},
-    "memory_status": {"label": "Speicherstatus", "desc": "Zeigt aktuelle Zaehler fuer Organismen, Historie und Archiv."},
-    "prune_memory": {"label": "Speicher jetzt bereinigen", "desc": "Kuerzt Historien und Totenarchiv sofort auf die eingestellten Grenzen."},
-    "sound": {"label": "Organismus Soundscape", "desc": "Optionale harmonische Klangschicht. Wichtige Organismen sind lauter."},
-    "sound_volume": {"label": "Sound Lautstaerke", "desc": "Gesamtlautstaerke der generierten Organismus-Melodien."},
-    "sound_voices": {"label": "Sound Stimmen", "desc": "Maximale Anzahl gleichzeitig hoerbarer Organismen."},
-    "resume_after_menu": {"label": "Nach Menue fortsetzen", "desc": "Wenn aktiv, laeuft eine vorher laufende Simulation nach dem Schliessen weiter."},
-    "critic": {"label": "Critic Overlay", "desc": "Zeigt oder verbirgt die Critic-/Interest-Auswertung."},
-    "hud": {"label": "Kompaktes HUD", "desc": "Zeigt eine kleine Statuszeile in der Hauptansicht."},
-    "help_overlay": {"label": "F10 Hinweis", "desc": "Zeigt den kleinen F10 Einstellungen Hinweis in der Hauptansicht."},
-    "fps": {"label": "FPS Anzeige", "desc": "Schaltet den Panda3D FPS-Zaehler um."},
-    "clean": {"label": "Clean View / Overlays aus", "desc": "Verbirgt normale Overlays fuer Screenshots oder Beobachtung."},
-    "inject": {"label": "Neuen Organismus injizieren", "desc": "Fuegt einen generierten Organismus hinzu. Linksklick in der Hauptansicht injiziert am Cursor."},
-    "export_obj": {"label": "OBJ Lebensformen exportieren", "desc": "Speichert aktuelle primaere Lebensformen als einzelne und kombinierte OBJ-Dateien."},
-    "reset": {"label": "Welt zuruecksetzen", "desc": "Startet die Welt mit neuer generierter Population neu."},
-    "close": {"label": "Menue schliessen", "desc": "Schliesst Einstellungen und stellt den vorherigen Pause-Zustand wieder her."}
+    "help": {
+      "label": "Hilfe / Tastenreferenz",
+      "desc": "Oeffnet die eingebaute Projekterklaerung, Optionshilfe und Tastenreferenz. Die Simulation bleibt pausiert."
+    },
+    "language": {
+      "label": "Sprache",
+      "desc": "Waehlt die UI-Sprache. Sprachdateien liegen als JSON unter language/. Englisch ist der Fallback."
+    },
+    "resolution": {
+      "label": "Aufloesung",
+      "desc": "Waehlt ein Anzeige-Preset. Enter uebernimmt die Groesse. 1920 x 1080 Full HD ist der Standard."
+    },
+    "fullscreen": {
+      "label": "Vollbild / Fenster",
+      "desc": "Wechselt zwischen Vollbild und normalem Fenster. Fenster ist hilfreich fuer Diagnose."
+    },
+    "view": {
+      "label": "Ansichts-Preset",
+      "desc": "Aendert die Farbdeutung der Organismen: Identitaet, Alter, Energie, Familie, Traits, Thermal, Ghost und Critic Heat."
+    },
+    "render": {
+      "label": "Render-Modus",
+      "desc": "Wechselt zwischen 2D-Textur, 3D-Terrain und echter 3D-Organismus-Objektansicht. Fortgeschrittene Organismen können im Objektmodus nun Torso, Wirbelsäule, Kopf, Gliedmaßen, Flügel, Flossen und aufrechtere oder intelligentere Körperpläne entwickeln."
+    },
+    "object_orgs": {
+      "label": "3D Objekt-Organismen",
+      "desc": "Begrenzt, wie viele primaere Organismen als echte 3D Meshes gebaut werden. Weniger ist schneller."
+    },
+    "obj_export_cap": {
+      "label": "OBJ Export Limit",
+      "desc": "Maximale Anzahl primaerer Organismen beim OBJ-Export."
+    },
+    "blend": {
+      "label": "Anti-Flicker Blend",
+      "desc": "Blendet zwischen Generationen und reduziert sichtbares Flackern."
+    },
+    "sim_mode": {
+      "label": "Simulationsmodus",
+      "desc": "Organismus-Modus nutzt Genome, Traits, lokale Biases und Evolution. Pure Conway nutzt klassische Regeln."
+    },
+    "speed": {
+      "label": "Simulationsgeschwindigkeit",
+      "desc": "Zielwert fuer Schritte pro Sekunde. Niedriger ist besser fuer schwache Hardware und Beobachtung."
+    },
+    "history_limit": {
+      "label": "Evolution Memory Tiefe",
+      "desc": "Wie viele Beobachtungen pro Organismus behalten werden. Mehr Historie kostet Speicher/FPS."
+    },
+    "dead_archive": {
+      "label": "Archiv toter Organismen",
+      "desc": "Wie viele ausgestorbene Organismen als Abstammungs-/Evolutionsspeicher bleiben."
+    },
+    "scan_interval": {
+      "label": "Tracker Scan Intervall",
+      "desc": "Wie oft das Grid in Lebensformen zerlegt wird. Hoeher ist schneller; niedriger genauer."
+    },
+    "memory_status": {
+      "label": "Speicherstatus",
+      "desc": "Zeigt aktuelle Zaehler fuer Organismen, Historie und Archiv."
+    },
+    "prune_memory": {
+      "label": "Speicher jetzt bereinigen",
+      "desc": "Kuerzt Historien und Totenarchiv sofort auf die eingestellten Grenzen."
+    },
+    "sound": {
+      "label": "Organismus Soundscape",
+      "desc": "Optionale harmonische Klangschicht. Bedeutendere Organismen werden lauter; weniger wichtige treten zurück oder verschwinden, wenn das Stimmenlimit erreicht ist. Intelligentere Organismen nutzen zusätzlich eher sprachähnliche Proto-Äußerungen und strukturiertere Melodien."
+    },
+    "sound_volume": {
+      "label": "Sound Lautstaerke",
+      "desc": "Gesamtlautstaerke der generierten Organismus-Melodien."
+    },
+    "sound_voices": {
+      "label": "Sound Stimmen",
+      "desc": "Maximale Anzahl gleichzeitig hoerbarer Organismen."
+    },
+    "resume_after_menu": {
+      "label": "Nach Menue fortsetzen",
+      "desc": "Wenn aktiv, laeuft eine vorher laufende Simulation nach dem Schliessen weiter."
+    },
+    "critic": {
+      "label": "Critic Overlay",
+      "desc": "Zeigt oder verbirgt die Critic-/Interest-Auswertung."
+    },
+    "hud": {
+      "label": "Kompaktes HUD",
+      "desc": "Zeigt eine kleine Statuszeile in der Hauptansicht."
+    },
+    "help_overlay": {
+      "label": "F10 Hinweis",
+      "desc": "Zeigt den kleinen F10 Einstellungen Hinweis in der Hauptansicht."
+    },
+    "fps": {
+      "label": "FPS Anzeige",
+      "desc": "Schaltet den Panda3D FPS-Zaehler um."
+    },
+    "clean": {
+      "label": "Clean View / Overlays aus",
+      "desc": "Verbirgt normale Overlays fuer Screenshots oder Beobachtung."
+    },
+    "inject": {
+      "label": "Neuen Organismus injizieren",
+      "desc": "Fuegt einen generierten Organismus hinzu. Linksklick in der Hauptansicht injiziert am Cursor."
+    },
+    "export_obj": {
+      "label": "OBJ Lebensformen exportieren",
+      "desc": "Speichert aktuelle primaere Lebensformen als einzelne und kombinierte OBJ-Dateien."
+    },
+    "reset": {
+      "label": "Welt zuruecksetzen",
+      "desc": "Startet die Welt mit neuer generierter Population neu."
+    },
+    "close": {
+      "label": "Menue schliessen",
+      "desc": "Schliesst Einstellungen und stellt den vorherigen Pause-Zustand wieder her."
+    },
+    "render_backend": {
+      "label": "Render-Backend",
+      "desc": "Wählt das Panda3D-Anzeige-Backend für den nächsten Neustart. Auto/OpenGL nutzen Hardwarebeschleunigung, wenn verfügbar. DirectX9 ist experimentell und kann in diesem Panda3D-Build fehlen. CPU/Software nutzt tinydisplay zur Diagnose und ist langsamer, nicht schneller."
+    },
+    "object_update": {
+      "label": "3D-Objekt-Updateintervall",
+      "desc": "Legt fest, wie oft echte 3D-Organismus-Meshes neu gebaut werden. Höhere Werte verbessern die FPS deutlich, weil Mesh-Erzeugung CPU-lastig ist. Die Evolution läuft weiter, aber das sichtbare Objekt wird seltener aktualisiert."
+    },
+    "object_quality": {
+      "label": "3D-Objekt-Meshqualität",
+      "desc": "Steuert die Detailstufe der echten 3D-Meshes. Schnell ist für viele Organismen oder niedrige FPS empfohlen. Detailliert erzeugt mehr Vertices und klarere Anatomie, ist aber schwerer."
+    },
+    "light_mode": {
+      "label": "Lichtrichtung",
+      "desc": "Wählt, aus welcher Richtung das Hauptlicht kommt. Automatische Sonne bewegt sich langsam um die Welt."
+    },
+    "regen_render": {
+      "label": "Render/Shader neu erzeugen",
+      "desc": "Baut Beleuchtung, Mesh-Wurzel und Render-Caches neu auf. Nützlich nach Änderungen an 3D-Details/Licht oder wenn die Objektansicht veraltet wirkt."
+    },
+    "thought_output": {
+      "label": "Organismus-Gedanken",
+      "desc": "Legt fest, ob Proto-Gedanken fortgeschrittener Organismen verborgen, als HUD-Text angezeigt, per Windows TTS gesprochen oder beides werden. TTS nutzt Windows System.Speech ohne zusätzliche Abhängigkeiten."
+    }
   },
   "help_lines": [
-    "Was ist PandaLife GAN Organism Arena?",
+    "Was ist GAN Organism Arena?",
     "  Eine Artificial-Life-Sandbox und Visualisierung, inspiriert von Conway's Game of Life. Dazu kommen Organismus-Tracking, Genome, Traits, Generator/Critic-Prinzip, Evolutionsspeicher, 3D-Ansichten, OBJ-Export und optionaler harmonischer Sound.",
     "",
     "Was ist Game of Life?",
     "  Ein zellularer Automat: Ein Raster wird Schritt fuer Schritt aktualisiert. In Conway-Life ueberlebt eine lebende Zelle mit 2 oder 3 Nachbarn; eine tote Zelle wird bei genau 3 Nachbarn geboren; sonst stirbt oder bleibt sie leer.",
     "",
     "Sinn der Anwendung",
-    "  Pure Conway ist deterministisch und schoen, aber ohne individuelle Agenten. PandaLife interpretiert Zellcluster als digitale Organismen. Im Organismus-Modus bekommen sie Genome, Traits, lokale Eingriffe und Bewertung, wodurch ein kleines digitales Oekosystem entsteht.",
+    "  Pure Conway ist deterministisch und schoen, aber ohne individuelle Agenten. GAN Organism Arena interpretiert Zellcluster als digitale Organismen. Im Organismus-Modus bekommen sie Genome, Traits, lokale Eingriffe und Bewertung, wodurch ein kleines digitales Oekosystem entsteht.",
     "",
     "Wichtige Modi",
     "  Pure Conway: klassische deterministische Zellregeln.",
@@ -117,6 +248,20 @@
     "  settings/config.json speichert Einstellungen.",
     "  logs/ enthaelt Laufzeitlogs, logs/install/ Installerlogs.",
     "  language/ enthaelt erweiterbare Sprachdateien.",
-    "  LICENSE.txt enthaelt die MIT License."
+    "  LICENSE.txt enthaelt die MIT License.",
+    "",
+    "Fortgeschrittene evolutionäre Objektkörper",
+    "  Im echten 3D-Objektmodus sind höher entwickelte Organismen nicht mehr nur runde Klumpen. Sie können nun Wirbelsäulen-Segmente, Torso-Segmente, Köpfe, Schwänze, Beinpaare, Armpaare, Flossen, federartige Flügelfächer und aufrechtere Haltungen ausbilden.",
+    "  Sehr fortgeschrittene Formen können zu vertebraloiden, tetrapoden, bipeden, aviformen oder sophonten/transzendenten Varianten werden. Das bleibt eine abstrakte Artificial-Life-Darstellung und ist kein biologisch exakter Tiersimulator, soll sich aber über lange Läufe sichtbar weiterentwickeln.",
+    "",
+    "Emotion, Begehren und Proto-Sprache",
+    "  Organismen leiten außerdem einfache emotionale und motivationale Zustände ab, z. B. hungrig, neugierig, aggressiv, sozial oder zufrieden. Hochintelligente Organismen können kurze Proto-Äußerungen erzeugen, die im HUD erscheinen und ihre melodische Klangidentität beeinflussen.",
+    "Performance-Hinweise",
+    "  Der echte 3D-Objektmodus ist schwerer als 2D und 3D-Terrain, weil echte Organismus-Meshes neu gebaut werden. Die wichtigsten Performance-Optionen sind 3D object organism cap, 3D object update interval und 3D object mesh quality.",
+    "  Das Render-Backend wird gewählt, bevor Panda3D das Fenster öffnet. Eine Änderung in den Einstellungen wird gespeichert, benötigt aber einen Neustart. Auto/OpenGL bevorzugen Hardware. CPU/Software ist hauptsächlich ein Diagnose-Fallback.",
+    "Licht und Render-Refresh",
+    "  Lichtrichtung steuert das Hauptlicht der 3D-Welt. Automatische Sonne bewegt sich langsam über die Zeit. Render/Shader neu erzeugen baut Beleuchtung und Mesh-Cache sauber neu auf.",
+    "Organismus-Gedanken und TTS",
+    "  Gedanken können aus, nur Text, nur Windows-TTS oder Text plus TTS sein. Die Sprachausgabe ist absichtlich gedrosselt, damit sie nicht jedes Frame spricht."
   ]
 }

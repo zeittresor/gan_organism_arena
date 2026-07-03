@@ -61,6 +61,22 @@ def main() -> int:
         if rgba.shape != (64, 64, 4):
             print(f"ERROR: unexpected image shape {rgba.shape} in mode {mode_index}")
             return 1
+
+    # Regression check for v0.2.5+: high open-ended complexity must not overflow
+    # uint8 colour conversion in any 2D view.
+    if snap.organisms:
+        first = next(iter(snap.organisms.values()))
+        first.complexity_level = 160
+        first.eyes = 40
+        first.limbs = 40
+        first.manipulators = 40
+        first.armor = 1.0
+        for mode_index in range(len(builder.MODE_NAMES)):
+            builder.next_mode(mode_index)
+            rgba = builder.build_rgba(snap)
+            if rgba.dtype.name != "uint8" or rgba.shape != (64, 64, 4):
+                print(f"ERROR: high-complexity render regression in mode {mode_index}: {rgba.shape} {rgba.dtype}")
+                return 1
     print(
         f"OK self-test: step={snap.step_index} cells={snap.critic.living_cells} "
         f"organisms={len(snap.organisms)} view_modes={len(builder.MODE_NAMES)} memory={stats}"

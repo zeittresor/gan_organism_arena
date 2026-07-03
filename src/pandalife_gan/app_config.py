@@ -8,7 +8,7 @@ from typing import Any
 
 @dataclass(slots=True)
 class AppConfig:
-    """Runtime configuration for PandaLife.
+    """Runtime configuration for GAN Organism Arena.
 
     The defaults are intentionally conservative so the app can run on older
     Windows 10 machines with integrated or modest discrete GPUs.
@@ -23,7 +23,7 @@ class AppConfig:
     window_width: int = 1920
     window_height: int = 1080
     pure_conway: bool = False
-    max_organisms: int = 120
+    max_organisms: int = 96
     component_scan_interval: int = 3
     min_tracked_cells: int = 3
     screenshot_dir: Path = Path("screenshots")
@@ -36,8 +36,8 @@ class AppConfig:
     smooth_blend: bool = True
     blend_speed: float = 10.0
     terrain_max_axis: int = 96
-    organism_history_limit: int = 90
-    dead_archive_limit: int = 240
+    organism_history_limit: int = 24
+    dead_archive_limit: int = 60
     memory_prune_interval: int = 120
     performance_log_interval: int = 600
     sound_enabled: bool = True
@@ -45,11 +45,17 @@ class AppConfig:
     max_sound_organisms: int = 6
     render_3d: bool = False
     render_mode: str = "2d"
-    object_mode_max_organisms: int = 28
+    object_mode_max_organisms: int = 12
     obj_export_max_organisms: int = 32
     view_mode: int = 0
     settings_dir: Path = Path("settings")
     language: str = "en"
+    render_backend: str = "auto"
+    object_update_interval: int = 24
+    object_mesh_quality: str = "fast"
+    light_mode: str = "auto_sun"
+    thought_output: str = "text"
+    thought_tts_interval: float = 12.0
 
     @property
     def settings_path(self) -> Path:
@@ -95,6 +101,16 @@ class AppConfig:
         self.render_3d = self.render_mode != "2d"
         if getattr(self, "language", "en") not in {"en", "de", "fr"}:
             self.language = "en"
+        if getattr(self, "render_backend", "auto") not in {"auto", "opengl", "directx9", "software"}:
+            self.render_backend = "auto"
+        if getattr(self, "object_mesh_quality", "balanced") not in {"fast", "balanced", "detailed"}:
+            self.object_mesh_quality = "balanced"
+        if getattr(self, "light_mode", "auto_sun") not in {"auto_sun", "top_left", "top_right", "bottom_left", "bottom_right", "left_mid", "right_mid", "center", "back"}:
+            self.light_mode = "auto_sun"
+        if getattr(self, "thought_output", "text") not in {"off", "text", "tts", "both"}:
+            self.thought_output = "text"
+        self.object_update_interval = max(1, min(120, int(getattr(self, "object_update_interval", 24))))
+        self.thought_tts_interval = max(3.0, min(120.0, float(getattr(self, "thought_tts_interval", 12.0))))
 
     def to_settings_dict(self) -> dict[str, Any]:
         return {
@@ -123,6 +139,12 @@ class AppConfig:
             "obj_export_max_organisms": int(self.obj_export_max_organisms),
             "view_mode": int(self.view_mode),
             "language": str(self.language),
+            "render_backend": str(self.render_backend),
+            "object_update_interval": int(self.object_update_interval),
+            "object_mesh_quality": str(self.object_mesh_quality),
+            "light_mode": str(self.light_mode),
+            "thought_output": str(self.thought_output),
+            "thought_tts_interval": float(self.thought_tts_interval),
         }
 
     def save_settings(self) -> Path:
@@ -156,6 +178,16 @@ class AppConfig:
             cfg.log_dir = Path(args.log_dir)
         if getattr(args, "language", None) in {"en", "de", "fr"}:
             cfg.language = str(args.language)
+        if getattr(args, "render_backend", None) in {"auto", "opengl", "directx9", "software"}:
+            cfg.render_backend = str(args.render_backend)
+        if getattr(args, "object_update_interval", None) is not None:
+            cfg.object_update_interval = max(1, min(120, int(args.object_update_interval)))
+        if getattr(args, "object_mesh_quality", None) in {"fast", "balanced", "detailed"}:
+            cfg.object_mesh_quality = str(args.object_mesh_quality)
+        if getattr(args, "light_mode", None) in {"auto_sun", "top_left", "top_right", "bottom_left", "bottom_right", "left_mid", "right_mid", "center", "back"}:
+            cfg.light_mode = str(args.light_mode)
+        if getattr(args, "thought_output", None) in {"off", "text", "tts", "both"}:
+            cfg.thought_output = str(args.thought_output)
         if args.grid:
             try:
                 w, h = args.grid.lower().replace("x", " ").split()[:2]
@@ -191,7 +223,7 @@ class AppConfig:
             cfg.render_mode = str(args.render_mode)
             cfg.render_3d = cfg.render_mode != "2d"
         if getattr(args, "object_mode_max_organisms", None) is not None:
-            cfg.object_mode_max_organisms = max(4, min(80, int(args.object_mode_max_organisms)))
+            cfg.object_mode_max_organisms = max(4, min(200, int(args.object_mode_max_organisms)))
         if getattr(args, "obj_export_max_organisms", None) is not None:
             cfg.obj_export_max_organisms = max(1, min(200, int(args.obj_export_max_organisms)))
         return cfg

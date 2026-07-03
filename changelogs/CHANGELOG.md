@@ -1,5 +1,56 @@
 # Changelog
 
+## v0.2.8
+
+- Added stronger true-3D performance guards: lower defaults, wider update intervals, quality-scaled mesh tessellation and a hard per-refresh vertex budget.
+- Object-mode performance logs now include rendered/skipped organism counts plus vertex/face counts.
+- Reduced default evolution memory and dead archive size for smoother long runs.
+- Improved true-3D creature silhouettes with slimmer segmented bodies, longer visible feelers/limbs and stronger limb contrast.
+- Improved thought/TTS selection so multiple advanced organisms can speak instead of one leading organism repeating the same sentence.
+- Added evolving phrase composition using organism desire, emotion, age, complexity, family progress and speech level.
+- Windows TTS now skips new speech while the previous utterance process is still running.
+- Updated installer/version metadata to v0.2.8.
+
+## v0.2.7
+
+- Renamed the visible project/application identity to **GAN Organism Arena**.
+- Added installer version and release-date output: v0.2.7, 2026-07-03.
+- Added Settings option **Render backend (restart)** with Auto/Hardware, OpenGL, DirectX9 experimental and CPU/software choices. Hardware/auto remains the default.
+- Added Settings option **3D object update interval** so true-3D meshes are not rebuilt every frame. Default is now performance-oriented.
+- Added Settings option **3D object mesh quality** with Fast/Balanced/Detailed presets.
+- Lowered new-install defaults for true-3D object cap, history depth and dead archive to improve FPS.
+- Added Settings option **Light direction** with top-left, top-right, bottom-left, bottom-right, left/right-middle, center, back and automatic sun movement.
+- Added **Regenerate render/shaders** action to rebuild lighting, texture and true-3D mesh cache.
+- Added **Thought output** option: Off, text HUD, Windows TTS, or both. TTS uses Windows SAPI through PowerShell without adding a Python dependency.
+- Improved true-3D organism meshes so appendages become visible earlier and use more contrast.
+- Added runtime performance logging for backend, object cap, object update interval, mesh quality, light mode and thought mode.
+- Kept the v0.2.6 high-complexity uint8 color overflow fix and regression test.
+
+## v0.2.5
+
+- Expanded true 3D object evolution so organisms can keep developing beyond the earlier blob-like stage.
+- Added higher-order anatomical traits such as spine segments, torso/head differentiation, tails, leg pairs, arm pairs, fins, feather-like wing fans and more upright postures.
+- Added broader body-plan progression including vertebraloid, tetrapod, bipedal, aviform, sophont and transcendent forms in object mode.
+- Added simple emotion, desire, intelligence and proto-speech traits. The most advanced organisms can now show short utterances in the HUD and influence the soundscape more strongly.
+- Improved sound importance/melody selection so more intelligent organisms receive more distinctive melodic identities.
+- Improved primary-organism selection in true 3D mode so recently born or highly intelligent organisms are more likely to become visible.
+
+## v0.2.4
+
+- Improved Settings readability:
+  - wrapped long detail/help lines so text stays inside the right panel,
+  - added visual scrollbars for the Settings list and the Help/detail panel,
+  - kept the scrollbar implementation font-independent so it cannot turn into missing-glyph boxes.
+- Improved mouse injection reliability across render modes.
+  - Left click now uses a ray/plane hit where possible and a safe screen-to-grid fallback where necessary.
+  - Injected lifeforms immediately refresh 2D, 3D terrain and true 3D object views.
+- Made true-3D organism evolution more open-ended.
+  - Removed the old visible microbe-to-complexoid ceiling from organism complexity.
+  - Added higher body-plan tiers such as macroform, elderform, biomech and leviathan levels.
+  - Relaxed true-3D mesh growth limits so long-lived organisms can continue developing into larger macro-organic forms.
+- Raised the default true-3D organism render cap to 60 and added higher Settings presets up to 200.
+- Updated version metadata to v0.2.4.
+
 ## v0.2.3
 
 - Added explicit MIT License references to README/docs and kept `LICENSE.txt` as the canonical license file.
@@ -22,8 +73,6 @@
   - explains hotkeys, mouse controls, output folders and license.
 - Added CLI option `--language en|de|fr`.
 - Updated version metadata to v0.2.3.
-
-# Changelog
 
 ## v0.2.2
 

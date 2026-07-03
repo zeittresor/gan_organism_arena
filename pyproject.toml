@@ -1,7 +1,7 @@
 [project]
-name = "pandalife-gan"
-version = "0.2.3"
-description = "Panda3D cellular automata organism arena with pseudo-GAN genomes"
+name = "gan-organism-arena"
+version = "0.2.8"
+description = "Panda3D artificial-life organism arena with pseudo-GAN genomes"
 requires-python = ">=3.10"
 dependencies = [
   "panda3d>=1.10.14,<1.12",

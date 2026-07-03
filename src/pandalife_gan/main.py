@@ -37,7 +37,12 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--sound-volume", type=float, default=None, help="Master volume for organism soundscape, 0.0 to 1.0.")
     parser.add_argument("--max-sound-organisms", type=int, default=None, help="Maximum number of organisms that can sound at the same time.")
     parser.add_argument("--render-mode", choices=["2d", "terrain3d", "object3d"], default=None, help="Start render mode: 2d, terrain3d or object3d.")
+    parser.add_argument("--render-backend", choices=["auto", "opengl", "directx9", "software"], default=None, help="Panda3D display backend. Changes normally require restart.")
     parser.add_argument("--object-mode-max-organisms", type=int, default=None, help="Maximum active organisms shown as true 3D object meshes.")
+    parser.add_argument("--object-update-interval", type=int, default=None, help="Simulation steps between true-3D object mesh rebuilds.")
+    parser.add_argument("--object-mesh-quality", choices=["fast", "balanced", "detailed"], default=None, help="True-3D object mesh detail quality.")
+    parser.add_argument("--light-mode", choices=["auto_sun", "top_left", "top_right", "bottom_left", "bottom_right", "left_mid", "right_mid", "center", "back"], default=None, help="Lighting direction preset.")
+    parser.add_argument("--thought-output", choices=["off", "text", "tts", "both"], default=None, help="Show/hear organism thoughts: off, text, tts or both.")
     parser.add_argument("--obj-export-max-organisms", type=int, default=None, help="Maximum primary organisms exported per OBJ save action.")
     parser.add_argument("--self-test", action="store_true", help="Run a short non-graphical simulation test and exit.")
     return parser
@@ -95,10 +100,10 @@ def main(argv: list[str] | None = None) -> int:
         # Panda3D imports are delayed so command-line help, installer verification
         # and self-tests can run in environments where the engine is not yet installed
         # or where no display is available.
-        from .render.panda_app import PandaLifeApp
+        from .render.panda_app import GANOrganismArenaApp
 
-        app = PandaLifeApp(cfg)
-        logging.info("PandaLifeApp constructed; entering Panda3D main loop")
+        app = GANOrganismArenaApp(cfg)
+        logging.info("GANOrganismArenaApp constructed; entering Panda3D main loop")
         app.run()
         logging.info("Panda3D main loop ended normally")
         return 0
@@ -106,7 +111,7 @@ def main(argv: list[str] | None = None) -> int:
         raise
     except BaseException:
         logging.exception("Fatal runtime error")
-        print("\nFATAL: PandaLife crashed. See logs\\latest_runtime.log for details.", file=sys.stderr)
+        print("\nFATAL: GAN Organism Arena crashed. See logs\\latest_runtime.log for details.", file=sys.stderr)
         return 1
     finally:
         flush_runtime_logging()

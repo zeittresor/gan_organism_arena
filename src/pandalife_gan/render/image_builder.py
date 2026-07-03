@@ -129,17 +129,20 @@ class ImageBuilder:
             shell = np.array([190, 230, 255], dtype=np.uint8)
             # Shell/armor ring.
             if org.armor > 0.20:
-                radius = max(2, 1 + org.complexity_level)
+                # Higher v0.2.5 complexity levels can be large; the 2D traits
+                # overlay must remain bounded so it cannot produce huge rings or
+                # excessive per-frame work.
+                radius = max(2, min(14, 2 + org.complexity_level // 3))
                 ImageBuilder._draw_ring(rgba, x, y, radius, shell)
             # Eyes/sensors in movement direction.
             mx, my = org.genome.motion_bias
             dx = 1 if mx >= 0 else -1
             dy = 1 if my >= 0 else -1
-            for i in range(max(0, org.eyes)):
+            for i in range(max(0, min(20, org.eyes))):
                 off = i - (org.eyes - 1) / 2.0
                 ImageBuilder._paint(rgba, x + dx * 2 + int(off), y + dy * 2, glow)
             # Limbs/arms as small radial traces.
-            limb_count = max(org.limbs, org.manipulators)
+            limb_count = min(28, max(org.limbs, org.manipulators))
             for i in range(limb_count):
                 ang = (i / max(1, limb_count)) * math.tau + org.id * 0.41
                 length = 2 + min(4, org.complexity_level)
@@ -148,8 +151,14 @@ class ImageBuilder:
                     ly = y + int(round(math.sin(ang) * j))
                     c = np.clip(base.astype(np.int16) + 70, 0, 255).astype(np.uint8)
                     ImageBuilder._paint(rgba, lx, ly, c)
-            # Core marker encodes complexity level.
-            core = np.array([255, max(70, 240 - org.complexity_level * 25), 80 + org.complexity_level * 25], dtype=np.uint8)
+            # Core marker encodes complexity level. Always clamp before creating
+            # uint8 arrays; NumPy 2.x raises OverflowError for >255 integers.
+            level = max(0, min(255, int(org.complexity_level)))
+            core = np.array([
+                255,
+                int(np.clip(240 - level * 8, 70, 255)),
+                int(np.clip(80 + level * 8, 0, 255)),
+            ], dtype=np.uint8)
             ImageBuilder._paint(rgba, x, y, core)
 
     @staticmethod

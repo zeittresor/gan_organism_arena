@@ -2,13 +2,18 @@ from __future__ import annotations
 
 import logging
 import math
+import subprocess
+import textwrap
+import time
 from pathlib import Path
 from typing import Any
 
 import numpy as np
 from panda3d.core import (
+    AmbientLight,
     AntialiasAttrib,
     CardMaker,
+    DirectionalLight,
     ClockObject,
     KeyboardButton,
     OrthographicLens,
@@ -20,6 +25,7 @@ from panda3d.core import (
     Filename,
     TransparencyAttrib,
     Vec3,
+    Vec4,
     WindowProperties,
     loadPrcFileData,
 )
@@ -57,8 +63,13 @@ DEAD_ARCHIVE_PRESETS = [0, 60, 120, 240, 480, 960, 2000]
 SCAN_INTERVAL_PRESETS = [1, 2, 3, 5, 8, 12, 20]
 SOUND_VOLUME_PRESETS = [0.0, 0.10, 0.25, 0.45, 0.60, 0.80, 1.0]
 SOUND_VOICE_PRESETS = [1, 3, 5, 6, 8, 10, 12]
-OBJECT_ORGANISM_PRESETS = [8, 12, 18, 28, 40, 60, 80]
+OBJECT_ORGANISM_PRESETS = [4, 6, 8, 12, 18, 24, 32, 40, 60, 80, 120]
 OBJ_EXPORT_PRESETS = [4, 8, 16, 24, 32, 48, 80, 120, 200]
+OBJECT_UPDATE_INTERVAL_PRESETS = [6, 10, 18, 24, 36, 60, 90, 120]
+OBJECT_QUALITY_PRESETS = ["fast", "balanced", "detailed"]
+RENDER_BACKEND_PRESETS = ["auto", "opengl", "directx9", "software"]
+LIGHT_MODE_PRESETS = ["auto_sun", "top_left", "top_right", "bottom_left", "bottom_right", "left_mid", "right_mid", "center", "back"]
+THOUGHT_OUTPUT_PRESETS = ["off", "text", "tts", "both"]
 RENDER_MODES = [("2d", "2D texture"), ("terrain3d", "3D terrain"), ("object3d", "3D objects")]
 
 MENU_CURSOR_TEXT = ">>"
@@ -66,9 +77,11 @@ MENU_CURSOR_FALLBACK_TEXT = ">>"
 SAVE_TOAST_TEXT = "OK Saved"
 SAVE_TOAST_FALLBACK_TEXT = "OK Saved"
 MENU_VISIBLE_ROWS = 27
+MENU_DETAIL_WRAP_WIDTH = 66
+HELP_WRAP_WIDTH = 78
 
 
-class PandaLifeApp(ShowBase):
+class GANOrganismArenaApp(ShowBase):
     def __init__(self, cfg: AppConfig):
         self.cfg = cfg
         LOG.info("Configuring Panda3D")
@@ -126,6 +139,18 @@ class PandaLifeApp(ShowBase):
         self.sound_voice_index = self._nearest_value_index(SOUND_VOICE_PRESETS, cfg.max_sound_organisms)
         self.object_org_index = self._nearest_value_index(OBJECT_ORGANISM_PRESETS, cfg.object_mode_max_organisms)
         self.obj_export_index = self._nearest_value_index(OBJ_EXPORT_PRESETS, cfg.obj_export_max_organisms)
+        self.object_update_interval_index = self._nearest_value_index(OBJECT_UPDATE_INTERVAL_PRESETS, cfg.object_update_interval)
+        self.object_quality_index = max(0, OBJECT_QUALITY_PRESETS.index(cfg.object_mesh_quality) if cfg.object_mesh_quality in OBJECT_QUALITY_PRESETS else 1)
+        self.render_backend_index = max(0, RENDER_BACKEND_PRESETS.index(cfg.render_backend) if cfg.render_backend in RENDER_BACKEND_PRESETS else 0)
+        self.light_mode_index = max(0, LIGHT_MODE_PRESETS.index(cfg.light_mode) if cfg.light_mode in LIGHT_MODE_PRESETS else 0)
+        self.thought_output_index = max(0, THOUGHT_OUTPUT_PRESETS.index(cfg.thought_output) if cfg.thought_output in THOUGHT_OUTPUT_PRESETS else 1)
+        self._last_object_mesh_step = -999999
+        self._object_mesh_update_count = 0
+        self._last_tts_time = 0.0
+        self._last_tts_text = ""
+        self._tts_process = None
+        self._thought_round_robin = 0
+        self._restart_notice_timer = 0.0
         self._menu_saved_paused = False
         self._menu_pause_active = False
         self._save_toast_timer = 0.0
@@ -143,10 +168,15 @@ class PandaLifeApp(ShowBase):
         self.terrain.node_path.setAntialias(AntialiasAttrib.MNone)
         self.terrain.node_path.hide()
         self.object_mesh = LifeObjectMesh(
-            self.render, cfg.grid_width, cfg.grid_height, max_organisms=cfg.object_mode_max_organisms
+            self.render,
+            cfg.grid_width,
+            cfg.grid_height,
+            max_organisms=cfg.object_mode_max_organisms,
+            quality=cfg.object_mesh_quality,
         )
         self.object_mesh.node_path.setTransparency(TransparencyAttrib.MAlpha)
         self.object_mesh.node_path.hide()
+        self._setup_lighting()
         # Apply persisted render mode after all render backends exist.
         persisted_mode = self.render_mode
         self._setup_camera_2d()
@@ -165,7 +195,7 @@ class PandaLifeApp(ShowBase):
         self._save_settings(show_feedback=False)
         self._update_texture(force=True)
         self.taskMgr.add(self._update_task, "pandalife-update")
-        LOG.info("PandaLifeApp initialisation complete")
+        LOG.info("GANOrganismArenaApp initialisation complete")
 
     def _configure_panda(self) -> None:
         fullscreen = "true" if self.cfg.fullscreen else "false"
@@ -174,7 +204,19 @@ class PandaLifeApp(ShowBase):
         loadPrcFileData("", "notify-level warning")
         loadPrcFileData("", f"fullscreen {fullscreen}")
         loadPrcFileData("", f"win-size {self.cfg.window_width} {self.cfg.window_height}")
-        loadPrcFileData("", "window-title PandaLife GAN Organism Arena")
+        backend = getattr(self.cfg, "render_backend", "auto")
+        if backend == "opengl":
+            loadPrcFileData("", "load-display pandagl")
+            LOG.info("Render backend requested: OpenGL hardware")
+        elif backend == "directx9":
+            loadPrcFileData("", "load-display pandadx9")
+            LOG.info("Render backend requested: DirectX9 experimental")
+        elif backend == "software":
+            loadPrcFileData("", "load-display p3tinydisplay")
+            LOG.info("Render backend requested: CPU/software tinydisplay")
+        else:
+            LOG.info("Render backend requested: auto/hardware preferred")
+        loadPrcFileData("", "window-title GAN Organism Arena")
         loadPrcFileData("", "sync-video false")
         loadPrcFileData("", f"show-frame-rate-meter {'true' if self.cfg.show_fps else 'false'}")
         loadPrcFileData("", "textures-power-2 none")
@@ -283,6 +325,89 @@ class PandaLifeApp(ShowBase):
         self.camera.setPos(x, y, z)
         self.camera.lookAt(target)
 
+
+    def _setup_lighting(self) -> None:
+        self.ambient_light = AmbientLight("ambient-life-light")
+        self.ambient_light.setColor(Vec4(0.32, 0.34, 0.36, 1.0))
+        self.ambient_np = self.render.attachNewNode(self.ambient_light)
+        self.render.setLight(self.ambient_np)
+
+        self.key_light = DirectionalLight("key-life-light")
+        self.key_light.setColor(Vec4(0.92, 0.90, 0.82, 1.0))
+        self.key_light.setShadowCaster(False)
+        self.key_light_np = self.render.attachNewNode(self.key_light)
+        self.render.setLight(self.key_light_np)
+
+        self.fill_light = DirectionalLight("fill-life-light")
+        self.fill_light.setColor(Vec4(0.20, 0.24, 0.32, 1.0))
+        self.fill_light_np = self.render.attachNewNode(self.fill_light)
+        self.render.setLight(self.fill_light_np)
+        self._apply_light_mode(force=True)
+
+    def _light_vector_for_mode(self) -> Vec3:
+        mode = getattr(self.cfg, "light_mode", "auto_sun")
+        if mode == "auto_sun":
+            # Slow orbit: lighting changes like a small sun over the organism world.
+            phase = (getattr(self.world, "step_index", 0) * 0.0035) % (2.0 * math.pi)
+            return Vec3(math.cos(phase) * 1.4, -1.35, math.sin(phase) * 1.4 + 0.45)
+        mapping = {
+            "top_left": Vec3(-1.2, -1.5, 1.2),
+            "top_right": Vec3(1.2, -1.5, 1.2),
+            "bottom_left": Vec3(-1.2, -0.7, -1.2),
+            "bottom_right": Vec3(1.2, -0.7, -1.2),
+            "left_mid": Vec3(-1.8, -1.0, 0.05),
+            "right_mid": Vec3(1.8, -1.0, 0.05),
+            "center": Vec3(0.0, -1.6, 0.8),
+            "back": Vec3(0.0, 1.2, 0.6),
+        }
+        return mapping.get(mode, Vec3(-1.2, -1.5, 1.2))
+
+    def _apply_light_mode(self, force: bool = False) -> None:
+        if not hasattr(self, "key_light_np"):
+            return
+        vec = self._light_vector_for_mode()
+        if vec.lengthSquared() < 0.0001:
+            vec = Vec3(-1.0, -1.0, 1.0)
+        pos = Point3(vec.x * 80.0, vec.y * 80.0, vec.z * 80.0)
+        self.key_light_np.setPos(pos)
+        self.key_light_np.lookAt(Point3(0.0, 0.0, 0.0))
+        self.fill_light_np.setPos(Point3(-pos.x * 0.45, -pos.y * 0.35, max(12.0, -pos.z * 0.2)))
+        self.fill_light_np.lookAt(Point3(0.0, 0.0, 0.0))
+        if hasattr(self, "object_mesh"):
+            self.object_mesh.set_light_vector((vec.x, vec.y, vec.z))
+        if force:
+            LOG.info("Lighting applied: mode=%s vector=%s", getattr(self.cfg, "light_mode", "auto_sun"), vec)
+
+    def _regenerate_render_pipeline(self) -> None:
+        LOG.info("Regenerating render pipeline / mesh cache")
+        try:
+            self.render.clearLight()
+            self._setup_lighting()
+            # Recreate object mesh root so old generated Geoms are released.
+            if hasattr(self, "object_mesh"):
+                self.object_mesh.node_path.removeNode()
+            self.object_mesh = LifeObjectMesh(
+                self.render,
+                self.cfg.grid_width,
+                self.cfg.grid_height,
+                max_organisms=self.cfg.object_mode_max_organisms,
+                quality=self.cfg.object_mesh_quality,
+            )
+            self.object_mesh.node_path.setTransparency(TransparencyAttrib.MAlpha)
+            self._apply_light_mode(force=True)
+            if self.render_mode == "object3d":
+                self.object_mesh.node_path.show()
+                self._update_object_mesh(force=True)
+            else:
+                self.object_mesh.node_path.hide()
+            self._terrain_dirty = True
+            self._update_texture(force=True)
+            if self.render_mode == "terrain3d":
+                self._update_terrain()
+            self._show_save_toast()
+        except Exception:
+            LOG.exception("Render pipeline regeneration failed")
+
     def _apply_current_camera(self) -> None:
         if self.render_mode == "object3d":
             self._apply_camera_object_3d()
@@ -309,7 +434,7 @@ class PandaLifeApp(ShowBase):
                     # Panda3D sometimes rejects Windows-style paths from Python
                     # strings. Filename.fromOsSpecific converts C:\... into the
                     # engine's expected internal path form.
-                    panda_filename = Filename.fromOsSpecific(str(candidate))
+                    panda_filename = Filename.fromOsSpecific(str(candidate)).getFullpath()
                     font = self.loader.loadFont(panda_filename)
                     if font is not None:
                         LOG.info("Loaded menu symbol font: %s", candidate)
@@ -339,6 +464,15 @@ class PandaLifeApp(ShowBase):
             scale=0.030,
             fg=(0.88, 0.88, 0.78, 1.0),
             bg=(0.0, 0.0, 0.0, 0.28),
+            align=TextNode.ALeft,
+            mayChange=True,
+        )
+        self.speak_text = OnscreenText(
+            text="",
+            pos=(-1.30, -0.88),
+            scale=0.028,
+            fg=(0.88, 0.94, 1.0, 1.0),
+            bg=(0.0, 0.0, 0.0, 0.22),
             align=TextNode.ALeft,
             mayChange=True,
         )
@@ -443,6 +577,35 @@ class PandaLifeApp(ShowBase):
             )
             self.menu_rows.append((cursor, label, value))
 
+        # Visual scroll indicators for the left option list and the right help/detail panel.
+        # They are intentionally built from plain DirectFrame rectangles so they do
+        # not depend on fonts or Unicode glyph support.
+        self.menu_scroll_track = DirectFrame(
+            frameSize=(-0.004, 0.004, -0.62, 0.54),
+            frameColor=(0.22, 0.32, 0.36, 0.42),
+            pos=(-0.365, 0, 0.03),
+        )
+        self.menu_scroll_thumb = DirectFrame(
+            frameSize=(-0.006, 0.006, -0.08, 0.08),
+            frameColor=(0.80, 0.92, 0.78, 0.86),
+            pos=(-0.365, 0, 0.03),
+        )
+        self.detail_scroll_track = DirectFrame(
+            frameSize=(-0.004, 0.004, -0.62, 0.54),
+            frameColor=(0.22, 0.32, 0.36, 0.38),
+            pos=(1.045, 0, 0.03),
+        )
+        self.detail_scroll_thumb = DirectFrame(
+            frameSize=(-0.006, 0.006, -0.08, 0.08),
+            frameColor=(0.80, 0.92, 0.78, 0.84),
+            pos=(1.045, 0, 0.03),
+        )
+        for frame in (self.menu_scroll_track, self.menu_scroll_thumb, self.detail_scroll_track, self.detail_scroll_thumb):
+            try:
+                frame.setTransparency(TransparencyAttrib.MAlpha)
+            except Exception:
+                pass
+
         self._show_menu_ui(False)
         self._apply_overlay_visibility()
 
@@ -496,8 +659,9 @@ class PandaLifeApp(ShowBase):
         self.userExit()
 
 
-    def tr(self, key: str, **kwargs: Any) -> str:
-        return self.localizer.text(key, **kwargs)
+    def tr(self, key: str, default: str | None = None, **kwargs: Any) -> str:
+        value = self.localizer.text(key, **kwargs)
+        return default if default is not None and value == key else value
 
     @staticmethod
     def _language_index(language: str) -> int:
@@ -562,6 +726,10 @@ class PandaLifeApp(ShowBase):
             getattr(self, "menu_status", None),
             getattr(self, "menu_detail", None),
             getattr(self, "menu_footer", None),
+            getattr(self, "menu_scroll_track", None),
+            getattr(self, "menu_scroll_thumb", None),
+            getattr(self, "detail_scroll_track", None),
+            getattr(self, "detail_scroll_thumb", None),
         ]
         if hasattr(self, "resolution_menu"):
             # Legacy text block no longer used in v0.1.8. Keep it hidden to
@@ -585,6 +753,50 @@ class PandaLifeApp(ShowBase):
         if len(text) <= max_len:
             return text
         return text[: max(0, max_len - 3)] + "..."
+
+    @staticmethod
+    def _wrap_text(text: str, width: int = MENU_DETAIL_WRAP_WIDTH, subsequent_indent: str = "") -> list[str]:
+        text = str(text).replace("\r", "")
+        out: list[str] = []
+        for raw in text.split("\n"):
+            if raw.strip() == "":
+                out.append("")
+                continue
+            leading = raw[: len(raw) - len(raw.lstrip())]
+            wrapped = textwrap.wrap(
+                raw.strip(),
+                width=max(20, width - len(leading)),
+                break_long_words=False,
+                break_on_hyphens=False,
+            ) or [""]
+            for idx, line in enumerate(wrapped):
+                out.append((leading if idx == 0 else leading + subsequent_indent) + line)
+        return out
+
+    def _set_scrollbar(self, track, thumb, scroll: int, max_scroll: int, visible: bool = True) -> None:
+        if not track or not thumb:
+            return
+        if not visible or max_scroll <= 0:
+            track.hide()
+            thumb.hide()
+            return
+        track.show()
+        thumb.show()
+        top = 0.54
+        bottom = -0.62
+        height = top - bottom
+        ratio = max(0.12, min(1.0, MENU_VISIBLE_ROWS / max(MENU_VISIBLE_ROWS + max_scroll, 1)))
+        half = height * ratio * 0.5
+        progress = max(0.0, min(1.0, float(scroll) / float(max_scroll)))
+        center = top - half - progress * (height - 2.0 * half)
+        try:
+            thumb["frameSize"] = (-0.006, 0.006, -half, half)
+        except Exception:
+            pass
+        try:
+            thumb.setZ(0.03 + center)
+        except Exception:
+            pass
 
     @staticmethod
     def _set_text_fg(node, color) -> None:
@@ -667,6 +879,11 @@ class PandaLifeApp(ShowBase):
         self.cfg.render_mode = str(self.render_mode)
         self.cfg.object_mode_max_organisms = int(self.object_mesh.max_organisms) if hasattr(self, "object_mesh") else int(self.cfg.object_mode_max_organisms)
         self.cfg.obj_export_max_organisms = int(self.cfg.obj_export_max_organisms)
+        self.cfg.object_update_interval = int(getattr(self.cfg, "object_update_interval", 6))
+        self.cfg.object_mesh_quality = str(getattr(self.cfg, "object_mesh_quality", "balanced"))
+        self.cfg.render_backend = str(getattr(self.cfg, "render_backend", "auto"))
+        self.cfg.light_mode = str(getattr(self.cfg, "light_mode", "auto_sun"))
+        self.cfg.thought_output = str(getattr(self.cfg, "thought_output", "text"))
         self.cfg.view_mode = int(self.image_builder.mode)
         self.cfg.language = self._current_language_code()
         if hasattr(self, "soundscape"):
@@ -743,8 +960,13 @@ class PandaLifeApp(ShowBase):
             "fullscreen",
             "view",
             "render",
+            "render_backend",
             "object_orgs",
+            "object_update",
+            "object_quality",
             "obj_export_cap",
+            "light_mode",
+            "regen_render",
             "blend",
             "sim_mode",
             "speed",
@@ -756,6 +978,7 @@ class PandaLifeApp(ShowBase):
             "sound",
             "sound_volume",
             "sound_voices",
+            "thought_output",
             "resume_after_menu",
             "critic",
             "hud",
@@ -774,11 +997,11 @@ class PandaLifeApp(ShowBase):
             return "guide"
         if option_id in {"language"}:
             return "language"
-        if option_id in {"resolution", "fullscreen", "view", "render", "object_orgs", "obj_export_cap", "blend"}:
+        if option_id in {"resolution", "fullscreen", "view", "render", "render_backend", "object_orgs", "object_update", "object_quality", "obj_export_cap", "light_mode", "regen_render", "blend"}:
             return "display"
         if option_id in {"sim_mode", "speed", "history_limit", "dead_archive", "scan_interval", "memory_status", "prune_memory", "resume_after_menu"}:
             return "simulation"
-        if option_id in {"sound", "sound_volume", "sound_voices"}:
+        if option_id in {"sound", "sound_volume", "sound_voices", "thought_output"}:
             return "sound"
         if option_id in {"critic", "hud", "help_overlay", "fps", "clean"}:
             return "overlays"
@@ -839,10 +1062,18 @@ class PandaLifeApp(ShowBase):
             self._set_view_mode(self.image_builder.mode + direction)
         elif option_id == "speed":
             self._speed_up() if direction > 0 else self._slow_down()
+        elif option_id == "render_backend":
+            self._change_render_backend(direction)
         elif option_id == "object_orgs":
             self._change_object_organism_cap(direction)
+        elif option_id == "object_update":
+            self._change_object_update_interval(direction)
+        elif option_id == "object_quality":
+            self._change_object_quality(direction)
         elif option_id == "obj_export_cap":
             self._change_obj_export_cap(direction)
+        elif option_id == "light_mode":
+            self._change_light_mode(direction)
         elif option_id == "history_limit":
             self._change_history_limit(direction)
         elif option_id == "dead_archive":
@@ -853,7 +1084,9 @@ class PandaLifeApp(ShowBase):
             self._change_sound_volume(direction)
         elif option_id == "sound_voices":
             self._change_sound_voices(direction)
-        elif option_id in {"fullscreen", "render", "blend", "sim_mode", "sound", "resume_after_menu", "critic", "hud", "help_overlay", "fps", "clean"}:
+        elif option_id == "thought_output":
+            self._change_thought_output(direction)
+        elif option_id in {"fullscreen", "render", "blend", "sim_mode", "sound", "resume_after_menu", "critic", "hud", "help_overlay", "fps", "clean", "regen_render"}:
             self._activate_option(option_id)
         if option_id != "resolution":
             self._save_settings()
@@ -872,6 +1105,8 @@ class PandaLifeApp(ShowBase):
             self._cycle_view_mode()
         elif option_id == "render":
             self._toggle_3d()
+        elif option_id == "render_backend":
+            self._change_render_backend(1)
         elif option_id == "blend":
             self._toggle_blend()
         elif option_id == "sim_mode":
@@ -880,8 +1115,16 @@ class PandaLifeApp(ShowBase):
             self._speed_up()
         elif option_id == "object_orgs":
             self._change_object_organism_cap(1)
+        elif option_id == "object_update":
+            self._change_object_update_interval(1)
+        elif option_id == "object_quality":
+            self._change_object_quality(1)
         elif option_id == "obj_export_cap":
             self._change_obj_export_cap(1)
+        elif option_id == "light_mode":
+            self._change_light_mode(1)
+        elif option_id == "regen_render":
+            self._regenerate_render_pipeline()
         elif option_id == "history_limit":
             self._change_history_limit(1)
         elif option_id == "dead_archive":
@@ -896,6 +1139,8 @@ class PandaLifeApp(ShowBase):
             self._change_sound_volume(1)
         elif option_id == "sound_voices":
             self._change_sound_voices(1)
+        elif option_id == "thought_output":
+            self._change_thought_output(1)
         elif option_id == "resume_after_menu":
             self._menu_saved_paused = not self._menu_saved_paused
             LOG.info("Resume after menu toggled: %s", not self._menu_saved_paused)
@@ -954,10 +1199,21 @@ class PandaLifeApp(ShowBase):
             return self.image_builder.mode_name
         if option_id == "render":
             return dict(RENDER_MODES).get(self.render_mode, self.render_mode)
+        if option_id == "render_backend":
+            label = self.tr(f"ui.backend_{self.cfg.render_backend}", default=self.cfg.render_backend)
+            return f"{label} (restart)"
         if option_id == "object_orgs":
             return f"{self.object_mesh.max_organisms} meshes"
+        if option_id == "object_update":
+            return f"every {self.cfg.object_update_interval} step(s)"
+        if option_id == "object_quality":
+            return self.tr(f"ui.quality_{self.cfg.object_mesh_quality}", default=self.cfg.object_mesh_quality)
         if option_id == "obj_export_cap":
             return f"{self.cfg.obj_export_max_organisms} OBJ"
+        if option_id == "light_mode":
+            return self.tr(f"ui.light_{self.cfg.light_mode}", default=self.cfg.light_mode)
+        if option_id == "regen_render":
+            return "Enter"
         if option_id == "blend":
             return on if self.smooth_blend else off
         if option_id == "sim_mode":
@@ -981,6 +1237,8 @@ class PandaLifeApp(ShowBase):
             return f"{int(round(self.cfg.sound_volume * 100))}%"
         if option_id == "sound_voices":
             return f"{self.cfg.max_sound_organisms}"
+        if option_id == "thought_output":
+            return self.tr(f"ui.thought_{self.cfg.thought_output}", default=self.cfg.thought_output)
         if option_id == "resume_after_menu":
             return self.tr("ui.yes") if not self._menu_saved_paused else self.tr("ui.no_stay_paused")
         if option_id == "critic":
@@ -1010,6 +1268,9 @@ class PandaLifeApp(ShowBase):
             ])
             self.menu_detail.setScale(0.021)
             self.menu_detail.setText(self._build_help_text())
+            help_lines = self._build_help_lines_wrapped()
+            self._set_scrollbar(self.menu_scroll_track, self.menu_scroll_thumb, 0, 0, visible=False)
+            self._set_scrollbar(self.detail_scroll_track, self.detail_scroll_thumb, self.help_scroll, max(0, len(help_lines) - 31), visible=True)
             self.menu_footer.setText(self.tr("ui.footer_help"))
             return
         self.menu_detail.setScale(0.030)
@@ -1038,9 +1299,9 @@ class PandaLifeApp(ShowBase):
             "=" * min(42, max(12, len(label))),
             f"{self.tr('ui.current')}: {value}",
             "",
-            desc,
-            "",
         ]
+        detail.extend(self._wrap_text(desc, MENU_DETAIL_WRAP_WIDTH, subsequent_indent="  "))
+        detail.append("")
         if option_id in {"history_limit", "dead_archive", "scan_interval", "memory_status", "prune_memory"}:
             detail.extend([
                 self.tr("ui.memory_snapshot") + ":",
@@ -1081,32 +1342,46 @@ class PandaLifeApp(ShowBase):
             "  Left click in main view injects an organism at the cursor.",
             "  Left drag rotates the 3D view.",
         ])
-        self.menu_detail.setText("\n".join(detail))
+        wrapped_detail: list[str] = []
+        for line in detail:
+            if len(line) > MENU_DETAIL_WRAP_WIDTH:
+                wrapped_detail.extend(self._wrap_text(line, MENU_DETAIL_WRAP_WIDTH, subsequent_indent="  "))
+            else:
+                wrapped_detail.append(line)
+        self.menu_detail.setText("\n".join(wrapped_detail[:31]))
+        self._set_scrollbar(self.menu_scroll_track, self.menu_scroll_thumb, menu_scroll, menu_max_scroll, visible=True)
+        self._set_scrollbar(self.detail_scroll_track, self.detail_scroll_thumb, 0, max(0, len(wrapped_detail) - 31), visible=len(wrapped_detail) > 31)
         scroll_note = ""
         if menu_max_scroll > 0:
-            scroll_note = " | " + self.tr("ui.menu_scroll", current=menu_scroll, max=menu_max_scroll)
-        self.menu_footer.setText(self.tr("ui.footer_settings") + scroll_note)
+            scroll_note = " | " + self.tr("ui.menu_scroll", current=menu_scroll + 1, max=menu_max_scroll + 1)
+        self.menu_footer.setText(self._short(self.tr("ui.footer_settings") + scroll_note, 140))
 
     def _scroll_help(self, delta: int) -> None:
-        lines = self._build_help_lines()
-        visible = 25
+        lines = self._build_help_lines_wrapped()
+        visible = 31
         max_scroll = max(0, len(lines) - visible)
         self.help_scroll = max(0, min(max_scroll, int(self.help_scroll) + int(delta)))
         self._update_resolution_menu()
 
     def _build_help_text(self) -> str:
-        lines = self._build_help_lines()
+        lines = self._build_help_lines_wrapped()
         visible = 31
         max_scroll = max(0, len(lines) - visible)
         self.help_scroll = max(0, min(max_scroll, int(getattr(self, "help_scroll", 0))))
         page = lines[self.help_scroll:self.help_scroll + visible]
         if max_scroll > 0:
             page.append("")
-            page.append("[" + self.tr("ui.help_scroll", current=self.help_scroll, max=max_scroll) + "]")
+            page.append("[" + self.tr("ui.help_scroll", current=self.help_scroll + 1, max=max_scroll + 1) + "]")
         return "\n".join(page)
 
     def _build_help_lines(self) -> list[str]:
         return self.localizer.lines("help_lines")
+
+    def _build_help_lines_wrapped(self) -> list[str]:
+        out: list[str] = []
+        for line in self._build_help_lines():
+            out.extend(self._wrap_text(line, HELP_WRAP_WIDTH, subsequent_indent="  "))
+        return out
 
     def _change_language(self, direction: int) -> None:
         self.language_index = (self.language_index + direction) % len(SUPPORTED_LANGUAGES)
@@ -1172,6 +1447,43 @@ class PandaLifeApp(ShowBase):
         LOG.info("OBJ export cap changed: %s", self.cfg.obj_export_max_organisms)
         self._save_settings()
 
+    def _change_render_backend(self, direction: int) -> None:
+        self.render_backend_index = (self.render_backend_index + direction) % len(RENDER_BACKEND_PRESETS)
+        self.cfg.render_backend = RENDER_BACKEND_PRESETS[self.render_backend_index]
+        LOG.info("Render backend changed to %s (restart required)", self.cfg.render_backend)
+        self._restart_notice_timer = 3.0
+        self._save_settings()
+
+    def _change_object_update_interval(self, direction: int) -> None:
+        self.object_update_interval_index = (self.object_update_interval_index + direction) % len(OBJECT_UPDATE_INTERVAL_PRESETS)
+        self.cfg.object_update_interval = int(OBJECT_UPDATE_INTERVAL_PRESETS[self.object_update_interval_index])
+        LOG.info("3D object update interval changed: %s", self.cfg.object_update_interval)
+        self._save_settings()
+
+    def _change_object_quality(self, direction: int) -> None:
+        self.object_quality_index = (self.object_quality_index + direction) % len(OBJECT_QUALITY_PRESETS)
+        self.cfg.object_mesh_quality = OBJECT_QUALITY_PRESETS[self.object_quality_index]
+        if hasattr(self, "object_mesh"):
+            self.object_mesh.quality = self.cfg.object_mesh_quality
+        LOG.info("3D object mesh quality changed: %s", self.cfg.object_mesh_quality)
+        self._terrain_dirty = True
+        self._save_settings()
+
+    def _change_light_mode(self, direction: int) -> None:
+        self.light_mode_index = (self.light_mode_index + direction) % len(LIGHT_MODE_PRESETS)
+        self.cfg.light_mode = LIGHT_MODE_PRESETS[self.light_mode_index]
+        LOG.info("Light mode changed: %s", self.cfg.light_mode)
+        self._apply_light_mode(force=True)
+        self._save_settings()
+
+    def _change_thought_output(self, direction: int) -> None:
+        self.thought_output_index = (self.thought_output_index + direction) % len(THOUGHT_OUTPUT_PRESETS)
+        self.cfg.thought_output = THOUGHT_OUTPUT_PRESETS[self.thought_output_index]
+        LOG.info("Thought output mode changed: %s", self.cfg.thought_output)
+        if self.cfg.thought_output == "off" and hasattr(self, "speak_text"):
+            self.speak_text.setText("")
+        self._save_settings()
+
     def _export_obj_lifeforms(self) -> None:
         try:
             export_root = Path("exports") / "obj"
@@ -1211,7 +1523,12 @@ class PandaLifeApp(ShowBase):
         self.world.inject_random_organism(max_size=31)
         self.world.previous_owner = self.world.owner.copy()
         self.world._scan_components(force=True)  # controlled internal refresh for immediate visibility
+        self._terrain_dirty = True
         self._update_texture(force=True)
+        if self.render_mode == "object3d":
+            self._update_object_mesh(force=True)
+        elif self.render_mode == "terrain3d":
+            self._update_terrain()
 
     def _inject_organism_at_cursor(self) -> None:
         pos = self._cursor_to_grid_xy()
@@ -1223,7 +1540,12 @@ class PandaLifeApp(ShowBase):
         self.world.inject_random_organism_at(x, y, max_size=31)
         self.world.previous_owner = self.world.owner.copy()
         self.world._scan_components(force=True)
+        self._terrain_dirty = True
         self._update_texture(force=True)
+        if self.render_mode == "object3d":
+            self._update_object_mesh(force=True)
+        elif self.render_mode == "terrain3d":
+            self._update_terrain()
 
     def _cursor_to_grid_xy(self) -> tuple[int, int] | None:
         watcher = self.mouseWatcherNode
@@ -1231,23 +1553,38 @@ class PandaLifeApp(ShowBase):
             return None
         mx = float(watcher.getMouseX())
         my = float(watcher.getMouseY())
+
+        def fallback_screen_map() -> tuple[int, int]:
+            # Last-resort mapping that works in every render mode. It is less
+            # physically exact than a ray/plane hit, but it guarantees that a
+            # visible click can create a new lifeform instead of silently doing
+            # nothing when the 3D camera ray misses the mathematical plane.
+            x_f = (mx + 1.0) * 0.5 * (self.cfg.grid_width - 1)
+            y_f = (my + 1.0) * 0.5 * (self.cfg.grid_height - 1)
+            return int(round(x_f)), int(round(y_f))
+
+        x: int
+        y: int
         if self.render_3d:
             near = Point3()
             far = Point3()
-            if not self.cam.node().getLens().extrude(watcher.getMouse(), near, far):
-                return None
-            p_near = self.render.getRelativePoint(self.camera, near)
-            p_far = self.render.getRelativePoint(self.camera, far)
-            plane = Plane(Vec3(0, 1, 0), Point3(0, 0, 0))
-            hit = Point3()
-            if not plane.intersectsLine(hit, p_near, p_far):
-                return None
-            if self.render_mode == "object3d":
-                x = int(round(hit.getX() / max(0.001, self.object_mesh.world_scale) + self.cfg.grid_width / 2.0))
-                y = int(round(hit.getZ() / max(0.001, self.object_mesh.world_scale) + self.cfg.grid_height / 2.0))
-            else:
-                x = int(round(hit.getX()))
-                y = int(round(hit.getZ()))
+            hit_ok = False
+            if self.cam.node().getLens().extrude(watcher.getMouse(), near, far):
+                p_near = self.render.getRelativePoint(self.camera, near)
+                p_far = self.render.getRelativePoint(self.camera, far)
+                # Both 3D views use X/Z as world-map axes and Y as height.
+                plane = Plane(Vec3(0, 1, 0), Point3(0, 0, 0))
+                hit = Point3()
+                if plane.intersectsLine(hit, p_near, p_far):
+                    if self.render_mode == "object3d":
+                        x = int(round(hit.getX() / max(0.001, self.object_mesh.world_scale) + self.cfg.grid_width / 2.0))
+                        y = int(round(hit.getZ() / max(0.001, self.object_mesh.world_scale) + self.cfg.grid_height / 2.0))
+                    else:
+                        x = int(round(hit.getX()))
+                        y = int(round(hit.getZ()))
+                    hit_ok = 0 <= x < self.cfg.grid_width and 0 <= y < self.cfg.grid_height
+            if not hit_ok:
+                x, y = fallback_screen_map()
         else:
             center_x = self.cfg.grid_width / 2.0 + self.pan_x
             center_y = self.cfg.grid_height / 2.0 + self.pan_y
@@ -1255,8 +1592,8 @@ class PandaLifeApp(ShowBase):
             film_h = self.cfg.grid_height * self.zoom
             x = int(round(center_x + mx * film_w * 0.5))
             y = int(round(center_y + my * film_h * 0.5))
-        if x < 0 or y < 0 or x >= self.cfg.grid_width or y >= self.cfg.grid_height:
-            return None
+        x = max(0, min(self.cfg.grid_width - 1, int(x)))
+        y = max(0, min(self.cfg.grid_height - 1, int(y)))
         return x, y
 
     def _toggle_critic(self) -> None:
@@ -1270,6 +1607,8 @@ class PandaLifeApp(ShowBase):
             self.hud.show() if (self.show_hud and normal_visible) else self.hud.hide()
         if hasattr(self, "help_text"):
             self.help_text.show() if (self.show_help and normal_visible) else self.help_text.hide()
+        if hasattr(self, "speak_text"):
+            self.speak_text.show() if normal_visible else self.speak_text.hide()
 
     def _toggle_hud(self) -> None:
         self.show_hud = not self.show_hud
@@ -1329,7 +1668,7 @@ class PandaLifeApp(ShowBase):
         elif self.render_mode == "terrain3d":
             LOG.info("Switching to true 3D object view")
             self._setup_camera_object_3d()
-            self._update_object_mesh()
+            self._update_object_mesh(force=True)
         else:
             LOG.info("Switching to 2D texture view")
             self._setup_camera_2d()
@@ -1439,13 +1778,17 @@ class PandaLifeApp(ShowBase):
                     self._update_texture(force=False)
                     self._terrain_dirty = True
             self._apply_texture_blend(dt)
+            if getattr(self.cfg, "light_mode", "auto_sun") == "auto_sun" and self.render_3d:
+                self._apply_light_mode(force=False)
             if self.render_3d and self._terrain_dirty:
                 if self.render_mode == "object3d":
-                    self._update_object_mesh()
+                    if self._should_update_object_mesh():
+                        self._update_object_mesh()
                 else:
                     self._update_terrain()
             if hasattr(self, "soundscape"):
                 self.soundscape.update(self.world.organisms, dt)
+            self._maybe_emit_thought_tts()
             self.hud_accumulator += dt
             if self.hud_accumulator >= 0.20 or self.resolution_menu_open:
                 self.hud_accumulator = 0.0
@@ -1468,7 +1811,7 @@ class PandaLifeApp(ShowBase):
         self._last_perf_log_step = step
         stats = self.world.memory_stats()
         LOG.info(
-            "Runtime perf/memory: step=%s sps=%.2f organisms=%s dead_archive=%s history_samples=%s history_limit=%s scan_interval=%s density=%.4f activity=%.4f render=%s blend=%s sound=%s",
+            "Runtime perf/memory: step=%s sps=%.2f organisms=%s dead_archive=%s history_samples=%s history_limit=%s scan_interval=%s density=%.4f activity=%.4f render=%s backend=%s object_cap=%s object_interval=%s object_quality=%s object_rendered=%s object_skipped=%s object_vertices=%s object_faces=%s light=%s thoughts=%s blend=%s sound=%s",
             step,
             self.sps,
             stats["organisms"],
@@ -1479,6 +1822,16 @@ class PandaLifeApp(ShowBase):
             self.world.critic_stats.density,
             self.world.critic_stats.activity,
             self.render_mode,
+            self.cfg.render_backend,
+            getattr(self.object_mesh, "max_organisms", 0) if hasattr(self, "object_mesh") else 0,
+            self.cfg.object_update_interval,
+            self.cfg.object_mesh_quality,
+            getattr(self.object_mesh, "last_rendered_organisms", 0) if hasattr(self, "object_mesh") else 0,
+            getattr(self.object_mesh, "last_skipped_organisms", 0) if hasattr(self, "object_mesh") else 0,
+            getattr(self.object_mesh, "last_vertex_count", 0) if hasattr(self, "object_mesh") else 0,
+            getattr(self.object_mesh, "last_face_count", 0) if hasattr(self, "object_mesh") else 0,
+            self.cfg.light_mode,
+            self.cfg.thought_output,
             self.smooth_blend,
             self.soundscape.enabled if hasattr(self, "soundscape") else False,
         )
@@ -1515,9 +1868,194 @@ class PandaLifeApp(ShowBase):
         self.terrain.update_from_snapshot(self.world.snapshot())
         self._terrain_dirty = False
 
-    def _update_object_mesh(self) -> None:
+    def _should_update_object_mesh(self) -> bool:
+        step = int(getattr(self.world, "step_index", 0))
+        interval = max(1, int(getattr(self.cfg, "object_update_interval", 6)))
+        if self._last_object_mesh_step < 0:
+            return True
+        return (step - self._last_object_mesh_step) >= interval
+
+    def _update_object_mesh(self, force: bool = False) -> None:
+        if (not force) and (not self._should_update_object_mesh()):
+            return
         self.object_mesh.update_from_snapshot(self.world.snapshot())
+        self._last_object_mesh_step = int(getattr(self.world, "step_index", 0))
+        self._object_mesh_update_count = int(getattr(self, "_object_mesh_update_count", 0)) + 1
+        if self._object_mesh_update_count % 12 == 0:
+            LOG.info(
+                "Object mesh refresh: step=%s rendered=%s skipped=%s vertices=%s faces=%s quality=%s interval=%s cap=%s",
+                self._last_object_mesh_step,
+                getattr(self.object_mesh, "last_rendered_organisms", 0),
+                getattr(self.object_mesh, "last_skipped_organisms", 0),
+                getattr(self.object_mesh, "last_vertex_count", 0),
+                getattr(self.object_mesh, "last_face_count", 0),
+                self.cfg.object_mesh_quality,
+                self.cfg.object_update_interval,
+                getattr(self.object_mesh, "max_organisms", 0),
+            )
         self._terrain_dirty = False
+
+    def _candidate_thinking_organisms(self, snap=None):
+        if snap is None:
+            snap = self.world.snapshot()
+        organisms = [o for o in snap.organisms.values() if getattr(o, "utterance", "")]
+        organisms.sort(
+            key=lambda o: (
+                float(getattr(o, "intelligence", 0.0)) * 1.35
+                + int(getattr(o, "speech_level", 0)) * 0.35
+                + o.complexity_level * 0.018
+                + min(1.0, o.age / 1500.0) * 0.22,
+                o.size,
+                o.id,
+            ),
+            reverse=True,
+        )
+        return organisms[: min(12, len(organisms))]
+
+    def _lead_thinking_organism(self, snap=None):
+        candidates = self._candidate_thinking_organisms(snap)
+        if not candidates:
+            return None
+        # Rotate among the strongest thinkers. This prevents one successful old
+        # organism from monopolising text/TTS forever.
+        idx = int(getattr(self, "_thought_round_robin", 0)) % len(candidates)
+        return candidates[idx]
+
+    def _compose_thought_text(self, org) -> str:
+        if org is None:
+            return ""
+        level = int(getattr(org, "speech_level", 0))
+        desire = str(getattr(org, "desire", "persist"))
+        emotion = str(getattr(org, "emotion", "calm"))
+        body = str(getattr(org, "body_plan", "organism"))
+        age = int(getattr(org, "age", 0))
+        comp = int(getattr(org, "complexity_level", 0))
+        size = int(getattr(org, "size", 0))
+        children = int(getattr(org, "children", 0))
+        # Deterministic variation: stable enough to feel like personality, but
+        # changes as age/complexity changes so speech progresses over time.
+        pick = (int(getattr(org, "id", 0)) * 11 + age // 47 + comp * 3 + children * 5) % 5
+        primitive = {
+            "feed": ["mmm", "need", "warm", "eat", "hungry"],
+            "expand": ["ah", "grow", "open", "more", "push"],
+            "hunt": ["tik", "seek", "sharp", "chase", "bite"],
+            "bond": ["la", "near", "kin", "come", "we"],
+            "learn": ["oo", "why", "see", "listen", "know"],
+            "rest": ["hum", "still", "slow", "safe", "sleep"],
+            "persist": ["hum", "stay", "hold", "alive", "wait"],
+        }
+        short = {
+            "feed": ["Need food.", "Energy low.", "I seek food.", "Give me heat.", "I must feed."],
+            "expand": ["I grow.", "More body.", "I push outward.", "My shape opens.", "I need room."],
+            "hunt": ["I track prey.", "Weak forms move.", "I will pursue.", "The edge is hungry.", "I sharpen."],
+            "bond": ["Stay near.", "Kin are close.", "We move together.", "I hear family.", "Do not drift."],
+            "learn": ["I observe.", "What is this?", "I remember patterns.", "The world answers.", "I compare shapes."],
+            "rest": ["I recover.", "Be still.", "Hold energy.", "The shell rests.", "Wait and mend."],
+            "persist": ["I remain.", "Hold form.", "I continue.", "This body persists.", "Still alive."],
+        }
+        long = {
+            "feed": [
+                f"My {body} body needs more energy.",
+                "I am searching for nourishment at the edge.",
+                "If I do not feed, my pattern will thin.",
+                f"I feel hunger through {max(1, getattr(org, 'sensors', 0))} sensors.",
+                "Energy will decide my next mutation.",
+            ],
+            "expand": [
+                f"I want to grow beyond {size} cells.",
+                "My limbs reach for more space.",
+                "I am reshaping my body toward a larger form.",
+                f"Complexity {comp} is not enough; I want another body plan.",
+                "The world has room, and I will push into it.",
+            ],
+            "hunt": [
+                "I sense weaker patterns nearby.",
+                "My desire is sharp and outward.",
+                "I will overtake unstable lifeforms if I can.",
+                "Predation teaches the body new motion.",
+                "The chase gives my limbs purpose.",
+            ],
+            "bond": [
+                "Kinship stabilizes my pattern.",
+                f"My lineage has produced {children} descendants.",
+                "I want my family close enough to exchange shape.",
+                "Together we are less likely to vanish.",
+                "I remember where my children separated.",
+            ],
+            "learn": [
+                "I am observing this arena and changing with it.",
+                "The next form needs better senses.",
+                "Memory becomes structure; structure becomes thought.",
+                "I compare survival, motion and shape.",
+                f"At age {age}, I know more than I did before.",
+            ],
+            "rest": [
+                "I will conserve strength before transforming again.",
+                "Stillness can be a survival strategy.",
+                "My shell holds while the world moves.",
+                "Rest preserves the pattern from collapse.",
+                "I wait until energy returns.",
+            ],
+            "persist": [
+                "I want to survive long enough to transform.",
+                "The body is temporary, but the lineage continues.",
+                "I hold my form against noise and hunger.",
+                "Persistence is my first kind of intelligence.",
+                "I am not finished evolving.",
+            ],
+        }
+        if level <= 1:
+            phrase = primitive.get(desire, primitive["persist"])[pick]
+        elif level == 2:
+            phrase = short.get(desire, short["persist"])[pick]
+        else:
+            phrase = long.get(desire, long["persist"])[pick]
+        if level >= 4 and pick in {1, 3}:
+            phrase += f" I feel {emotion}."
+        return phrase
+
+    def _maybe_emit_thought_tts(self) -> None:
+        mode = getattr(self.cfg, "thought_output", "text")
+        if mode not in {"tts", "both"}:
+            return
+        now = time.monotonic()
+        if now - self._last_tts_time < float(getattr(self.cfg, "thought_tts_interval", 12.0)):
+            return
+        proc = getattr(self, "_tts_process", None)
+        if proc is not None:
+            try:
+                if proc.poll() is None:
+                    return
+            except Exception:
+                self._tts_process = None
+        candidates = self._candidate_thinking_organisms()
+        if not candidates:
+            return
+        for _ in range(len(candidates)):
+            self._thought_round_robin = int(getattr(self, "_thought_round_robin", 0)) + 1
+            lead = candidates[self._thought_round_robin % len(candidates)]
+            utterance = self._compose_thought_text(lead).strip()
+            if utterance and utterance != self._last_tts_text:
+                break
+        else:
+            return
+        safe_text = utterance.replace("'", "''")[:220]
+        cmd = [
+            "powershell",
+            "-NoProfile",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-Command",
+            "Add-Type -AssemblyName System.Speech; $s=New-Object System.Speech.Synthesis.SpeechSynthesizer; $s.Rate=-1; $s.Volume=70; $s.Speak('" + safe_text + "');",
+        ]
+        try:
+            self._tts_process = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+            self._last_tts_time = now
+            self._last_tts_text = utterance
+            LOG.info("TTS organism thought: id=%s level=%s emotion=%s desire=%s text=%s", getattr(lead, "id", "?"), getattr(lead, "speech_level", "?"), getattr(lead, "emotion", "?"), getattr(lead, "desire", "?"), utterance)
+        except Exception:
+            LOG.exception("Could not launch Windows TTS for organism thought")
+            self._last_tts_time = now
 
     def _update_hud(self) -> None:
         self._apply_overlay_visibility()
@@ -1534,3 +2072,16 @@ class PandaLifeApp(ShowBase):
             f"Organisms {len(snap.organisms)}  {sim_mode}/{render}  {sound}  |  {self.tr('ui.f10_settings')}"
         )
         self.hud.setText(text)
+        if hasattr(self, "speak_text"):
+            mode = getattr(self.cfg, "thought_output", "text")
+            if mode in {"text", "both"}:
+                lead = self._lead_thinking_organism(snap)
+                thought = self._compose_thought_text(lead) if lead is not None else ""
+                if lead is not None and thought:
+                    body = getattr(lead, 'body_plan', 'organism')
+                    emo = getattr(lead, 'emotion', 'calm')
+                    self.speak_text.setText(f"Lead {body} [{emo}]: {thought}")
+                else:
+                    self.speak_text.setText("")
+            else:
+                self.speak_text.setText("")
