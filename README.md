@@ -5,6 +5,8 @@ Release date: **2026-07-03**.
 
 GAN Organism Arena is an artificial-life sandbox built with Panda3D. It combines a Game-of-Life-inspired cellular world with organism tracking, genome-like traits, pseudo-GAN morphology generation, evolutionary scoring, organic artificial-life sounds, artificial-lifes could learn to speak (with tts voice output), 2D/3D visualization, and OBJ export.
 
+Changelog: https://github.com/zeittresor/gan_organism_arena/blob/main/changelogs/CHANGELOG.md
+
 <img width="1920" height="1080" alt="pandalife_step_00000170" src="https://github.com/user-attachments/assets/37eaa632-e07d-424c-8dcd-45b2e81aed1f" />
 
 <img width="1920" height="1080" alt="pandalife_step_00002147" src="https://github.com/user-attachments/assets/f6265fc8-11d8-4cdc-abdd-0d594491b405" />
