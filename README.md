@@ -5,11 +5,15 @@
 ### Alpha6 project-context self-test fix
 
 The artificial-life self-test now runs as a normal Godot project scene (`scenes/SelfTest.tscn`) instead of a standalone `--script`. This ensures the project autoload singletons (`SettingsStore`, `L10n`, `AppLog`) exist exactly as they do during normal gameplay. Alpha5 parsed all files successfully but its standalone self-test compilation could not resolve `SettingsStore`.
+
+<img width="2560" height="1080" alt="2026-09-01 00_38_57-Greenshot" src="https://github.com/user-attachments/assets/e0c5829a-2941-443b-9681-126c9a635262" />
+
+<img width="2560" height="1080" alt="2026-09-01 00_46_23-Greenshot" src="https://github.com/user-attachments/assets/0872bcca-7abd-462a-ad60-a982d7af23d8" />
   
 **Engine target:** Godot 4.7.2 stable  
 **License:** MIT
 
-## TL;DR
+## Short
 
 GAN Organism Arena is now a real **3D artificial-life aquarium** instead of a 2D cellular simulation with a 3D visualization layer. Organisms exist and move in X/Y/Z, consume resources in a volume, reproduce with mutated developmental genomes, build three-dimensional bodies, accumulate bounded experience, and develop increasingly expressive communication.
 
