@@ -1,267 +1,40 @@
 {
   "ui": {
-    "f10_settings": "F10 Parametres",
-    "settings_title": "Parametres - {app} v{version}",
-    "help_title": "Aide / raccourcis",
-    "paused_status": "La simulation est en pause pendant Parametres ou Aide",
-    "settings_status": "{mode} {size} | {render} | {view} | simulation en pause dans le menu",
-    "footer_settings": "Les Parametres mettent la simulation en pause. La fermeture restaure l'etat precedent. Sauvegarde dans settings/config.json.",
-    "footer_help": "Up/Down fait defiler l'aide | Enter/Esc revient aux Parametres | F10/M ferme",
-    "saved": "OK Sauve",
-    "obj_saved": "OBJ sauve",
-    "section_guide": "Guide",
-    "section_display": "Affichage",
-    "section_simulation": "Simulation",
-    "section_sound": "Son",
-    "section_overlays": "Overlays",
-    "section_actions": "Actions",
-    "section_language": "Langue",
-    "more_above": "plus haut",
-    "more_below": "plus bas",
-    "menu_scroll": "Menu scroll {current}/{max}",
-    "help_scroll": "Aide scroll {current}/{max} - Up/Down ou W/S",
-    "current": "Actuel",
-    "controls": "Commandes",
-    "mouse": "Souris",
-    "memory_snapshot": "Memoire",
-    "object_mode_title": "Mode objet 3D",
-    "soundscape_title": "Paysage sonore",
-    "on": "on",
-    "off": "off",
-    "yes": "oui",
-    "no_stay_paused": "non, rester en pause",
-    "fullscreen": "plein ecran",
-    "windowed": "fenetre",
-    "organism_mode": "Mode Organisme",
-    "pure_conway": "Pure Conway",
-    "backend_auto": "auto matériel",
-    "backend_opengl": "OpenGL matériel",
-    "backend_directx9": "DirectX9 expérimental",
-    "backend_software": "CPU/logiciel",
-    "quality_fast": "rapide",
-    "quality_balanced": "équilibré",
-    "quality_detailed": "détaillé",
-    "light_auto_sun": "soleil automatique",
-    "light_top_left": "haut-gauche",
-    "light_top_right": "haut-droite",
-    "light_bottom_left": "bas-gauche",
-    "light_bottom_right": "bas-droite",
-    "light_left_mid": "gauche-milieu",
-    "light_right_mid": "droite-milieu",
-    "light_center": "centre/avant",
-    "light_back": "arrière",
-    "thought_off": "désactivé",
-    "thought_text": "texte seul",
-    "thought_tts": "Windows TTS seul",
-    "thought_both": "texte + Windows TTS"
+    "hint": "F10 Réglages | F1 Aide | ZQSD/WASD + souris nager | Q/E descendre/monter | clic gauche sélectionner | clic droit suivre | Tab organisme suivant | 1-4 vues | G injecter | F8 OBJ | F12 capture",
+    "settings_title": "GAN Organism Arena - Réglages",
+    "help_title": "GAN Organism Arena - Guide du projet / Touches",
+    "no_selection": "Aucun organisme sélectionné. Visez-en un et cliquez à gauche, ou appuyez sur Tab.",
+    "renderer_restart": "Backend de rendu enregistré. Redémarrez l'application pour l'appliquer.",
+    "rebuilt": "Corps visibles et ressources matériaux/shaders reconstruits.",
+    "select_first": "Sélectionnez d'abord un organisme.",
+    "world_reset": "Un nouveau monde évolutif a été généré."
   },
-  "options": {
-    "help": {
-      "label": "Aide / raccourcis",
-      "desc": "Ouvre l'explication du projet, le guide des options et la reference clavier. La simulation reste en pause."
-    },
-    "language": {
-      "label": "Langue",
-      "desc": "Selectionne la langue de l'interface. Les fichiers JSON sont dans language/. L'anglais sert de fallback."
-    },
-    "resolution": {
-      "label": "Resolution",
-      "desc": "Choisit une taille d'affichage. Enter applique la taille. 1920 x 1080 Full HD est la valeur par defaut."
-    },
-    "fullscreen": {
-      "label": "Plein ecran / fenetre",
-      "desc": "Bascule entre plein ecran et fenetre. Le mode fenetre aide au diagnostic."
-    },
-    "view": {
-      "label": "Preset de vue",
-      "desc": "Change la coloration: identite, age, energie, famille, traits, thermique, fantome et critic heat."
-    },
-    "render": {
-      "label": "Mode rendu",
-      "desc": "Bascule entre texture 2D, terrain 3D et vraie vue d’objets-organismes 3D. En mode objet, les organismes avancés peuvent maintenant développer torse, colonne, tête, membres, ailes, nageoires et des plans corporels plus droits ou plus intelligents."
-    },
-    "object_orgs": {
-      "label": "Organismes objet 3D",
-      "desc": "Limite le nombre d'organismes principaux construits comme meshes 3D. Moins est plus rapide."
-    },
-    "obj_export_cap": {
-      "label": "Limite export OBJ",
-      "desc": "Nombre maximal d'organismes principaux exportes en OBJ."
-    },
-    "blend": {
-      "label": "Blend anti-flicker",
-      "desc": "Interpole entre generations pour reduire le scintillement."
-    },
-    "sim_mode": {
-      "label": "Mode simulation",
-      "desc": "Mode Organisme ajoute genomes, traits, biais local et evolution. Pure Conway utilise les regles classiques."
-    },
-    "speed": {
-      "label": "Vitesse simulation",
-      "desc": "Nombre cible d'etapes par seconde. Plus bas aide le materiel ancien et l'observation."
-    },
-    "history_limit": {
-      "label": "Profondeur memoire",
-      "desc": "Nombre d'observations conservees par organisme. Plus grand garde plus d'histoire mais coute performance/memoire."
-    },
-    "dead_archive": {
-      "label": "Archive organismes morts",
-      "desc": "Nombre d'organismes eteints gardes comme memoire d'ascendance/evolution."
-    },
-    "scan_interval": {
-      "label": "Intervalle tracker",
-      "desc": "Frequence d'analyse du grid en formes de vie. Plus haut est plus rapide; plus bas plus precis."
-    },
-    "memory_status": {
-      "label": "Etat memoire",
-      "desc": "Affiche les compteurs d'organismes, historique et archive."
-    },
-    "prune_memory": {
-      "label": "Nettoyer memoire",
-      "desc": "Reduit immediatement historiques et archive aux limites configurees."
-    },
-    "sound": {
-      "label": "Soundscape organismes",
-      "desc": "Couche sonore harmonique optionnelle. Les organismes importants deviennent plus forts; les autres s’estompent ou disparaissent quand la limite de voix est atteinte. Les organismes plus intelligents utilisent aussi des proto-énoncés plus proches de la parole et des identités mélodiques plus structurées."
-    },
-    "sound_volume": {
-      "label": "Volume sonore",
-      "desc": "Volume global des melodies d'organismes."
-    },
-    "sound_voices": {
-      "label": "Voix sonores",
-      "desc": "Nombre maximal d'organismes audibles en meme temps."
-    },
-    "resume_after_menu": {
-      "label": "Reprendre apres menu",
-      "desc": "Si actif, une simulation qui tournait reprend apres fermeture du menu."
-    },
-    "critic": {
-      "label": "Overlay critic",
-      "desc": "Affiche ou cache l'evaluation critic/interest."
-    },
-    "hud": {
-      "label": "HUD compact",
-      "desc": "Affiche une petite ligne d'etat dans la vue principale."
-    },
-    "help_overlay": {
-      "label": "Indice F10",
-      "desc": "Affiche le petit texte F10 Parametres dans la vue principale."
-    },
-    "fps": {
-      "label": "Compteur FPS",
-      "desc": "Active le compteur FPS de Panda3D."
-    },
-    "clean": {
-      "label": "Vue propre / cacher overlays",
-      "desc": "Cache les overlays pour screenshots ou observation."
-    },
-    "inject": {
-      "label": "Injecter organisme",
-      "desc": "Ajoute un organisme genere. Clic gauche dans la vue principale injecte au curseur."
-    },
-    "export_obj": {
-      "label": "Exporter OBJ",
-      "desc": "Sauve les formes de vie principales comme fichiers OBJ separes et combines."
-    },
-    "reset": {
-      "label": "Reinitialiser monde",
-      "desc": "Redemarre le monde avec une nouvelle population generee."
-    },
-    "close": {
-      "label": "Fermer menu",
-      "desc": "Ferme Parametres et restaure l'etat pause precedent."
-    },
-    "render_backend": {
-      "label": "Backend de rendu",
-      "desc": "Choisit le backend d’affichage Panda3D au prochain redémarrage. Auto/OpenGL utilisent l’accélération matérielle si disponible. DirectX9 est expérimental et peut être absent. CPU/logiciel utilise tinydisplay pour diagnostic et sera plus lent."
-    },
-    "object_update": {
-      "label": "Intervalle objets 3D",
-      "desc": "Contrôle la fréquence de reconstruction des meshes d’organismes 3D. Des valeurs plus hautes améliorent fortement les FPS car la génération de mesh coûte du CPU."
-    },
-    "object_quality": {
-      "label": "Qualité mesh 3D",
-      "desc": "Contrôle le détail des meshes 3D. Rapide est recommandé avec beaucoup d’organismes ou de faibles FPS. Détaillé crée plus de sommets et une anatomie plus claire, mais coûte plus cher."
-    },
-    "light_mode": {
-      "label": "Direction de lumière",
-      "desc": "Choisit la direction de la lumière principale. Le soleil automatique tourne lentement autour du monde."
-    },
-    "regen_render": {
-      "label": "Régénérer rendu/shaders",
-      "desc": "Reconstruit l’éclairage, les racines de mesh et les caches de rendu. Utile après changement de détail 3D/lumière ou si la vue objet semble figée."
-    },
-    "thought_output": {
-      "label": "Pensées organismes",
-      "desc": "Choisit si les proto-pensées sont cachées, affichées en texte HUD, prononcées par Windows TTS, ou les deux. TTS utilise Windows System.Speech sans dépendance supplémentaire."
-    }
+  "settings": {
+    "language": "Langue",
+    "renderer": "Backend de rendu (redémarrage requis)",
+    "fullscreen": "Plein écran",
+    "view_mode": "Vue scientifique",
+    "light_mode": "Direction de la lumière / soleil",
+    "simulation_speed": "Multiplicateur de vitesse de simulation",
+    "simulation_tick_hz": "Ticks de simulation 3D par seconde",
+    "evolution_rate": "Vitesse d'évolution",
+    "organism_cap": "Nombre maximal d'organismes vivants",
+    "nutrient_count": "Nombre de particules nutritives 3D",
+    "visual_cell_cap": "Cellules corporelles visibles max. par organisme",
+    "body_rebuild_interval": "Intervalle de reconstruction corporelle (secondes)",
+    "thought_mode": "Sortie pensée / communication",
+    "thought_interval": "Intervalle des pensées (secondes)",
+    "max_history_events": "Événements mémorisés par organisme"
   },
-  "help_lines": [
-    "Qu'est-ce que GAN Organism Arena ?",
-    "  Une sandbox de vie artificielle inspiree de Conway's Game of Life. Elle ajoute tracking d'organismes, genomes, traits, logique generateur/critic, memoire evolutive, vues 3D, export OBJ et son harmonique optionnel.",
-    "",
-    "Qu'est-ce que Game of Life ?",
-    "  Un automate cellulaire: une grille de cellules est mise a jour etape par etape. Dans Conway-Life, une cellule vivante survit avec 2 ou 3 voisines; une cellule morte nait avec exactement 3 voisines; sinon elle meurt ou reste vide.",
-    "",
-    "But de l'application",
-    "  Pure Conway est deterministe mais n'a pas d'agents individuels. GAN Organism Arena interprete les clusters comme organismes numeriques. En Mode Organisme ils obtiennent genomes, traits, influence locale et score evolutif, ce qui ressemble davantage a un petit ecosysteme.",
-    "",
-    "Modes importants",
-    "  Pure Conway: regles cellulaires classiques.",
-    "  Mode Organisme: regles type Life plus genomes, traits, biais, ascendance et scoring.",
-    "  Texture 2D: vue generale rapide.",
-    "  Terrain 3D: grille comme surface de hauteur.",
-    "  Objets 3D: organismes principaux comme vrais meshes x/y/z exportables en OBJ.",
-    "",
-    "Commandes du menu",
-    "  F10 ou M: ouvrir/fermer Parametres. La simulation se fige.",
-    "  F1: ouvrir cette aide.",
-    "  Esc: fermer Aide/Parametres; quitter seulement depuis la vue principale.",
-    "  Enter: appliquer ou basculer l'option selectionnee.",
-    "  Up/Down ou W/S: selectionner ou faire defiler l'aide.",
-    "  Left/Right ou A/D: changer la valeur.",
-    "",
-    "Options",
-    "  Langue: choisir la langue depuis language/*.json.",
-    "  Resolution: preset d'affichage; defaut 1920 x 1080.",
-    "  Plein ecran/fenetre: fenetre conseillee pour diagnostic.",
-    "  Preset de vue: couleurs pour age, energie, famille, traits, chaleur, etc.",
-    "  Mode rendu: 2D, terrain 3D ou objets 3D reels.",
-    "  Blend anti-flicker: transitions plus douces entre generations.",
-    "  Mode simulation: Pure Conway ou Mode Organisme.",
-    "  Profondeur memoire: quantite d'histoire gardee par organisme.",
-    "  Intervalle tracker: performance contre precision du tracking.",
-    "  Soundscape: melodies harmoniques pour organismes importants.",
-    "  Vue propre: cache les overlays.",
-    "  Export OBJ: ecrit les formes de vie vers exports/obj/.",
-    "",
-    "Vue principale",
-    "  Clic gauche: injecter un organisme au curseur.",
-    "  Glisser gauche: tourner la vue 3D autour du monde.",
-    "  Molette: zoom ou distance orbitale.",
-    "  T: 2D / terrain 3D / objets 3D.",
-    "  E: export OBJ.",
-    "  F12: screenshot.",
-    "",
-    "Fichiers",
-    "  settings/config.json sauvegarde les parametres.",
-    "  logs/ contient les logs runtime; logs/install/ les logs installer.",
-    "  language/ contient les fichiers de langue extensibles.",
-    "  LICENSE.txt contient la MIT License.",
-    "",
-    "Corps évolutifs avancés en mode objet",
-    "  En mode vrai objet 3D, les organismes complexes ne sont plus seulement des masses arrondies. Ils peuvent maintenant accumuler colonne, torse, tête, queue, paires de pattes, paires de bras, nageoires, éventails plumeux et des postures plus verticales.",
-    "  Les formes très avancées peuvent devenir vertébraloïdes, tétrapodes, bipèdes, aviformes ou sophontes/transcendantes. Cela reste une représentation abstraite de vie artificielle, pas un simulateur biologique exact, mais l’objectif est qu’elle continue à évoluer visiblement pendant de longues sessions.",
-    "",
-    "Émotion, désir et proto-parole",
-    "  Les organismes dérivent aussi des états émotionnels et motivationnels simples comme affamé, curieux, agressif, social ou satisfait. Les organismes très intelligents peuvent produire de courtes proto-phrases visibles dans le HUD et qui influencent leur identité sonore.",
-    "Notes de performance",
-    "  Le vrai mode objet 3D est plus lourd que la 2D ou le terrain 3D parce qu’il reconstruit de vrais meshes. Les options clés sont le nombre d’objets 3D, l’intervalle de mise à jour et la qualité du mesh.",
-    "  Le backend de rendu est choisi avant l’ouverture de la fenêtre Panda3D. Le changer dans Settings enregistre la valeur, mais un redémarrage est nécessaire. Auto/OpenGL privilégient le matériel; CPU/logiciel est surtout un fallback de diagnostic.",
-    "Lumière et rafraîchissement",
-    "  Direction de lumière contrôle la lumière principale. Soleil automatique bouge lentement. Régénérer rendu/shaders reconstruit éclairage et caches.",
-    "Pensées et TTS",
-    "  Les pensées peuvent être désactivées, texte seul, Windows TTS seul ou texte plus TTS. La parole est volontairement limitée pour ne pas parler à chaque image."
-  ]
+  "actions": {
+    "rebuild_visuals": "Reconstruire les corps / ressources shader",
+    "inject": "Injecter un nouvel organisme aléatoire",
+    "export_selected": "Exporter l'organisme sélectionné en OBJ",
+    "reset_world": "Réinitialiser le monde évolutif",
+    "close_settings": "Fermer les réglages",
+    "close_help": "Fermer l'aide"
+  },
+  "help": {
+    "content": "[font_size=26][b]Qu'est-ce que GAN Organism Arena ?[/b][/font_size]\n\nGAN Organism Arena est un aquarium de vie artificielle. Cette réécriture déplace la simulation elle-même d'une grille 2D vers un véritable monde tridimensionnel. Les organismes ont des positions X/Y/Z réelles, nagent dans toutes les directions, cherchent des ressources, évitent les menaces, se reproduisent avec mutation, développent des corps en 3D et accumulent des états cognitifs et communicatifs de plus en plus riches.\n\n[b]Principe[/b]\nLe projet original s'inspirait du Jeu de la vie de Conway, automate cellulaire où des règles locales simples produisent des motifs étonnamment complexes. Cette version conserve l'idée d'émergence mais ne force pas les règles de Conway en 3D. Chaque organisme est plutôt un programme de développement évolutif. Le génome module symétrie, allongement, membres, nageoires, armure, capteurs, développement neuronal, curiosité, coopération, agressivité, métabolisme et vocalisation.\n\n[b]Développement ouvert[/b]\nIl n'existe volontairement aucun stade final sémantique. Complexité et cognition peuvent continuer à augmenter. Seul le budget de cellules visibles est borné pour protéger les performances; proportions, longueurs des appendices, ramifications, capteurs, densité neurale et communication peuvent continuer à évoluer.\n\n[b]Développement corporel 3D[/b]\nLes corps sont formés de cellules biologiques low-poly instanciées par GPU dans l'espace 3D local. Les formes simples peuvent devenir axiales, acquérir support de type colonne, chaînes neurales, tête, membres pairs, mains/pieds, éventails de nageoires, plaques d'armure, structures plumeuses et longs appendices sensoriels.\n\n[b]Cognition et langage[/b]\nChaque organisme possède énergie, faim, peur, curiosité, tendance sociale, expérience et mémoire épisodique bornée. Le niveau de langage dépend du développement neuronal, des capteurs, de la vocalisation, de la lignée et de la complexité. Les communications évoluent des sons élémentaires vers syllabes, symboles, phrases et pensées plus composées. Windows TTS peut vocaliser la traduction de ce flux.\n\n[b]Contrôles[/b]\nSouris: regarder. W/S: avant/arrière. A/D: gauche/droite. Q/E: descendre/monter. Shift: accélérer. Molette: vitesse d'observation. Échap: libérer/capturer la souris. Clic gauche: sélectionner. Clic droit: suivre. Tab: organisme suivant.\n\nF10: réglages (simulation en pause). F1: aide (pause). Espace: pause manuelle. G: injecter. 1-4: vues Naturelle/Cellules/Neurale/Énergie. F8: export OBJ. F12: capture d'écran.\n\n[b]Réglages principaux[/b]\nBackend: Forward+ Vulkan, Mobile Vulkan ou Compatibility OpenGL; redémarrage requis. Tick 3D: fréquence des décisions, indépendante des FPS. Limite de cellules visibles: budget LOD, pas une limite évolutive. Intervalle de reconstruction: plus élevé = moins de CPU. Sortie pensée: aucune, texte, TTS Windows ou les deux. Mémoire épisodique: historique borné pour les longues sessions.\n\n[b]Architecture performances[/b]\nLe comportement évolue à basse fréquence configurable, le rendu reste libre. Les corps utilisent MultiMesh/GPU instancing et se déplacent comme un seul objet. La morphologie n'est reconstruite qu'en cas de changement visible ou après l'intervalle choisi.\n\n[b]Fichiers[/b]\nsettings/config.json - options persistantes. language/*.json - traductions éditables. logs/latest_runtime.log - diagnostic. exports/obj/ - meshes. screenshots/ - captures.\n\n[b]Licence[/b]\nMIT License. Voir LICENSE.txt."
+  }
 }

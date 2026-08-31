@@ -1,0 +1,33 @@
+; GAN Organism Arena 3D - Godot 4.7 project
+config_version=5
+
+[application]
+config/name="GAN Organism Arena"
+config/description="Volumetric artificial-life aquarium with open-ended body and cognitive evolution"
+config/version="1.0.0-alpha6"
+run/main_scene="res://scenes/Main.tscn"
+
+[autoload]
+SettingsStore="*res://game/settings_store.gd"
+L10n="*res://game/localization.gd"
+AppLog="*res://game/app_log.gd"
+
+[display]
+window/size/viewport_width=1920
+window/size/viewport_height=1080
+window/size/window_width_override=1280
+window/size/window_height_override=720
+window/stretch/mode="canvas_items"
+
+[rendering]
+renderer/rendering_method="forward_plus"
+renderer/rendering_method.mobile="mobile"
+textures/default_filters/use_nearest_mipmap_filter=false
+anti_aliasing/quality/msaa_3d=2
+lights_and_shadows/directional_shadow/size=2048
+
+[physics]
+common/physics_ticks_per_second=60
+
+[debug]
+settings/fps/force_fps=0

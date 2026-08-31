@@ -7,7 +7,7 @@ if not exist "%GODOT%" (
     pause
     exit /b 2
 )
-"%GODOT%" --headless --path "%CD%" --rendering-method gl_compatibility --scene res://scenes/SelfTest.tscn
+"%GODOT%" --headless --path "%CD%" --script res://game/parse_test.gd --rendering-method gl_compatibility
 set "ERR=%ERRORLEVEL%"
 if not "%ERR%"=="0" pause
 exit /b %ERR%
