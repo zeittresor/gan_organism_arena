@@ -1,14 +1,16 @@
 # GAN Organism Arena
 
-**Version 1.0.0-alpha9 — 2026-09-01**
+**Version 1.0.0-alpha12 — 2026-09-01**
 
 ## Short
 
 GAN Organism Arena is now a real **3D artificial-life aquarium** instead of a 2D cellular simulation with a 3D visualization layer. Organisms exist and move in X/Y/Z, consume resources in a volume, reproduce through mutation and two-parent genetic crossover, build three-dimensional bodies, accumulate bounded experience, and develop increasingly expressive communication.
 
-<img width="2560" height="1080" alt="2026-09-01 19_19_17-Greenshot" src="https://github.com/user-attachments/assets/2fe20b1b-1969-4685-80be-c70fa8cb9c0c" />
+<img width="1920" height="1080" alt="arena_00001371" src="https://github.com/user-attachments/assets/48248b77-119c-4d2a-90f5-e869183671b2" />
 
 <img width="2560" height="1080" alt="2026-09-01 19_21_26-Greenshot" src="https://github.com/user-attachments/assets/4b1d0a0c-0f6c-4387-90a6-503ff94bfade" />
+
+<img width="1920" height="1080" alt="arena_00002182" src="https://github.com/user-attachments/assets/833178b5-0b22-489d-a5e1-d64a94e703d6" />
 
 **Engine target:** Godot 4.7.2 stable  
 **License:** MIT
