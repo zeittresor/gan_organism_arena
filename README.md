@@ -8,7 +8,7 @@ GAN Organism Arena is now a real **3D artificial-life aquarium** instead of a 2D
 
 <img width="1920" height="1080" alt="arena_00001371" src="https://github.com/user-attachments/assets/48248b77-119c-4d2a-90f5-e869183671b2" />
 
-<img width="2560" height="1080" alt="2026-09-01 19_21_26-Greenshot" src="https://github.com/user-attachments/assets/4b1d0a0c-0f6c-4387-90a6-503ff94bfade" />
+<img width="1920" height="1080" alt="arena_00000237" src="https://github.com/user-attachments/assets/b963c17f-ac43-42ea-939d-cefe92829c59" />
 
 <img width="1920" height="1080" alt="arena_00002182" src="https://github.com/user-attachments/assets/833178b5-0b22-489d-a5e1-d64a94e703d6" />
 
