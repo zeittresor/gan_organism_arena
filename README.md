@@ -1,17 +1,19 @@
 # GAN Organism Arena
 
-**Version 1.0.0-alpha6 — 2026-09-01**
+**Version 1.0.0-alpha9 — 2026-09-01**
 
-## Short
+### Alpha8 habitats, ecology and sound
 
-GAN Organism Arena is now a real **3D artificial-life aquarium** instead of a 2D cellular simulation with a 3D visualization layer. Organisms exist and move in X/Y/Z, consume resources in a volume, reproduce with mutated developmental genomes, build three-dimensional bodies, accumulate bounded experience, and develop increasingly expressive communication.
+Alpha8 extends the working 3D evolution loop beyond a permanently aquatic box. Keys **5-9** switch between increasingly mixed habitats, from open water to water/land/sky. Habitat adaptation is heritable, so organisms are selected by aquatic, terrestrial and flight competence rather than being magically converted. Social evolution now includes courtship, group cohesion, simple hierarchy and predator/prey pressure. Procedural 3D organism calls and changing habitat ambience are independent from Windows TTS. At the population cap, weak organisms may be displaced by viable offspring so generation turnover can continue.
 
-<img width="2560" height="1080" alt="2026-09-01 00_38_57-Greenshot" src="https://github.com/user-attachments/assets/e0c5829a-2941-443b-9681-126c9a635262" />
+**New controls:** 5-9 habitat stages; NumPad + / - expands or shrinks the XYZ world.
 
-<img width="2560" height="1080" alt="2026-09-01 00_46_23-Greenshot" src="https://github.com/user-attachments/assets/0872bcca-7abd-462a-ad60-a982d7af23d8" />
-  
 **Engine target:** Godot 4.7.2 stable  
 **License:** MIT
+
+## TL;DR
+
+GAN Organism Arena is now a real **3D artificial-life aquarium** instead of a 2D cellular simulation with a 3D visualization layer. Organisms exist and move in X/Y/Z, consume resources in a volume, reproduce through mutation and two-parent genetic crossover, build three-dimensional bodies, accumulate bounded experience, and develop increasingly expressive communication.
 
 On Windows, run:
 
@@ -19,7 +21,7 @@ On Windows, run:
 install_windows.bat
 ```
 
-The installer downloads a **portable local copy of Godot 4.7.2** into `runtime/godot/`, parses every core GDScript deterministically, runs an advanced morphology/genome/language/appendage self-test plus a short runtime smoke test, and starts it after a 10-second cancelable delay. Nothing is installed system-wide. After the first installation, the project can run offline. The Godot binary itself is not duplicated inside this source ZIP; the installer fetches the official Windows x64 portable archive on the first run and verifies its SHA-256 before extraction.
+The installer downloads a **portable local copy of Godot 4.7.2** into `runtime/godot/`, parses every core GDScript deterministically, runs an advanced morphology/genome/language/appendage self-test plus a short runtime smoke test, and starts it after a 10-second cancelable delay. Nothing is installed system-wide. After the first installation, the project can run offline. Alpha9 uses a clean project-context smoke test with orderly audio/TTS teardown, so Godot shutdown diagnostics are handled explicitly instead of being mistaken for a failed native process. The Godot binary itself is not duplicated inside this source ZIP; the installer fetches the official Windows x64 portable archive on the first run and verifies its SHA-256 before extraction.
 
 ## Controls
 
@@ -47,13 +49,17 @@ The old Panda3D/Python implementation is not merely being rendered differently. 
 
 - true 3D organism positions and movement;
 - developmental genomes instead of a fixed body-stage ladder;
+- seven distinct starting body topologies with continuously mutable proportions;
+- two-parent crossover, ordinary mutation and rare macro-mutation into new body plans;
+- developmental viability selection so incoherent genomes can fail instead of reproducing;
+- heritable longevity/senescence so saturated populations continue to turn over across generations;
 - GPU-instanced 3D body cells using Godot `MultiMesh`;
 - bounded event memory instead of retaining every evolution step;
 - separate simulation tick rate and rendering frame rate;
 - real three-dimensional paired appendages, head/sensor growth, axial support, neural chains, fins, armor and branching structures;
 - open-ended numerical complexity/cognition with only the *visible LOD budget* bounded;
 - progressive communication from elemental calls to symbolic and compositional translated thoughts;
-- free-swimming observer camera;
+- free-swimming observer camera plus anatomical tail/rear follow mode;
 - scientific Cell, Neural and Energy views;
 - OBJ export for the selected current organism.
 

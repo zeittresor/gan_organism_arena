@@ -27,6 +27,14 @@ func initialize(count: int, extent: float, seed_value: int) -> void:
     multimesh_instance.multimesh = mm
     set_count(count)
 
+func set_extent(extent: float) -> void:
+    half_extent = maxf(8.0, extent)
+    for i in range(points.size()):
+        points[i].x = clampf(points[i].x, -half_extent, half_extent)
+        points[i].y = clampf(points[i].y, -half_extent * 0.58, half_extent * 0.58)
+        points[i].z = clampf(points[i].z, -half_extent, half_extent)
+    _upload()
+
 func set_count(count: int) -> void:
     count = clampi(count, 16, 2000)
     while points.size() < count:

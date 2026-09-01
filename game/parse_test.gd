@@ -11,6 +11,8 @@ const CORE_SCRIPTS = [
     "res://game/tts_windows.gd",
     "res://game/genome.gd",
     "res://game/nutrient_field.gd",
+    "res://game/habitat_visual.gd",
+    "res://game/audio_ecosystem.gd",
     "res://game/free_swim_camera.gd",
     "res://game/organism_visual.gd",
     "res://game/organism.gd",
@@ -18,7 +20,8 @@ const CORE_SCRIPTS = [
     "res://game/sim_world.gd",
     "res://game/arena_ui.gd",
     "res://game/main.gd",
-    "res://game/self_test.gd"
+    "res://game/self_test.gd",
+    "res://game/smoke_test.gd"
 ]
 
 func _initialize() -> void:

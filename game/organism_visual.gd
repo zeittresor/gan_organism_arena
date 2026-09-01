@@ -8,6 +8,9 @@ var body_cells: Array = []
 var visual_cap = 180
 var view_mode = "natural"
 var _last_revision = -99999
+var rear_anchor_local = Vector3(0.0, 0.0, 2.0)
+var focus_anchor_local = Vector3(0.0, 0.0, -1.0)
+var body_size_hint = 3.0
 
 func _ready() -> void:
     multimesh_instance = MultiMeshInstance3D.new()
@@ -73,98 +76,308 @@ func rebuild(force = false) -> void:
 
 func _develop_body(complexity: float) -> void:
     var g = owner_life.genome
-    var growth = log(1.0 + complexity)
-    var body_length: float = 2.4 + growth * 1.45 + float(g.elongation) * 2.8
-    var body_radius: float = 0.48 + growth * 0.10 + (1.0 - float(g.elongation)) * 0.28
-    var spine_count = clampi(4 + int(growth * 2.2), 4, 18)
-    var spine_points: Array[Vector3] = []
+    var growth: float = log(1.0 + complexity)
+    var plan: int = int(g.body_plan)
+    match plan:
+        1:
+            _develop_fusiform(g, growth)
+        2:
+            _develop_radial(g, growth)
+        3:
+            _develop_ray(g, growth)
+        4:
+            _develop_branching(g, growth)
+        5:
+            _develop_crustacean(g, growth)
+        6:
+            _develop_cephalopod(g, growth)
+        _:
+            _develop_serpentine(g, growth)
+    _add_adaptive_structures(g, growth)
 
-    for i in range(spine_count):
-        var t = float(i) / float(maxi(1, spine_count - 1))
-        var z = lerpf(-body_length * 0.48, body_length * 0.52, t)
-        var arch = sin(t * PI) * minf(1.1, growth * 0.12)
-        var sway: float = sin(t * TAU + float(int(g.seed) % 31)) * 0.08 * float(g.branch_drive)
-        var p = Vector3(sway, arch, z)
-        spine_points.append(p)
-        var torso_scale = 0.58 + sin(t * PI) * 0.78
-        _add_cell(p, Tissue.BODY, body_radius * torso_scale)
-        if complexity > 8.0:
-            _add_cell(p + Vector3(0.0, 0.02, 0.0), Tissue.NEURAL, body_radius * 0.23)
-        if complexity > 12.0 and i % 2 == 0:
-            _add_cell(p + Vector3(0.0, -body_radius * 0.22, 0.0), Tissue.SKELETON, body_radius * 0.18)
+func _develop_serpentine(g, growth: float) -> void:
+    var body_length: float = 2.8 + growth * 1.35 + float(g.elongation) * 4.0
+    var radius: float = 0.34 + growth * 0.075 + float(g.body_width) * 0.38
+    var count: int = clampi(6 + int(growth * 2.1), 6, 20)
+    var spine: Array[Vector3] = []
+    for i in range(count):
+        var t: float = float(i) / float(maxi(1, count - 1))
+        var z: float = lerpf(-body_length * 0.48, body_length * 0.52, t)
+        var wave: float = sin(t * TAU * (1.0 + float(g.branch_drive)) + float(int(g.seed) % 17)) * radius * 0.35
+        var p = Vector3(wave * (1.0 - float(g.symmetry) * 0.55), sin(t * PI) * radius * 0.45, z)
+        spine.append(p)
+        var taper: float = 0.56 + sin(t * PI) * 0.72
+        _add_cell(p, Tissue.BODY, radius * taper, Vector3(1.05, 0.82 + float(g.flattening) * 0.25, 1.28))
+        _add_internal_tissue(p, radius, i, growth)
+    var head: Vector3 = spine[0] + Vector3(0.0, radius * 0.22, -radius * (0.9 + float(g.head_drive)))
+    _make_head(g, head, radius * (1.05 + float(g.head_drive) * 0.55), growth)
+    var tail_start: Vector3 = spine[spine.size() - 1]
+    var tail_end: Vector3 = tail_start + Vector3(0.0, -radius * 0.25, body_length * (0.18 + float(g.tail_drive) * 0.34))
+    _add_chain(tail_start, tail_end, clampi(4 + int(growth), 4, 12), Tissue.BODY, radius * 0.43)
+    if growth > 1.3 and float(g.limb_drive) > 0.15:
+        _paired_appendages(g, spine, radius, growth, 1 + int(float(g.limb_drive) * 2.5))
+    rear_anchor_local = tail_end
+    focus_anchor_local = head
+    body_size_hint = maxf(body_length * 0.55, 2.5)
 
-    # Head and sensor concentration grow gradually, rather than appearing as a fixed stage.
-    var front: Vector3 = spine_points[0]
-    var head_scale: float = body_radius * (1.05 + float(g.sensory_drive) * 0.55 + minf(0.75, growth * 0.08))
-    var head = front + Vector3(0.0, 0.14 + head_scale * 0.12, -head_scale * 0.78)
-    _add_cell(head, Tissue.BODY, head_scale)
-    if complexity > 3.0:
-        _add_cell(head + Vector3(-head_scale * 0.48, head_scale * 0.18, -head_scale * 0.52), Tissue.SENSOR, head_scale * 0.18)
-        _add_cell(head + Vector3(head_scale * 0.48, head_scale * 0.18, -head_scale * 0.52), Tissue.SENSOR, head_scale * 0.18)
-    if complexity > 20.0:
-        _add_chain(head + Vector3(-head_scale * 0.28, head_scale * 0.55, -head_scale * 0.25), head + Vector3(-head_scale * 0.45, head_scale * 1.45, -head_scale * 0.85), 5, Tissue.SENSOR, head_scale * 0.10)
-        _add_chain(head + Vector3(head_scale * 0.28, head_scale * 0.55, -head_scale * 0.25), head + Vector3(head_scale * 0.45, head_scale * 1.45, -head_scale * 0.85), 5, Tissue.SENSOR, head_scale * 0.10)
+func _develop_fusiform(g, growth: float) -> void:
+    var length: float = 2.7 + growth * 0.72 + float(g.elongation) * 2.0
+    var radius: float = 0.55 + float(g.body_width) * 0.72 + growth * 0.055
+    var count: int = clampi(5 + int(growth * 1.15), 5, 12)
+    var spine: Array[Vector3] = []
+    for i in range(count):
+        var t: float = float(i) / float(maxi(1, count - 1))
+        var z: float = lerpf(-length * 0.42, length * 0.46, t)
+        var p = Vector3(0.0, sin(t * PI) * radius * 0.12, z)
+        spine.append(p)
+        var torso: float = 0.72 + sin(t * PI) * 0.62
+        _add_cell(p, Tissue.BODY, radius * torso, Vector3(1.30 + float(g.body_width) * 0.70, 0.92 - float(g.flattening) * 0.22, 0.82))
+        if i > 0 and i < count - 1 and i % 2 == 0:
+            _add_cell(p + Vector3(radius * 0.62, 0.0, 0.0), Tissue.SKELETON, radius * 0.18, Vector3(1.4, 0.6, 0.7))
+            _add_cell(p + Vector3(-radius * 0.62, 0.0, 0.0), Tissue.SKELETON, radius * 0.18, Vector3(1.4, 0.6, 0.7))
+        _add_internal_tissue(p, radius, i, growth)
+    var head: Vector3 = spine[0] + Vector3(0.0, radius * 0.10, -radius * 1.05)
+    _make_head(g, head, radius * (0.92 + float(g.head_drive) * 0.62), growth)
+    _paired_appendages(g, spine, radius, growth, clampi(2 + int(float(g.limb_drive) * 1.6), 2, 4))
+    var tail_start: Vector3 = spine[spine.size() - 1]
+    var tail_len: float = length * (0.10 + float(g.tail_drive) * 0.30)
+    var tail_end: Vector3 = tail_start + Vector3(0.0, 0.0, tail_len)
+    if tail_len > 0.25:
+        _add_chain(tail_start, tail_end, clampi(3 + int(growth * 0.8), 3, 9), Tissue.BODY, radius * 0.31)
+    rear_anchor_local = tail_end
+    focus_anchor_local = head
+    body_size_hint = maxf(length * 0.50 + radius, 2.5)
 
-    # Tail keeps lengthening logarithmically; it never hits a conceptual evolution ceiling.
-    var tail_start: Vector3 = spine_points[spine_points.size() - 1]
-    var tail_length: float = (0.8 + float(g.elongation) * 2.0) * (0.65 + growth * 0.18)
-    var tail_end = tail_start + Vector3(0.0, -0.18 * tail_length, tail_length)
-    _add_chain(tail_start, tail_end, clampi(4 + int(growth), 4, 12), Tissue.BODY, body_radius * 0.44)
+func _develop_radial(g, growth: float) -> void:
+    var core: float = 0.82 + float(g.body_width) * 0.85 + growth * 0.07
+    _add_cell(Vector3.ZERO, Tissue.BODY, core, Vector3(1.2, 0.72 + (1.0 - float(g.flattening)) * 0.55, 1.2))
+    _add_cell(Vector3(0.0, core * 0.22, -core * 0.35), Tissue.NEURAL, core * 0.25)
+    var arms: int = clampi(4 + int(float(g.branch_drive) * 5.0 + growth * 0.35), 4, 10)
+    var arm_len: float = (1.3 + float(g.limb_length) * 3.5) * (0.82 + growth * 0.08)
+    for i in range(arms):
+        var angle: float = TAU * float(i) / float(arms)
+        var direction = Vector3(cos(angle), sin(angle) * (0.20 + float(g.flattening) * 0.45), sin(angle))
+        direction = direction.normalized()
+        var root: Vector3 = direction * core * 0.55
+        var bend = Vector3(0.0, cos(angle * 2.0 + float(g.seed % 19)) * core * 0.45, 0.0)
+        var tip: Vector3 = direction * arm_len + bend
+        _add_chain(root, tip, clampi(4 + int(growth), 4, 11), Tissue.FIN if float(g.fin_drive) > 0.55 else Tissue.BODY, core * (0.14 + float(g.limb_thickness) * 0.12))
+        if growth > 2.0 and i % 2 == 0:
+            _add_cell(tip, Tissue.SENSOR, core * 0.12)
+    # A small directional sensory lobe gives movement a front without imposing a spine.
+    var head = Vector3(0.0, core * 0.10, -core * 1.10)
+    _make_head(g, head, core * (0.42 + float(g.head_drive) * 0.32), growth)
+    rear_anchor_local = Vector3(0.0, 0.0, core * 1.3)
+    focus_anchor_local = head
+    body_size_hint = core + arm_len * 0.55
 
-    # Paired appendages appear as true 3D chains, not radial spikes around a sphere.
-    if complexity > 5.0:
-        var max_pairs = 4 if visual_cap >= 240 else 3
-        var pair_count: int = clampi(1 + int(float(g.limb_drive) * (1.0 + growth * 0.52)), 1, max_pairs)
-        for pair in range(pair_count):
-            var frac = 0.26 + 0.52 * (float(pair) / float(maxi(1, pair_count - 1)))
-            var idx = clampi(int(round(frac * float(spine_points.size() - 1))), 1, spine_points.size() - 2)
-            var root: Vector3 = spine_points[idx]
-            var limb_length: float = (0.95 + float(g.limb_drive) * 2.25) * (0.72 + growth * 0.12)
-            var down: float = 0.35 + (1.0 - float(g.buoyancy)) * 0.75
-            for side in [-1.0, 1.0]:
-                var elbow = root + Vector3(side * limb_length * 0.58, -down * limb_length * 0.46, -0.12 * limb_length)
-                var tip = root + Vector3(side * limb_length, -down * limb_length, 0.12 * limb_length)
-                var tissue: int = Tissue.FIN if float(g.fin_drive) > float(g.limb_drive) * 1.08 else Tissue.BODY
-                _add_chain(root, elbow, 3, tissue, body_radius * 0.27)
-                _add_chain(elbow, tip, 3, tissue, body_radius * 0.20)
-                if complexity > 16.0 and tissue != Tissue.FIN:
-                    # hand / foot rays
-                    var finger_count: int = clampi(2 + int(float(g.branch_drive) * 3.0 + growth * 0.18), 2, 4)
-                    for finger in range(finger_count):
-                        var a = (float(finger) - float(finger_count - 1) * 0.5) * 0.18
-                        var finger_tip = tip + Vector3(side * (0.32 + growth * 0.025), -0.12, a * limb_length)
-                        _add_chain(tip, finger_tip, 2, Tissue.BODY, body_radius * 0.075)
-                elif tissue == Tissue.FIN:
-                    # fin fan extends in the third dimension and becomes larger with complexity
-                    var fan = 3 + int(minf(3.0, growth * 0.55))
-                    for f in range(fan):
-                        var angle = lerpf(-0.65, 0.65, float(f) / float(maxi(1, fan - 1)))
-                        var fin_tip = tip + Vector3(side * (0.45 + growth * 0.06), sin(angle) * limb_length * 0.55, cos(angle) * limb_length * 0.50)
-                        _add_chain(tip, fin_tip, 2, Tissue.FIN, body_radius * 0.065)
+func _develop_ray(g, growth: float) -> void:
+    var length: float = 2.4 + growth * 0.58 + float(g.elongation) * 1.6
+    var width: float = 2.1 + float(g.body_width) * 3.7 + growth * 0.28
+    var thickness: float = 0.34 + (1.0 - float(g.flattening)) * 0.36
+    var rows: int = clampi(5 + int(growth * 0.7), 5, 10)
+    for row in range(rows):
+        var t: float = float(row) / float(maxi(1, rows - 1))
+        var z: float = lerpf(-length * 0.42, length * 0.34, t)
+        var span: float = sin(t * PI) * width
+        _add_cell(Vector3(0.0, 0.0, z), Tissue.BODY, thickness * 1.45, Vector3(1.9, 0.48, 1.1))
+        if growth > 1.5 and row % 2 == 0:
+            _add_cell(Vector3(0.0, thickness * 0.08, z), Tissue.NEURAL, thickness * 0.26, Vector3(1.5, 0.45, 1.0))
+        var wing_steps: int = clampi(3 + int(span * 0.55), 3, 8)
+        for side_value in [-1.0, 1.0]:
+            for j in range(1, wing_steps + 1):
+                var f: float = float(j) / float(wing_steps)
+                var p = Vector3(side_value * span * f, -absf(side_value * span * f) * 0.035, z + f * 0.20)
+                _add_cell(p, Tissue.FIN, thickness * lerpf(0.80, 0.26, f), Vector3(1.35, 0.34, 1.0))
+    var head = Vector3(0.0, thickness * 0.35, -length * 0.72)
+    _make_head(g, head, thickness * (1.35 + float(g.head_drive) * 0.62), growth)
+    var tail_start = Vector3(0.0, 0.0, length * 0.34)
+    var tail_end = Vector3(0.0, 0.0, length * (0.58 + float(g.tail_drive) * 0.72))
+    _add_chain(tail_start, tail_end, clampi(5 + int(growth), 5, 13), Tissue.BODY, thickness * 0.55)
+    rear_anchor_local = tail_end
+    focus_anchor_local = head
+    body_size_hint = maxf(width * 0.62, length * 0.62)
 
-    # Dorsal armor / feather-like structures are different evolutionary options.
-    if complexity > 10.0 and float(g.armor_drive) > 0.48:
-        for i in range(1, spine_points.size() - 1, 2):
-            var p: Vector3 = spine_points[i]
-            var h: float = 0.32 + growth * 0.07 + float(g.armor_drive) * 0.48
-            _add_chain(p, p + Vector3(0.0, h, 0.0), 3, Tissue.ARMOR, body_radius * 0.10)
-    elif complexity > 18.0 and float(g.fin_drive) > 0.58:
-        for i in range(1, spine_points.size() - 1, 2):
-            var p: Vector3 = spine_points[i]
-            var feather = 0.45 + growth * 0.08
-            _add_chain(p, p + Vector3(0.0, feather, 0.18), 3, Tissue.FIN, body_radius * 0.08)
+func _develop_branching(g, growth: float) -> void:
+    var core: float = 0.64 + float(g.body_width) * 0.70 + growth * 0.055
+    var trunk_len: float = 1.8 + float(g.elongation) * 2.2 + growth * 0.38
+    var trunk: Array[Vector3] = []
+    var segments: int = clampi(4 + int(growth), 4, 11)
+    for i in range(segments):
+        var t: float = float(i) / float(maxi(1, segments - 1))
+        var p = Vector3(sin(t * 3.0 + float(g.seed % 7)) * core * 0.25, cos(t * 2.0) * core * 0.18, lerpf(-trunk_len * 0.42, trunk_len * 0.42, t))
+        trunk.append(p)
+        _add_cell(p, Tissue.BODY, core * lerpf(0.95, 0.58, absf(t - 0.5) * 1.4), Vector3(1.15, 1.0, 0.95))
+        _add_internal_tissue(p, core, i, growth)
+    var branch_count: int = clampi(4 + int(float(g.branch_drive) * 7.0 + growth * 0.5), 4, 12)
+    for b in range(branch_count):
+        var frac: float = 0.12 + 0.76 * (float(b) / float(maxi(1, branch_count - 1)))
+        var idx: int = clampi(int(round(frac * float(trunk.size() - 1))), 0, trunk.size() - 1)
+        var root: Vector3 = trunk[idx]
+        var angle: float = float(b) * 2.399963 + float(g.seed % 23) * 0.08
+        var radial = Vector3(cos(angle), sin(angle * 0.73), sin(angle)).normalized()
+        var branch_len: float = (1.0 + float(g.limb_length) * 2.7) * (0.75 + growth * 0.08)
+        var tip: Vector3 = root + radial * branch_len
+        _add_chain(root, tip, clampi(3 + int(growth * 0.65), 3, 8), Tissue.BODY, core * (0.13 + float(g.limb_thickness) * 0.13))
+        if growth > 2.2:
+            var fork_axis = radial.cross(Vector3.UP)
+            if fork_axis.length_squared() < 0.01:
+                fork_axis = Vector3.RIGHT
+            fork_axis = fork_axis.normalized()
+            _add_chain(tip, tip + radial * branch_len * 0.45 + fork_axis * branch_len * 0.38, 3, Tissue.FIN if float(g.fin_drive) > 0.60 else Tissue.BODY, core * 0.10)
+            _add_chain(tip, tip + radial * branch_len * 0.45 - fork_axis * branch_len * 0.38, 3, Tissue.SENSOR if float(g.sensory_drive) > 0.62 else Tissue.BODY, core * 0.10)
+    var head = trunk[0] + Vector3(0.0, core * 0.20, -core * 0.70)
+    _make_head(g, head, core * (0.62 + float(g.head_drive) * 0.52), growth)
+    rear_anchor_local = trunk[trunk.size() - 1] + Vector3(0.0, 0.0, core)
+    focus_anchor_local = head
+    body_size_hint = maxf(trunk_len * 0.55, 2.5 + float(g.limb_length) * 1.5)
 
-func _add_cell(pos: Vector3, tissue: int, radius: float) -> void:
+func _develop_crustacean(g, growth: float) -> void:
+    var length: float = 2.4 + growth * 0.60 + float(g.elongation) * 1.4
+    var width: float = 0.72 + float(g.body_width) * 0.95
+    var segments: int = clampi(5 + int(growth * 1.15), 5, 13)
+    var spine: Array[Vector3] = []
+    for i in range(segments):
+        var t: float = float(i) / float(maxi(1, segments - 1))
+        var z: float = lerpf(-length * 0.42, length * 0.46, t)
+        var p = Vector3(0.0, 0.0, z)
+        spine.append(p)
+        var segment_scale: float = 0.72 + sin(t * PI) * 0.45
+        _add_cell(p, Tissue.ARMOR if i % 2 == 0 else Tissue.BODY, width * segment_scale, Vector3(1.50, 0.68, 0.72))
+        _add_cell(p + Vector3(0.0, -width * 0.18, 0.0), Tissue.SKELETON, width * 0.16, Vector3(1.25, 0.55, 0.65))
+        if growth > 1.6:
+            _add_cell(p + Vector3(0.0, width * 0.08, 0.0), Tissue.NEURAL, width * 0.15)
+    var leg_pairs: int = clampi(3 + int(float(g.limb_drive) * 4.0 + growth * 0.35), 3, 7)
+    for pair in range(leg_pairs):
+        var frac: float = 0.18 + 0.64 * float(pair) / float(maxi(1, leg_pairs - 1))
+        var idx: int = clampi(int(round(frac * float(spine.size() - 1))), 1, spine.size() - 2)
+        var root: Vector3 = spine[idx]
+        var leg_len: float = (0.75 + float(g.limb_length) * 1.75) * (0.8 + growth * 0.05)
+        for side_value in [-1.0, 1.0]:
+            var knee = root + Vector3(side_value * leg_len * 0.58, -leg_len * 0.42, 0.0)
+            var tip = root + Vector3(side_value * leg_len, -leg_len * 0.80, -leg_len * 0.12)
+            _add_chain(root, knee, 2, Tissue.BODY, width * (0.11 + float(g.limb_thickness) * 0.10))
+            _add_chain(knee, tip, 2, Tissue.BODY, width * 0.10)
+    var head = spine[0] + Vector3(0.0, width * 0.08, -width * 0.92)
+    _make_head(g, head, width * (0.82 + float(g.head_drive) * 0.45), growth)
+    var tail_start = spine[spine.size() - 1]
+    var tail_end = tail_start + Vector3(0.0, 0.0, length * (0.18 + float(g.tail_drive) * 0.22))
+    _add_chain(tail_start, tail_end, 4, Tissue.ARMOR, width * 0.28)
+    rear_anchor_local = tail_end
+    focus_anchor_local = head
+    body_size_hint = maxf(length * 0.55, width * 2.0)
+
+func _develop_cephalopod(g, growth: float) -> void:
+    var head_radius: float = 0.90 + float(g.head_drive) * 1.15 + growth * 0.075
+    var mantle_center = Vector3(0.0, 0.0, 0.45)
+    _add_cell(mantle_center, Tissue.BODY, head_radius, Vector3(1.10 + float(g.body_width) * 0.55, 1.05, 1.25))
+    _add_cell(mantle_center + Vector3(0.0, head_radius * 0.10, -head_radius * 0.28), Tissue.NEURAL, head_radius * 0.32)
+    var face = Vector3(0.0, 0.0, -head_radius * 0.78)
+    _add_cell(face + Vector3(-head_radius * 0.42, head_radius * 0.12, 0.0), Tissue.SENSOR, head_radius * 0.16)
+    _add_cell(face + Vector3(head_radius * 0.42, head_radius * 0.12, 0.0), Tissue.SENSOR, head_radius * 0.16)
+    var tentacles: int = clampi(5 + int(float(g.branch_drive) * 5.0 + growth * 0.35), 5, 10)
+    var tentacle_len: float = (1.4 + float(g.limb_length) * 3.8) * (0.76 + growth * 0.075)
+    for i in range(tentacles):
+        var angle: float = TAU * float(i) / float(tentacles)
+        var root = Vector3(cos(angle) * head_radius * 0.45, sin(angle) * head_radius * 0.30, -head_radius * 0.42)
+        var side = Vector3(cos(angle), sin(angle) * 0.65, -0.75).normalized()
+        var curl = Vector3(sin(angle * 2.0), cos(angle * 1.5), 0.0) * tentacle_len * 0.18
+        var tip = root + side * tentacle_len + curl
+        _add_chain(root, tip, clampi(5 + int(growth), 5, 13), Tissue.BODY, head_radius * (0.10 + float(g.limb_thickness) * 0.08))
+        if growth > 2.4 and i % 2 == 0:
+            _add_cell(tip, Tissue.SENSOR, head_radius * 0.08)
+    rear_anchor_local = mantle_center + Vector3(0.0, 0.0, head_radius * 1.25)
+    focus_anchor_local = face
+    body_size_hint = maxf(head_radius * 1.7, tentacle_len * 0.45)
+
+
+func _add_adaptive_structures(g, growth: float) -> void:
+    var center: Vector3 = focus_anchor_local.lerp(rear_anchor_local, 0.48)
+    var size: float = maxf(0.45, body_size_hint * 0.22)
+    # Wings are broad, sparse appendages rather than another worm-like chain.
+    if float(g.flight_drive) > 0.42 and growth > 1.0:
+        var span: float = size * (1.8 + float(g.flight_drive) * 3.6)
+        for side_value in [-1.0, 1.0]:
+            var root = center + Vector3(side_value * size * 0.35, size * 0.12, 0.0)
+            var tip = center + Vector3(side_value * span, size * 0.42, size * 0.22)
+            _add_chain(root, tip, 5, Tissue.FIN, size * 0.16)
+            for ray in range(3):
+                var rt = tip + Vector3(0.0, -size * (0.25 + ray * 0.18), size * (ray - 1) * 0.30)
+                _add_chain(root, rt, 3, Tissue.FIN, size * 0.08)
+    # Terrestrial adaptation creates load-bearing paired legs below the body.
+    if float(g.terrestrial_drive) > 0.38 and growth > 0.8:
+        var leg_len: float = size * (1.2 + float(g.limb_length) * 2.4)
+        for zoff in [-size * 0.75, size * 0.55]:
+            for side_value in [-1.0, 1.0]:
+                var hip = center + Vector3(side_value * size * 0.48, -size * 0.15, zoff)
+                var foot = hip + Vector3(side_value * size * 0.28, -leg_len, size * 0.12)
+                _add_chain(hip, foot, 4, Tissue.SKELETON if float(g.support_drive) > 0.55 else Tissue.BODY, size * 0.12)
+    # Aquatic specialists can evolve a caudal fan even when their base topology is radial/branching.
+    if float(g.aquatic_drive) > 0.62 and float(g.fin_drive) > 0.42:
+        var rear = rear_anchor_local
+        var fan: float = size * (0.8 + float(g.fin_drive) * 1.8)
+        _add_chain(rear, rear + Vector3(fan, fan * 0.65, fan * 0.18), 3, Tissue.FIN, size * 0.10)
+        _add_chain(rear, rear + Vector3(-fan, fan * 0.65, fan * 0.18), 3, Tissue.FIN, size * 0.10)
+
+func _paired_appendages(g, spine: Array[Vector3], radius: float, growth: float, requested_pairs: int) -> void:
+    if spine.size() < 3:
+        return
+    var max_pairs: int = 5 if visual_cap >= 240 else 4
+    var pair_count: int = clampi(requested_pairs, 1, max_pairs)
+    var limb_length: float = (0.65 + float(g.limb_length) * 3.25) * (0.75 + growth * 0.10)
+    var limb_radius: float = radius * (0.10 + float(g.limb_thickness) * 0.22)
+    for pair in range(pair_count):
+        var spread: float = float(pair) / float(maxi(1, pair_count - 1))
+        var center_frac: float = lerpf(0.20, 0.78, clampf(float(g.limb_position) * 0.45 + spread * 0.55, 0.0, 1.0))
+        var idx: int = clampi(int(round(center_frac * float(spine.size() - 1))), 1, spine.size() - 2)
+        var root: Vector3 = spine[idx]
+        var down: float = lerpf(0.22, 0.82, 1.0 - float(g.buoyancy))
+        for side_value in [-1.0, 1.0]:
+            var elbow = root + Vector3(side_value * limb_length * 0.58, -down * limb_length * 0.48, -limb_length * 0.08)
+            var tip = root + Vector3(side_value * limb_length, -down * limb_length, limb_length * 0.10)
+            var tissue: int = Tissue.FIN if float(g.fin_drive) > 0.58 else Tissue.BODY
+            _add_chain(root, elbow, 3, tissue, limb_radius)
+            _add_chain(elbow, tip, 3, tissue, limb_radius * 0.76)
+            if growth > 2.2 and tissue == Tissue.BODY:
+                var digits: int = clampi(2 + int(float(g.branch_drive) * 3.0), 2, 5)
+                for digit in range(digits):
+                    var fan_offset: float = (float(digit) - float(digits - 1) * 0.5) * limb_length * 0.11
+                    var digit_tip = tip + Vector3(side_value * limb_length * 0.22, -limb_length * 0.10, fan_offset)
+                    _add_chain(tip, digit_tip, 2, Tissue.BODY, limb_radius * 0.35)
+            elif tissue == Tissue.FIN:
+                var rays: int = clampi(3 + int(float(g.branch_drive) * 3.0), 3, 6)
+                for ray in range(rays):
+                    var a: float = lerpf(-0.72, 0.72, float(ray) / float(maxi(1, rays - 1)))
+                    var fin_tip = tip + Vector3(side_value * limb_length * 0.28, sin(a) * limb_length * 0.52, cos(a) * limb_length * 0.42)
+                    _add_chain(tip, fin_tip, 2, Tissue.FIN, limb_radius * 0.30)
+
+func _make_head(g, head: Vector3, radius: float, growth: float) -> void:
+    _add_cell(head, Tissue.BODY, radius, Vector3(1.08 + float(g.body_width) * 0.28, 0.92, 1.05))
+    if growth > 0.8:
+        _add_cell(head + Vector3(-radius * 0.44, radius * 0.18, -radius * 0.52), Tissue.SENSOR, radius * 0.16)
+        _add_cell(head + Vector3(radius * 0.44, radius * 0.18, -radius * 0.52), Tissue.SENSOR, radius * 0.16)
+    if growth > 2.4 and float(g.sensory_drive) > 0.45:
+        var antenna_len: float = radius * (0.65 + float(g.sensory_drive) * 1.25)
+        _add_chain(head + Vector3(-radius * 0.28, radius * 0.46, -radius * 0.20), head + Vector3(-radius * 0.48, radius * 0.55, -antenna_len), 4, Tissue.SENSOR, radius * 0.08)
+        _add_chain(head + Vector3(radius * 0.28, radius * 0.46, -radius * 0.20), head + Vector3(radius * 0.48, radius * 0.55, -antenna_len), 4, Tissue.SENSOR, radius * 0.08)
+
+func _add_internal_tissue(pos: Vector3, radius: float, index: int, growth: float) -> void:
+    if growth > 1.6:
+        _add_cell(pos + Vector3(0.0, 0.02, 0.0), Tissue.NEURAL, radius * 0.20)
+    if growth > 2.1 and index % 2 == 0:
+        _add_cell(pos + Vector3(0.0, -radius * 0.20, 0.0), Tissue.SKELETON, radius * 0.15)
+
+func _add_cell(pos: Vector3, tissue: int, radius: float, shape: Vector3 = Vector3.ONE) -> void:
     if body_cells.size() >= visual_cap:
         return
-    body_cells.append({"p": pos, "t": tissue, "r": clampf(radius, 0.055, 1.6)})
+    body_cells.append({"p": pos, "t": tissue, "r": clampf(radius, 0.055, 1.8), "s": shape})
 
 func _add_chain(a: Vector3, b: Vector3, count: int, tissue: int, radius: float) -> void:
     for i in range(count):
         if body_cells.size() >= visual_cap:
             return
-        var t = float(i + 1) / float(count + 1)
-        _add_cell(a.lerp(b, t), tissue, radius * lerpf(1.0, 0.68, t))
+        var t: float = float(i + 1) / float(count + 1)
+        _add_cell(a.lerp(b, t), tissue, radius * lerpf(1.0, 0.62, t))
 
 func _upload() -> void:
     if not multimesh_instance or not multimesh_instance.multimesh:
@@ -173,11 +386,23 @@ func _upload() -> void:
     mm.instance_count = body_cells.size()
     for i in range(body_cells.size()):
         var cell: Dictionary = body_cells[i]
-        var r = float(cell["r"])
+        var radius: float = float(cell["r"])
         var pos: Vector3 = cell["p"]
-        var xf = Transform3D(Basis.IDENTITY.scaled(Vector3.ONE * (r / 0.30)), pos)
+        var shape: Vector3 = cell.get("s", Vector3.ONE)
+        var scale_vec: Vector3 = Vector3.ONE * (radius / 0.30)
+        scale_vec *= shape
+        var xf = Transform3D(Basis.IDENTITY.scaled(scale_vec), pos)
         mm.set_instance_transform(i, xf)
         mm.set_instance_color(i, _cell_color(int(cell["t"])))
+
+func get_rear_anchor_local() -> Vector3:
+    return rear_anchor_local
+
+func get_focus_anchor_local() -> Vector3:
+    return focus_anchor_local
+
+func get_body_size_hint() -> float:
+    return body_size_hint
 
 func _cell_color(tissue: int) -> Color:
     var base: Color = owner_life.genome.base_color() if owner_life else Color.WHITE
@@ -195,12 +420,13 @@ func _cell_color(tissue: int) -> Color:
                 return Color(0.25, 0.92, 1.0)
             return base.darkened(0.58)
         "energy":
-            var e = clampf(float(owner_life.energy), 0.0, 1.0)
-            return Color(1.0 - e * 0.72, 0.18 + e * 0.82, 0.12 + e * 0.26)
+            var energy_level = clampf(float(owner_life.energy), 0.0, 1.0)
+            return Color(1.0 - energy_level * 0.72, 0.18 + energy_level * 0.82, 0.12 + energy_level * 0.26)
         _:
             match tissue:
                 Tissue.SENSOR: return Color(0.95, 1.0, 0.70)
                 Tissue.FIN: return base.lightened(0.18)
                 Tissue.ARMOR: return base.darkened(0.32)
                 Tissue.NEURAL: return base.lightened(0.08)
+                Tissue.SKELETON: return base.darkened(0.18)
                 _: return base

@@ -1,6 +1,6 @@
 $ErrorActionPreference = 'Stop'
 $Root = Split-Path -Parent $PSScriptRoot
-$ExpectedVersion = '1.0.0-alpha6'
+$ExpectedVersion = '1.0.0-alpha9'
 $ExpectedDate = '2026-09-01'
 
 function Require-File([string]$RelativePath) {
@@ -18,6 +18,7 @@ $Required = @(
     'README.md',
     'scenes\Main.tscn',
     'scenes\SelfTest.tscn',
+    'scenes\SmokeTest.tscn',
     'game\main.gd',
     'game\sim_world.gd',
     'game\organism.gd',
@@ -25,7 +26,10 @@ $Required = @(
     'game\genome.gd',
     'game\arena_ui.gd',
     'game\free_swim_camera.gd',
+    'game\habitat_visual.gd',
+    'game\audio_ecosystem.gd',
     'game\self_test.gd',
+    'game\smoke_test.gd',
     'game\parse_test.gd',
     'run_parse_test.bat',
     'language\en.json',
@@ -43,6 +47,8 @@ if ($ProjectText -notmatch ('config/version="' + [regex]::Escape($ExpectedVersio
 if ($ProjectText -notmatch 'run/main_scene="res://scenes/Main.tscn"') { throw 'project.godot main scene is missing' }
 $SelfTestScene = Get-Content -Raw -LiteralPath (Join-Path $Root 'scenes\SelfTest.tscn')
 if ($SelfTestScene -notmatch 'res://game/self_test.gd') { throw 'SelfTest.tscn is not wired to game/self_test.gd' }
+$SmokeTestScene = Get-Content -Raw -LiteralPath (Join-Path $Root 'scenes\SmokeTest.tscn')
+if ($SmokeTestScene -notmatch 'res://game/smoke_test.gd') { throw 'SmokeTest.tscn is not wired to game/smoke_test.gd' }
 
 foreach ($Code in @('en','de','fr')) {
     $Path = Join-Path $Root "language\$Code.json"
@@ -61,8 +67,8 @@ foreach ($Gd in $GdFiles) {
     if ($Text -match 'func\s+[^\r\n(]+\([^\r\n)]*:=' ) {
         throw "Invalid GDScript default-argument ':=' syntax in $($Gd.FullName)"
     }
-    if ($Text -match '1\.0\.0-alpha[1-5]') {
-        throw "Stale pre-alpha6 version string in $($Gd.FullName)"
+    if ($Text -match '1\.0\.0-alpha[1-8]') {
+        throw "Stale pre-alpha9 version string in $($Gd.FullName)"
     }
 
     # GDScript keywords may not be used as variable or parameter names.

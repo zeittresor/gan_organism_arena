@@ -1,4 +1,4 @@
-# Windows testing guide — 1.0.0-alpha6
+# Windows testing guide — 1.0.0-alpha9
 
 1. Extract the ZIP to a normal writable folder (not directly inside the ZIP viewer).
 2. Run `install_windows.bat`.
@@ -13,4 +13,11 @@ For diagnostics, run `run_diagnostics.bat` and send these files if something fai
 - `logs/latest_runtime.log`
 - any console output shown by `run_selftest.bat`
 
-The most useful first observations are: startup success, FPS after several minutes, organism body variety, whether organisms visibly move in all three axes, whether selection/follow works, whether TTS works, and whether Settings/Help remain usable at 1920x1080.
+The most useful alpha8 observations are: whether all seven broad morphology families are visibly distinguishable, whether descendants diverge in proportions across generations, whether cross-family offspring appear, whether unstable morphologies disappear naturally, whether close organisms still oscillate against one another, and whether RMB follow stays behind the tail/rear instead of chasing the centre. FPS after long runs and TTS/Settings usability are still useful too.
+
+
+Alpha8 focus: test keys 5-9 and NumPad +/-; observe whether aquatic forms are disadvantaged on land, whether terrestrial/flight traits eventually appear, whether courtship/group/predation behavior is visible without jitter, whether populations keep producing generations at cap, and whether ambient + positional organism audio is audible independently of TTS.
+
+## Clean runtime smoke test
+
+Run `run_smoketest.bat` after installation to instantiate the real Main scene headlessly, run it briefly, perform orderly shutdown and verify the `SMOKETEST OK` marker.

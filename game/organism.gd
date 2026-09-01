@@ -25,6 +25,15 @@ var selected = false
 var family_name = ""
 var event_history: Array[String] = []
 var _body_timer = 0.0
+var development_stability = 1.0
+var mate_cooldown = 0.0
+var wander_direction = Vector3(0.0, 0.0, -1.0)
+var wander_timer = 0.0
+var senescence = 0.0
+var behavior_state: String = "forage"
+var social_rank: float = 0.5
+var pair_target_id: int = -1
+var habitat_stress: float = 0.0
 
 
 func _setting(key: String, fallback):
@@ -44,8 +53,14 @@ func initialize(p_id: int, p_genome, spawn: Vector3, visual_cap: int, view_mode:
     energy = 0.58 + genome.metabolism * 0.28
     complexity = maxf(0.5, float(genome.generation) * 0.35)
     intelligence = 0.05 + genome.neural_drive * 0.08
+    development_stability = float(genome.viability_score()) if genome.has_method("viability_score") else 1.0
+    social_rank = clampf(float(genome.dominance_drive) * 0.65 + float(genome.aggression) * 0.20 + development_stability * 0.15, 0.0, 1.0)
     desired_velocity = Vector3(0.0, 0.0, -1.0).rotated(Vector3.UP, float(genome.seed % 628) / 100.0)
+    wander_direction = desired_velocity.normalized()
     velocity = desired_velocity * (1.2 + genome.metabolism)
+    if development_stability < float(_setting("viability_threshold", 0.18)):
+        energy *= lerpf(0.12, 0.52, development_stability)
+        _remember("unstable development")
     visual = OrganismVisualScript.new()
     add_child(visual)
     visual.configure(self, visual_cap, view_mode)
@@ -54,31 +69,58 @@ func think_step(dt: float, nutrient_pos: Vector3, social_vector: Vector3, threat
     if not alive:
         return
     age_seconds += dt
+    mate_cooldown = maxf(0.0, mate_cooldown - dt)
     hunger = clampf(1.0 - energy, 0.0, 1.0)
     curiosity_state = clampf(0.25 + genome.curiosity * 0.65 + sin(age_seconds * 0.17 + float(organism_id)) * 0.10, 0.0, 1.0)
     social_state = clampf(genome.cooperation * (0.55 + energy * 0.45), 0.0, 1.0)
-    fear = lerpf(fear, clampf(threat_vector.length() * 0.12, 0.0, 1.0), 0.12)
+    fear = lerpf(fear, clampf(threat_vector.length() * 0.12, 0.0, 1.0), 0.08)
+    if threat_vector.length() > 0.8:
+        behavior_state = "flee"
+    elif social_vector.length() > 0.75 and genome.cooperation > 0.55:
+        behavior_state = "social"
+    elif hunger > 0.55:
+        behavior_state = "forage"
+    else:
+        behavior_state = "explore"
 
-    var food_dir = (nutrient_pos - global_position).normalized()
-    var wander = Vector3(rng.randf_range(-1.0, 1.0), rng.randf_range(-0.7, 0.7), rng.randf_range(-1.0, 1.0)).normalized()
-    var steer = food_dir * (0.35 + hunger * 1.45)
-    steer += social_vector * genome.cooperation * 0.58
-    steer -= threat_vector * genome.aggression * 0.34
-    steer += wander * (0.16 + genome.curiosity * 0.30)
-    steer.y += (genome.buoyancy - 0.5) * 0.20
+    # Persistent wander avoids the rapid left-right steering noise of alpha6.
+    wander_timer -= dt
+    if wander_timer <= 0.0:
+        wander_timer = rng.randf_range(1.4, 4.6)
+        var candidate = Vector3(rng.randf_range(-1.0, 1.0), rng.randf_range(-0.65, 0.65), rng.randf_range(-1.0, 1.0))
+        if candidate.length_squared() > 0.001:
+            wander_direction = candidate.normalized()
+
+    var food_delta: Vector3 = nutrient_pos - global_position
+    var food_dir: Vector3 = food_delta.normalized() if food_delta.length_squared() > 0.001 else Vector3.ZERO
+    var steer = food_dir * (0.30 + hunger * 1.35)
+    steer += social_vector * genome.cooperation * 0.42
+    steer -= threat_vector * (0.28 + genome.aggression * 0.34)
+    steer += wander_direction * (0.14 + genome.curiosity * 0.24)
+    steer.y += (genome.buoyancy - 0.5) * 0.18
     if steer.length_squared() < 0.001:
         steer = -global_transform.basis.z
-    desired_velocity = steer.normalized() * (1.25 + genome.metabolism * 2.1 + minf(2.5, log(1.0 + complexity) * 0.20))
-    velocity = velocity.lerp(desired_velocity, clampf(dt * (0.8 + genome.neural_drive), 0.0, 1.0))
 
-    var metabolic_cost: float = dt * (0.0018 + float(genome.metabolism) * 0.0020 + velocity.length() * 0.00042)
+    var morphology_drag: float = 0.82 + float(genome.flattening) * 0.12 + float(genome.armor_drive) * 0.10
+    var target_speed: float = (1.15 + genome.metabolism * 2.0 + minf(2.3, log(1.0 + complexity) * 0.18)) / morphology_drag
+    desired_velocity = steer.normalized() * target_speed
+    var steering_response: float = 0.28 + genome.neural_drive * 0.42
+    velocity = velocity.lerp(desired_velocity, clampf(dt * steering_response, 0.0, 0.22))
+
+    var morphology_cost: float = 0.00020 * (float(genome.armor_drive) + float(genome.shell_drive))
+    morphology_cost += 0.00016 * float(genome.limb_drive) * float(genome.limb_length)
+    var instability_cost: float = pow(maxf(0.0, 1.0 - development_stability), 2.0) * 0.010
+    var senescence_start: float = 150.0 + float(genome.longevity) * 540.0 + float(genome.support_drive) * 90.0
+    senescence = maxf(0.0, (age_seconds - senescence_start) / maxf(60.0, senescence_start))
+    var senescence_cost: float = senescence * senescence * 0.0045
+    var metabolic_cost: float = dt * (0.0018 + float(genome.metabolism) * 0.0020 + velocity.length() * 0.00042 + morphology_cost + instability_cost + senescence_cost)
     energy = maxf(0.0, energy - metabolic_cost)
     experience += dt * (0.035 + curiosity_state * 0.022 + social_state * 0.012)
 
     # Open-ended state: no semantic maximum. Visual cost stays bounded separately.
-    var survival_factor: float = 0.45 + energy * 0.75 + float(genome.curiosity) * 0.18
+    var survival_factor: float = (0.32 + energy * 0.70 + float(genome.curiosity) * 0.16) * lerpf(0.25, 1.0, development_stability)
     complexity += dt * evolution_rate * survival_factor * (0.14 + log(1.0 + age_seconds) * 0.018)
-    intelligence += dt * evolution_rate * (0.0007 + genome.neural_drive * 0.00135 + genome.sensory_drive * 0.00055 + experience * 0.0000025)
+    intelligence += dt * evolution_rate * (0.0007 + genome.neural_drive * 0.00135 + genome.sensory_drive * 0.00055 + experience * 0.0000025) * lerpf(0.30, 1.0, development_stability)
     intelligence = maxf(0.0, intelligence)
     language_stage = _language_stage()
     if energy <= 0.0001:
@@ -114,24 +156,88 @@ func motion_step(delta: float, world_half_extent: float) -> void:
         _body_timer = 0.0
         visual.maybe_rebuild()
 
+
+func apply_habitat(dt: float, habitat_level: int, waterline: float, ground_y: float, world_half_extent: float) -> void:
+    if not alive:
+        return
+    var in_water: bool = global_position.y <= waterline
+    var near_ground: bool = global_position.y <= ground_y + 2.4
+    var aquatic: float = float(genome.aquatic_drive)
+    var terrestrial: float = float(genome.terrestrial_drive)
+    var flight: float = float(genome.flight_drive)
+    var fitness: float = aquatic if in_water else maxf(terrestrial if near_ground else flight, 0.04)
+    if habitat_level <= 5:
+        fitness = aquatic
+    habitat_stress = clampf(1.0 - fitness, 0.0, 1.0)
+    energy = maxf(0.0, energy - dt * habitat_stress * habitat_stress * 0.0035)
+    if not in_water:
+        if flight > 0.48:
+            velocity.y += sin(age_seconds * 0.7 + organism_id) * flight * dt * 0.8
+        elif terrestrial > aquatic:
+            var desired_y: float = ground_y + 0.65 + float(genome.body_width) * 1.2
+            velocity.y += clampf(desired_y - global_position.y, -1.0, 1.0) * dt * (0.9 + terrestrial)
+        else:
+            velocity.y -= dt * (0.55 + habitat_stress)
+    elif aquatic > 0.35:
+        velocity.y += (float(genome.buoyancy) - 0.5) * dt * 0.55
+    if habitat_stress > 0.88 and age_seconds > 8.0:
+        development_stability = maxf(0.02, development_stability - dt * 0.0008)
+
+func receive_predation(amount: float, attacker_id: int) -> float:
+    if not alive:
+        return 0.0
+    var protection: float = 0.20 + float(genome.armor_drive) * 0.36 + float(genome.shell_drive) * 0.36 + development_stability * 0.12
+    var loss: float = maxf(0.0, amount * (1.0 - clampf(protection, 0.0, 0.88)))
+    energy = maxf(0.0, energy - loss)
+    fear = minf(1.0, fear + 0.45)
+    _remember("attacked by %d" % attacker_id)
+    if energy <= 0.0001:
+        alive = false
+    return loss
+
 func absorb_nutrient(value: float) -> void:
     energy = minf(1.45, energy + value)
     experience += value * 4.0
     _remember("fed")
 
 func can_reproduce() -> bool:
-    return alive and age_seconds > 18.0 and energy > 1.02 and genome.reproduction > 0.28
+    var threshold: float = float(_setting("viability_threshold", 0.18))
+    return alive and mate_cooldown <= 0.0 and age_seconds > 18.0 and energy > 1.02 and genome.reproduction > 0.28 and development_stability >= threshold
 
 func reproduction_probability(dt: float) -> float:
     return dt * (0.0012 + genome.reproduction * 0.0045) * clampf(energy - 0.86, 0.0, 0.7)
 
 func parent_cost() -> void:
-    energy *= 0.63
+    energy *= 0.68
     children += 1
+    mate_cooldown = float(_setting("mate_cooldown", 24.0))
     _remember("offspring %d" % children)
 
+func body_plan_name() -> String:
+    if genome != null and genome.has_method("body_plan_name"):
+        return str(genome.body_plan_name())
+    return "unknown"
+
+func follow_camera_data() -> Dictionary:
+    var rear: Vector3 = global_position + global_transform.basis.z * 1.5
+    var focus: Vector3 = global_position - global_transform.basis.z * 0.8
+    var size_hint: float = 2.0
+    if is_instance_valid(visual):
+        if visual.has_method("get_rear_anchor_local"):
+            rear = visual.to_global(visual.get_rear_anchor_local())
+        if visual.has_method("get_focus_anchor_local"):
+            focus = visual.to_global(visual.get_focus_anchor_local())
+        if visual.has_method("get_body_size_hint"):
+            size_hint = float(visual.get_body_size_hint())
+    return {
+        "rear": rear,
+        "focus": focus,
+        "size": size_hint,
+        "forward": (-global_transform.basis.z).normalized()
+    }
+
 func evolutionary_score() -> float:
-    return log(1.0 + age_seconds) * 0.22 + log(1.0 + complexity) * 0.38 + intelligence * 0.60 + children * 0.12 + energy * 0.20
+    return log(1.0 + age_seconds) * 0.22 + log(1.0 + complexity) * 0.38 + intelligence * 0.60 + children * 0.12 + energy * 0.20 + development_stability * 0.24
 
 func _language_stage() -> int:
     var language_signal: float = intelligence + log(1.0 + complexity) * 0.10 + float(genome.vocal_drive) * 0.32 + float(genome.generation) * 0.008

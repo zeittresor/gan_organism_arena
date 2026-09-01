@@ -1,6 +1,6 @@
 extends Node
 
-const VERSION = "1.0.0-alpha6"
+const VERSION = "1.0.0-alpha9"
 const RELEASE_DATE = "2026-09-01"
 
 var defaults = {
@@ -26,8 +26,28 @@ var defaults = {
     "auto_reproduce": true,
     "max_history_events": 32,
     "body_rebuild_interval": 1.0,
+    "mutation_strength": 0.14,
+    "macro_mutation_rate": 0.14,
+    "crossover_rate": 0.90,
+    "viability_threshold": 0.18,
+    "mate_cooldown": 16.0,
+    "mating_radius": 18.0,
+    "social_spacing": 4.5,
+    "follow_distance": 6.0,
+    "follow_height": 1.6,
     "neural_glow": true,
-    "fullscreen": true
+    "fullscreen": true,
+    "habitat_level": 5,
+    "world_step": 1.0,
+    "courtship_strength": 0.75,
+    "group_strength": 0.55,
+    "predation_strength": 0.45,
+    "hierarchy_strength": 0.35,
+    "audio_enabled": true,
+    "ambient_audio": true,
+    "organism_audio": true,
+    "audio_volume": 0.45,
+    "organism_sound_interval": 4.5
 }
 
 var data: Dictionary = {}

@@ -1,6 +1,6 @@
 $ErrorActionPreference = 'Stop'
 $Root = Split-Path -Parent $PSScriptRoot
-$AppVersion = '1.0.0-alpha6'
+$AppVersion = '1.0.0-alpha9'
 $ReleaseDate = '2026-09-01'
 $GodotVersion = '4.7.2'
 $RuntimeDir = Join-Path $Root 'runtime\godot'
@@ -47,6 +47,37 @@ function Verify-Archive([string]$Path) {
     Write-Host "  Runtime archive checksum mismatch: $Hash" -ForegroundColor Yellow
     Remove-Item -Force -LiteralPath $Path -ErrorAction SilentlyContinue
     return $false
+}
+
+
+function Invoke-GodotCaptured([string[]]$Arguments, [string]$CombinedLog) {
+    $StdOut = "$CombinedLog.stdout.tmp"
+    $StdErr = "$CombinedLog.stderr.tmp"
+    Remove-Item -Force -LiteralPath $StdOut, $StdErr -ErrorAction SilentlyContinue
+
+    $QuotedArguments = @()
+    foreach ($Arg in $Arguments) {
+        $ArgText = [string]$Arg
+        if ($ArgText -match '[\s"]') {
+            $QuotedArguments += ('"' + $ArgText.Replace('"', '\"') + '"')
+        } else {
+            $QuotedArguments += $ArgText
+        }
+    }
+    $Process = Start-Process -FilePath $GodotConsole -ArgumentList $QuotedArguments -WorkingDirectory $Root -NoNewWindow -PassThru -Wait -RedirectStandardOutput $StdOut -RedirectStandardError $StdErr
+    $OutText = ''
+    $ErrText = ''
+    if (Test-Path -LiteralPath $StdOut) { $OutText = Get-Content -Raw -LiteralPath $StdOut }
+    if (Test-Path -LiteralPath $StdErr) { $ErrText = Get-Content -Raw -LiteralPath $StdErr }
+    $Combined = $OutText
+    if ($ErrText) {
+        if ($Combined -and -not $Combined.EndsWith("`n")) { $Combined += "`r`n" }
+        $Combined += $ErrText
+    }
+    Set-Content -LiteralPath $CombinedLog -Value $Combined -Encoding UTF8
+    if ($Combined) { Write-Host $Combined.TrimEnd() }
+    Remove-Item -Force -LiteralPath $StdOut, $StdErr -ErrorAction SilentlyContinue
+    return [pscustomobject]@{ ExitCode = $Process.ExitCode; Text = $Combined }
 }
 
 try {
@@ -107,9 +138,9 @@ try {
 
     Write-Host '[4/8] Parsing every core GDScript with per-file diagnostics...'
     $ParseLog = Join-Path $LogsDir "parse_$Stamp.log"
-    & $GodotConsole --headless --path $Root --script res://game/parse_test.gd --rendering-method gl_compatibility 2>&1 | Tee-Object -FilePath $ParseLog
-    $ParseExit = $LASTEXITCODE
-    $ParseText = Get-Content -Raw -LiteralPath $ParseLog
+    $ParseRun = Invoke-GodotCaptured @('--headless','--path',$Root,'--script','res://game/parse_test.gd','--rendering-method','gl_compatibility') $ParseLog
+    $ParseExit = $ParseRun.ExitCode
+    $ParseText = $ParseRun.Text
     if ($ParseExit -ne 0) { throw "GDScript parse test failed with exit code $ParseExit. See $ParseLog" }
     if ($ParseText -match 'SCRIPT ERROR:' -or $ParseText -match 'Parse Error:' -or $ParseText -match 'PARSE FAILED:' -or $ParseText -match 'Failed to load script') {
         throw "GDScript parse test reported a parser/script error even though Godot returned exit code 0. See $ParseLog"
@@ -117,9 +148,9 @@ try {
 
     Write-Host '[5/8] Running artificial-life morphology/genome/language self-test...'
     $SelfTestLog = Join-Path $LogsDir "selftest_$Stamp.log"
-    & $GodotConsole --headless --path $Root --rendering-method gl_compatibility --scene res://scenes/SelfTest.tscn 2>&1 | Tee-Object -FilePath $SelfTestLog
-    $SelfTestExit = $LASTEXITCODE
-    $SelfTestText = Get-Content -Raw -LiteralPath $SelfTestLog
+    $SelfRun = Invoke-GodotCaptured @('--headless','--path',$Root,'--rendering-method','gl_compatibility','--scene','res://scenes/SelfTest.tscn') $SelfTestLog
+    $SelfTestExit = $SelfRun.ExitCode
+    $SelfTestText = $SelfRun.Text
     if ($SelfTestExit -ne 0) { throw "Artificial-life self-test failed with exit code $SelfTestExit. See $SelfTestLog" }
     if ($SelfTestText -match 'SCRIPT ERROR:' -or $SelfTestText -match 'Parse Error:' -or $SelfTestText -match 'SELFTEST ERROR:' -or $SelfTestText -match 'Failed to load script') {
         throw "Artificial-life self-test reported a script/self-test error even though Godot returned exit code 0. See $SelfTestLog"
@@ -127,12 +158,18 @@ try {
 
     Write-Host '[6/8] Running short Compatibility/OpenGL runtime smoke test...'
     $SmokeLog = Join-Path $LogsDir "smoke_$Stamp.log"
-    & $GodotConsole --headless --path $Root --quit-after 90 --rendering-method gl_compatibility 2>&1 | Tee-Object -FilePath $SmokeLog
-    $SmokeExit = $LASTEXITCODE
+    $SmokeRun = Invoke-GodotCaptured @('--headless','--path',$Root,'--rendering-method','gl_compatibility','--scene','res://scenes/SmokeTest.tscn') $SmokeLog
+    $SmokeExit = $SmokeRun.ExitCode
+    $SmokeText = $SmokeRun.Text
     if ($SmokeExit -ne 0) { throw "Compatibility runtime smoke test failed with exit code $SmokeExit." }
-    $SmokeText = Get-Content -Raw -LiteralPath $SmokeLog
     if ($SmokeText -match 'SCRIPT ERROR:' -or $SmokeText -match 'Parse Error:' -or $SmokeText -match 'Failed to load script') {
         throw "Compatibility runtime smoke test reported a script error. See $SmokeLog"
+    }
+    if ($SmokeText -notmatch 'SMOKETEST OK:') {
+        throw "Compatibility runtime smoke test did not reach its clean-shutdown success marker. See $SmokeLog"
+    }
+    if ($SmokeText -match 'ObjectDB instance(?:s)? (?:was|were) leaked at exit') {
+        Write-Host '  Warning: Godot reported an ObjectDB shutdown diagnostic after the smoke-test success marker. The installer will continue, but the warning remains in the smoke log for investigation.' -ForegroundColor Yellow
     }
 
     Write-Host '[7/8] Writing installed-runtime marker...'

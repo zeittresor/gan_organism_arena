@@ -16,9 +16,13 @@ static func export_organism(org) -> String:
         var cell: Dictionary = cell_v
         var p: Vector3 = cell["p"]
         var r = float(cell["r"])
+        var shape: Vector3 = cell.get("s", Vector3.ONE)
+        var rx: float = r * shape.x
+        var ry: float = r * shape.y
+        var rz: float = r * shape.z
         var verts = [
-            p + Vector3(0, r, 0), p + Vector3(r, 0, 0), p + Vector3(0, 0, r),
-            p + Vector3(-r, 0, 0), p + Vector3(0, 0, -r), p + Vector3(0, -r, 0)
+            p + Vector3(0, ry, 0), p + Vector3(rx, 0, 0), p + Vector3(0, 0, rz),
+            p + Vector3(-rx, 0, 0), p + Vector3(0, 0, -rz), p + Vector3(0, -ry, 0)
         ]
         for v in verts:
             f.store_line("v %.6f %.6f %.6f" % [v.x, v.y, v.z])
