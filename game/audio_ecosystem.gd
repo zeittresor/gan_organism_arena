@@ -54,20 +54,6 @@ func play_organism_call(org) -> void:
     )
     player.play()
 
-func shutdown() -> void:
-    enabled = false
-    if is_instance_valid(ambient_player):
-        ambient_player.stop()
-        ambient_player.stream = null
-    for player in voice_players.duplicate():
-        if is_instance_valid(player):
-            player.stop()
-            player.stream = null
-    voice_players.clear()
-
-func _exit_tree() -> void:
-    shutdown()
-
 func _make_ambient_stream() -> AudioStreamWAV:
     var rate: int = 11025
     var seconds: float = 5.0
@@ -121,3 +107,12 @@ func _make_call_stream(org) -> AudioStreamWAV:
     wav.stereo = false
     wav.data = bytes
     return wav
+
+func shutdown() -> void:
+    if is_instance_valid(ambient_player):
+        ambient_player.stop()
+    for player in voice_players.duplicate():
+        if is_instance_valid(player):
+            player.stop()
+            player.queue_free()
+    voice_players.clear()

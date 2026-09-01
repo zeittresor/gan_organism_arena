@@ -44,7 +44,10 @@
     "ambient_audio": "Ambiance habitat",
     "organism_audio": "Cris / mélodies évolués",
     "audio_volume": "Volume audio",
-    "organism_sound_interval": "Intervalle des sons (secondes)"
+    "organism_sound_interval": "Intervalle des sons (secondes)",
+    "camera_fov": "Zoom caméra / champ de vision",
+    "zoom_step": "Pas de zoom à la molette",
+    "auto_reseed": "Réensemencer automatiquement les populations"
   },
   "actions": {
     "rebuild_visuals": "Reconstruire les corps / ressources shader",
@@ -55,6 +58,65 @@
     "close_help": "Fermer l'aide"
   },
   "help": {
-    "content": "[font_size=26][b]Qu'est-ce que GAN Organism Arena ?[/b][/font_size]\n\nGAN Organism Arena est un aquarium de vie artificielle. Cette réécriture déplace la simulation elle-même d'une grille 2D vers un véritable monde tridimensionnel. Les organismes ont des positions X/Y/Z réelles, nagent dans toutes les directions, cherchent des ressources, évitent les menaces, se reproduisent avec mutation, développent des corps en 3D et accumulent des états cognitifs et communicatifs de plus en plus riches.\n\n[b]Principe[/b]\nLe projet original s'inspirait du Jeu de la vie de Conway, automate cellulaire où des règles locales simples produisent des motifs étonnamment complexes. Cette version conserve l'idée d'émergence mais ne force pas les règles de Conway en 3D. Chaque organisme est plutôt un programme de développement évolutif. Le génome module symétrie, allongement, membres, nageoires, armure, capteurs, développement neuronal, curiosité, coopération, agressivité, métabolisme et vocalisation.\n\n[b]Développement ouvert[/b]\nIl n'existe volontairement aucun stade final sémantique. Complexité et cognition peuvent continuer à augmenter. Seul le budget de cellules visibles est borné pour protéger les performances; proportions, longueurs des appendices, ramifications, capteurs, densité neurale et communication peuvent continuer à évoluer.\n\n[b]Développement corporel 3D[/b]\nLes corps sont formés de cellules biologiques low-poly instanciées par GPU dans l'espace 3D local. Les formes simples peuvent devenir axiales, acquérir support de type colonne, chaînes neurales, tête, membres pairs, mains/pieds, éventails de nageoires, plaques d'armure, structures plumeuses et longs appendices sensoriels.\n\n[b]Cognition et langage[/b]\nChaque organisme possède énergie, faim, peur, curiosité, tendance sociale, expérience et mémoire épisodique bornée. Le niveau de langage dépend du développement neuronal, des capteurs, de la vocalisation, de la lignée et de la complexité. Les communications évoluent des sons élémentaires vers syllabes, symboles, phrases et pensées plus composées. Windows TTS peut vocaliser la traduction de ce flux.\n\n[b]Contrôles[/b]\nSouris: regarder. W/S: avant/arrière. A/D: gauche/droite. Q/E: descendre/monter. Shift: accélérer. Molette: vitesse d'observation. Échap: libérer/capturer la souris. Clic gauche: sélectionner. Clic droit: suivre. Tab: organisme suivant.\n\nF10: réglages (simulation en pause). F1: aide (pause). Espace: pause manuelle. G: injecter. 1-4: vues Naturelle/Cellules/Neurale/Énergie. F8: export OBJ. F12: capture d'écran.\n\n[b]Réglages principaux[/b]\nBackend: Forward+ Vulkan, Mobile Vulkan ou Compatibility OpenGL; redémarrage requis. Tick 3D: fréquence des décisions, indépendante des FPS. Limite de cellules visibles: budget LOD, pas une limite évolutive. Intervalle de reconstruction: plus élevé = moins de CPU. Sortie pensée: aucune, texte, TTS Windows ou les deux. Mémoire épisodique: historique borné pour les longues sessions.\n\n[b]Architecture performances[/b]\nLe comportement évolue à basse fréquence configurable, le rendu reste libre. Les corps utilisent MultiMesh/GPU instancing et se déplacent comme un seul objet. La morphologie n'est reconstruite qu'en cas de changement visible ou après l'intervalle choisi.\n\n[b]Fichiers[/b]\nsettings/config.json - options persistantes. language/*.json - traductions éditables. logs/latest_runtime.log - diagnostic. exports/obj/ - meshes. screenshots/ - captures.\n\n[b]Licence[/b]\nMIT License. Voir LICENSE.txt.\n\n[b]Evolution morphologique dans alpha7[/b]\nSept familles topologiques explorent les formes: serpentine, fusiforme, radiale, raie, ramifiee, crustacee et cephalopode. Ce ne sont pas des especes fixes. Les genes de proportion continus, mutations ordinaires, macro-mutations rares et croisements sexuels peuvent eloigner fortement les descendants de leurs parents. Un score de viabilite du developpement penalise les constructions trop couteuses ou insuffisamment soutenues. La cohesion sociale respecte maintenant une distance corporelle preferee pour eviter les oscillations permanentes en contact. Le suivi RMB utilise des ancres anatomiques arriere/focus afin de rester derriere la queue ou l arriere du corps.\n\n[b]Habitats évolutifs — alpha8[/b]\nLes touches 5-9 changent le stade écologique: eau complète, fond/îles, côte, terre/eaux peu profondes/air, puis eau+terre+ciel. Chaque niveau agrandit le monde XYZ d une unité configurable; Pavé + et - modifient la taille manuellement. Les adaptations aquatique, terrestre et aérienne sont héréditaires et créent donc une vraie pression de sélection.\n\n[b]Ecologie sociale et audio[/b]\nParade, cohésion de groupe, hiérarchie simple, prédation et croisements plus ouverts sont simulés. A la limite de population, les descendants peuvent remplacer des individus faibles afin que les générations continuent. L ambiance procédurale dépend de l habitat et les appels 3D des organismes deviennent plus complexes avec la famille et le niveau de langage."
+    "content": "[font_size=26][b]Qu'est-ce que GAN Organism Arena ?[/b][/font_size]\n\nGAN Organism Arena est un aquarium de vie artificielle. Cette réécriture déplace la simulation elle-même d'une grille 2D vers un véritable monde tridimensionnel. Les organismes ont des positions X/Y/Z réelles, nagent dans toutes les directions, cherchent des ressources, évitent les menaces, se reproduisent avec mutation, développent des corps en 3D et accumulent des états cognitifs et communicatifs de plus en plus riches.\n\n[b]Principe[/b]\nLe projet original s'inspirait du Jeu de la vie de Conway, automate cellulaire où des règles locales simples produisent des motifs étonnamment complexes. Cette version conserve l'idée d'émergence mais ne force pas les règles de Conway en 3D. Chaque organisme est plutôt un programme de développement évolutif. Le génome module symétrie, allongement, membres, nageoires, armure, capteurs, développement neuronal, curiosité, coopération, agressivité, métabolisme et vocalisation.\n\n[b]Développement ouvert[/b]\nIl n'existe volontairement aucun stade final sémantique. Complexité et cognition peuvent continuer à augmenter. Seul le budget de cellules visibles est borné pour protéger les performances; proportions, longueurs des appendices, ramifications, capteurs, densité neurale et communication peuvent continuer à évoluer.\n\n[b]Développement corporel 3D[/b]\nLes corps sont formés de cellules biologiques low-poly instanciées par GPU dans l'espace 3D local. Les formes simples peuvent devenir axiales, acquérir support de type colonne, chaînes neurales, tête, membres pairs, mains/pieds, éventails de nageoires, plaques d'armure, structures plumeuses et longs appendices sensoriels.\n\n[b]Cognition et langage[/b]\nChaque organisme possède énergie, faim, peur, curiosité, tendance sociale, expérience et mémoire épisodique bornée. Le niveau de langage dépend du développement neuronal, des capteurs, de la vocalisation, de la lignée et de la complexité. Les communications évoluent des sons élémentaires vers syllabes, symboles, phrases et pensées plus composées. Windows TTS peut vocaliser la traduction de ce flux.\n\n[b]Contrôles[/b]\nSouris: regarder. W/S: avant/arrière. A/D: gauche/droite. Q/E: descendre/monter. Shift: accélérer. Molette: zoom. Shift + molette: vitesse d'observation. Échap: libérer/capturer la souris. Clic gauche: sélectionner. Clic droit: suivre. Tab: organisme suivant.\n\nF10: réglages (simulation en pause). F1: aide (pause). Espace: pause manuelle. G: injecter. 1-4: vues Naturelle/Cellules/Neurale/Énergie. F8: export OBJ. F12: capture d'écran.\n\n[b]Réglages principaux[/b]\nBackend: Forward+ Vulkan, Mobile Vulkan ou Compatibility OpenGL; redémarrage requis. Tick 3D: fréquence des décisions, indépendante des FPS. Limite de cellules visibles: budget LOD, pas une limite évolutive. Intervalle de reconstruction: plus élevé = moins de CPU. Sortie pensée: aucune, texte, TTS Windows ou les deux. Mémoire épisodique: historique borné pour les longues sessions.\n\n[b]Architecture performances[/b]\nLe comportement évolue à basse fréquence configurable, le rendu reste libre. Les corps utilisent MultiMesh/GPU instancing et se déplacent comme un seul objet. La morphologie n'est reconstruite qu'en cas de changement visible ou après l'intervalle choisi.\n\n[b]Fichiers[/b]\nsettings/config.json - options persistantes. language/*.json - traductions éditables. logs/latest_runtime.log - diagnostic. exports/obj/ - meshes. screenshots/ - captures.\n\n[b]Licence[/b]\nMIT License. Voir LICENSE.txt.\n\n[b]Evolution morphologique dans alpha7[/b]\nSept familles topologiques explorent les formes: serpentine, fusiforme, radiale, raie, ramifiee, crustacee et cephalopode. Ce ne sont pas des especes fixes. Les genes de proportion continus, mutations ordinaires, macro-mutations rares et croisements sexuels peuvent eloigner fortement les descendants de leurs parents. Un score de viabilite du developpement penalise les constructions trop couteuses ou insuffisamment soutenues. La cohesion sociale respecte maintenant une distance corporelle preferee pour eviter les oscillations permanentes en contact. Le suivi RMB utilise des ancres anatomiques arriere/focus afin de rester derriere la queue ou l arriere du corps.\n\n[b]Habitats évolutifs — alpha8[/b]\nLes touches 5-9 changent le stade écologique: eau complète, fond/îles, côte, terre/eaux peu profondes/air, puis eau+terre+ciel. Chaque niveau agrandit le monde XYZ d une unité configurable; Pavé + et - modifient la taille manuellement. Les adaptations aquatique, terrestre et aérienne sont héréditaires et créent donc une vraie pression de sélection.\n\n[b]Ecologie sociale et audio[/b]\nParade, cohésion de groupe, hiérarchie simple, prédation et croisements plus ouverts sont simulés. À la limite de population, les morts naturelles libèrent des places pour les descendants. L ambiance procédurale dépend de l habitat et les appels 3D des organismes deviennent plus complexes avec la famille et le niveau de langage.\n\n[b]Écologie — alpha10[/b]\nLe monde mesure par défaut 144 × 86,4 × 144 unités, soit deux fois chaque ancienne dimension. Le sol visible et les déplacements utilisent la même surface. Les habitats 8/9 fournissent le ciel nécessaire au vol.\nRespiration, humidité et endurance limitent les déplacements. Des combinaisons héréditaires permettent vie amphibie, vol avec structures adaptées et pratique, chasse en meute, embuscade, cachettes, nettoyage, parasitisme, outils qui s’usent, marche verticale, petits corps insectoïdes et croissance végétale enracinée. Les aptitudes apprises ne sont pas héritées.\nCe sont des règles limitées de vie artificielle : les formes restent dans la grammaire de corps et de gènes implémentée. La population peut disparaître ; G ajoute un organisme et le réensemencement automatique est facultatif. La complexité et l’intelligence ne donnent aucun bonus artificiel de survie.\n\n[b]Revêtements corporels — alpha12[/b]\nÉpaisseur de peau, écailles, plumes, fourrure/soies, mucus, membranes, cornes/épines, becs et motifs pigmentaires sont héréditaires, mutent et peuvent se combiner. Les plumes ont des parties latérales et un axe visibles; elles peuvent apparaître sans nageoires ni vol. Le vol exige toujours ailes adaptées, soutien, respiration, pratique et ciel ouvert.\nPeau épaisse et écailles réduisent dessèchement et morsures mais limitent la respiration cutanée. Fourrure et plumes isolent du froid; elles peuvent retenir trop de chaleur et augmenter la traînée sous l’eau. Le mucus atténue dessèchement et traînée. Les cornes ajoutent protection et charge; les becs améliorent les morsures. Les revêtements consomment de l’énergie. Température et effets suivent des règles simplifiées.\nLes surfaces sont des cellules 3D stylisées dans le budget visuel existant. L’inspecteur distingue les revêtements et affiche la température locale."
+  },
+  "ecology": {
+    "traits": "Adaptations",
+    "energy": "Énergie",
+    "offspring": "Descendants",
+    "stamina": "Endurance",
+    "moisture": "Humidité",
+    "medium_changes": "Passages eau/terre",
+    "prey": "Proie",
+    "tree": "arborescent",
+    "sessile": "enraciné / sessile",
+    "amphibious": "amphibie",
+    "fast_swimmer": "nage rapide",
+    "flight": "vol",
+    "flight_practice": "apprentissage du vol",
+    "upright": "marche verticale",
+    "insectoid": "petit / insectoïde",
+    "tool_user": "usage des outils",
+    "pack_hunter": "chasse en meute",
+    "cleaner": "nettoyeur",
+    "parasite": "parasite",
+    "shy": "craintif / abrité",
+    "generalist": "généraliste",
+    "skin": "peau",
+    "feathers": "plumes",
+    "scales": "écailles",
+    "fur": "fourrure / soies",
+    "mucus": "couche muqueuse",
+    "membranes": "membranes",
+    "horns": "cornes / épines",
+    "beak": "bec",
+    "covering": "Revêtement corporel",
+    "temperature": "Milieu",
+    "plant_tissues": "tissus végétaux / filtrants"
+  },
+  "behavior": {
+    "forage": "recherche de nourriture",
+    "explore": "exploration",
+    "social": "interaction sociale",
+    "courtship": "parade",
+    "flee": "fuite",
+    "hide": "cachette",
+    "seek_water": "recherche d’eau",
+    "seek_land": "recherche de terre / air",
+    "settle": "fixation au sol",
+    "photosynthesize": "photosynthèse",
+    "filter_feed": "filtration",
+    "collect_tool": "collecte d’un outil",
+    "use_tool": "ouverture avec outil",
+    "pack_drive": "meute : rabattage",
+    "pack_flank": "meute : contournement",
+    "ambush": "embuscade",
+    "hunt": "chasse",
+    "graze": "broutage",
+    "clean_host": "nettoyage d’un hôte",
+    "parasitize": "parasitisme",
+    "fly": "vol",
+    "flight_practice": "apprentissage du vol",
+    "walk_upright": "marche verticale"
   }
 }

@@ -52,6 +52,38 @@ var courtship_drive: float = 0.45
 var pack_drive: float = 0.40
 var dominance_drive: float = 0.35
 
+var gill_drive: float = 0.75
+var lung_drive: float = 0.15
+var skin_breathing: float = 0.2
+var breath_storage: float = 0.35
+var muscle_drive: float = 0.45
+var size_gene: float = 0.5
+var wing_area: float = 0.15
+var light_skeleton: float = 0.35
+var balance_drive: float = 0.3
+var manipulation: float = 0.2
+var tool_drive: float = 0.15
+var shyness: float = 0.4
+var camouflage: float = 0.3
+var cleaning_drive: float = 0.2
+var parasite_drive: float = 0.15
+var root_drive: float = 0.2
+var photosynthesis: float = 0.15
+var wood_drive: float = 0.15
+var moisture_need: float = 0.35
+var grazer_drive: float = 0.3
+var ambush_drive: float = 0.3
+
+var skin_thickness: float = 0.45
+var scale_cover: float = 0.12
+var feather_cover: float = 0.06
+var fur_cover: float = 0.05
+var mucus_cover: float = 0.18
+var membrane_cover: float = 0.15
+var horn_drive: float = 0.08
+var beak_drive: float = 0.10
+var pattern_drive: float = 0.35
+
 func randomize_from(rng: RandomNumberGenerator, p_family_id: int, forced_plan: int = -1) -> void:
     seed = int(rng.randi())
     family_id = p_family_id
@@ -91,10 +123,19 @@ func randomize_from(rng: RandomNumberGenerator, p_family_id: int, forced_plan: i
     courtship_drive = rng.randf_range(0.10, 1.0)
     pack_drive = rng.randf_range(0.0, 1.0)
     dominance_drive = rng.randf_range(0.0, 1.0)
+    for gene_name in ecological_gene_names():
+        set(gene_name, rng.randf())
+    for gene_name in surface_gene_names():
+        set(gene_name, rng.randf())
+    # Initial respiratory traits broadly match the aquatic ancestors. Mutation
+    # and recombination can later separate locomotion from respiration.
+    gill_drive = clampf(aquatic_drive * 0.7 + rng.randf_range(0.1, 0.3), 0.0, 1.0)
+    lung_drive = clampf(terrestrial_drive * 0.8 + rng.randf_range(0.0, 0.2), 0.0, 1.0)
+    wing_area *= 0.45
     _bias_plan_genes(rng)
 
 func _continuous_gene_names() -> Array[String]:
-    return [
+    var names: Array[String] = [
         "hue", "symmetry", "elongation", "body_width", "flattening",
         "head_drive", "tail_drive", "limb_drive", "limb_length",
         "limb_thickness", "limb_position", "branch_drive", "fin_drive",
@@ -104,6 +145,9 @@ func _continuous_gene_names() -> Array[String]:
         "aquatic_drive", "terrestrial_drive", "flight_drive", "predator_drive",
         "courtship_drive", "pack_drive", "dominance_drive"
     ]
+    names.append_array(ecological_gene_names())
+    names.append_array(surface_gene_names())
+    return names
 
 func mutated(rng: RandomNumberGenerator, strength: float = 0.14, macro_rate: float = 0.14):
     var script_resource = get_script()
@@ -122,7 +166,7 @@ func mutated(rng: RandomNumberGenerator, strength: float = 0.14, macro_rate: flo
         g.set(property_name, value)
     # A macro mutation is intentionally rare but large. This prevents lineages
     # from being trapped forever in the topology of their first ancestor.
-    if rng.randf() < macro_rate * lerpf(0.65, 1.45, mutability):
+    if macro_rate >= 1.0 or rng.randf() < macro_rate * lerpf(0.65, 1.45, mutability):
         g.body_plan = _different_plan(g.body_plan, rng)
         _macro_perturb(g, rng, local_strength)
     return g
@@ -163,7 +207,7 @@ func crossover(other, rng: RandomNumberGenerator, strength: float = 0.12, macro_
             value = clampf(value, 0.0, 1.0)
         g.set(property_name, value)
 
-    if rng.randf() < macro_rate * lerpf(0.70, 1.50, local_mutability):
+    if macro_rate >= 1.0 or rng.randf() < macro_rate * lerpf(0.70, 1.50, local_mutability):
         g.body_plan = _different_plan(g.body_plan, rng)
         _macro_perturb(g, rng, local_strength)
     return g
@@ -179,7 +223,14 @@ func _macro_perturb(g, rng: RandomNumberGenerator, strength: float) -> void:
         "fin_drive", "armor_drive", "shell_drive", "support_drive",
         "aquatic_drive", "terrestrial_drive", "flight_drive", "predator_drive"
     ]
-    candidates.shuffle()
+    # Use the simulation RNG, including shuffle, for reproducible evolution.
+    candidates.append_array(ecological_gene_names())
+    candidates.append_array(surface_gene_names())
+    for i in range(candidates.size() - 1, 0, -1):
+        var j: int = rng.randi_range(0, i)
+        var old: String = candidates[i]
+        candidates[i] = candidates[j]
+        candidates[j] = old
     var count: int = rng.randi_range(3, 6)
     for i in range(mini(count, candidates.size())):
         var property_name: String = candidates[i]
@@ -269,3 +320,9 @@ func viability_score() -> float:
 
 func base_color() -> Color:
     return Color.from_hsv(hue, 0.66, 0.92)
+
+func ecological_gene_names() -> Array[String]:
+    return ["gill_drive", "lung_drive", "skin_breathing", "breath_storage", "muscle_drive", "size_gene", "wing_area", "light_skeleton", "balance_drive", "manipulation", "tool_drive", "shyness", "camouflage", "cleaning_drive", "parasite_drive", "root_drive", "photosynthesis", "wood_drive", "moisture_need", "grazer_drive", "ambush_drive"]
+
+func surface_gene_names() -> Array[String]:
+    return ["skin_thickness", "scale_cover", "feather_cover", "fur_cover", "mucus_cover", "membrane_cover", "horn_drive", "beak_drive", "pattern_drive"]

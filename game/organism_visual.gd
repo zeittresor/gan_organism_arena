@@ -1,6 +1,12 @@
 extends Node3D
 
-enum Tissue { BODY, SKIN, SKELETON, NEURAL, SENSOR, FIN, ARMOR }
+const Traits = preload("res://game/ecology_traits.gd")
+enum Tissue { BODY, SKIN, SKELETON, NEURAL, SENSOR, FIN, ARMOR, LEAF, ROOT, WING, LEG, FEATHER, QUILL, SCALE, FUR, MUCUS, MEMBRANE, HORN, BEAK, BARK }
+var lowest_point: float = -0.5
+var _phenotype: String = ""
+var _animation_time: float = 0.0
+var _animation_tick: float = 0.0
+var tool_mesh: MeshInstance3D
 
 var owner_life = null
 var multimesh_instance: MultiMeshInstance3D
@@ -16,6 +22,15 @@ func _ready() -> void:
     multimesh_instance = MultiMeshInstance3D.new()
     add_child(multimesh_instance)
     _create_render_resources()
+    tool_mesh = MeshInstance3D.new()
+    var tool = BoxMesh.new()
+    tool.size = Vector3(0.12, 0.13, 0.62)
+    var mat = StandardMaterial3D.new()
+    mat.albedo_color = Color(0.75, 0.61, 0.31)
+    tool.material = mat
+    tool_mesh.mesh = tool
+    tool_mesh.visible = false
+    add_child(tool_mesh)
 
 func _create_render_resources() -> void:
     var sphere = SphereMesh.new()
@@ -59,8 +74,8 @@ func maybe_rebuild() -> void:
     if not owner_life:
         return
     var revision = int(floor(log(1.0 + maxf(0.0, float(owner_life.complexity))) * 7.0))
-    if revision != _last_revision:
-        rebuild(false)
+    if revision != _last_revision or _phenotype != phenotype_key():
+        rebuild(true)
 
 func rebuild(force = false) -> void:
     if not owner_life or not multimesh_instance:
@@ -70,6 +85,7 @@ func rebuild(force = false) -> void:
     if not force and revision == _last_revision:
         return
     _last_revision = revision
+    _phenotype = phenotype_key()
     body_cells.clear()
     _develop_body(c)
     _upload()
@@ -78,22 +94,107 @@ func _develop_body(complexity: float) -> void:
     var g = owner_life.genome
     var growth: float = log(1.0 + complexity)
     var plan: int = int(g.body_plan)
-    match plan:
-        1:
-            _develop_fusiform(g, growth)
-        2:
-            _develop_radial(g, growth)
-        3:
-            _develop_ray(g, growth)
-        4:
-            _develop_branching(g, growth)
-        5:
-            _develop_crustacean(g, growth)
-        6:
-            _develop_cephalopod(g, growth)
-        _:
-            _develop_serpentine(g, growth)
-    _add_adaptive_structures(g, growth)
+    var budget: int = visual_cap
+    visual_cap = maxi(24, int(budget * (0.68 if owner_life.rooted else 0.62)))
+    if owner_life.rooted:
+        _develop_rooted(g, growth)
+    elif owner_life.stand_upright:
+        _develop_upright(g, growth)
+    elif g.size_gene < 0.28 and g.limb_drive > 0.55 and g.armor_drive > 0.45:
+        _develop_crustacean(g, growth)
+    else:
+        match plan:
+            1: _develop_fusiform(g, growth)
+            2: _develop_radial(g, growth)
+            3: _develop_ray(g, growth)
+            4: _develop_branching(g, growth)
+            5: _develop_crustacean(g, growth)
+            6: _develop_cephalopod(g, growth)
+            _: _develop_serpentine(g, growth)
+    visual_cap = budget if owner_life.rooted else maxi(32, int(budget * 0.84))
+    if not owner_life.rooted:
+        _add_adaptive_structures(g, growth)
+    visual_cap = budget
+    if not owner_life.rooted:
+        _add_body_coverings(g, growth)
+    var size_scale: float = Traits.body_scale(g)
+    lowest_point = 0.0
+    for cell in body_cells:
+        cell["p"] *= size_scale
+        cell["r"] *= size_scale
+        lowest_point = minf(lowest_point, cell["p"].y - cell["r"] * cell["s"].y)
+    rear_anchor_local *= size_scale
+    focus_anchor_local *= size_scale
+    body_size_hint *= size_scale
+
+func phenotype_key() -> String:
+    return "%s:%s:%s" % [owner_life.rooted, owner_life.stand_upright, owner_life.in_water]
+
+func _develop_rooted(g, growth: float) -> void:
+    var tree: bool = not owner_life.in_water and g.wood_drive > 0.60 and g.support_drive > 0.55
+    var height: float = (2.5 + growth * 1.3) if tree else (0.8 + growth * 0.45)
+    var radius: float = 0.18 + g.support_drive * 0.18
+    _add_chain(Vector3.ZERO, Vector3.UP * height, 10, Tissue.BARK if tree else Tissue.BODY, radius)
+    for i in range(7):
+        var angle: float = float(i) * 2.39996 + float(g.seed % 19)
+        var radial = Vector3(cos(angle), 0.0, sin(angle))
+        _add_chain(Vector3.ZERO, radial * (0.65 + g.root_drive) - Vector3.UP * 0.12, 3, Tissue.ROOT, radius * 0.5)
+        var start = Vector3.UP * height * (0.30 + float(i) * 0.075)
+        var tip = start + radial * height * (0.25 + g.branch_drive * 0.35) + Vector3.UP * height * 0.12
+        _add_chain(start, tip, 3, Tissue.BARK if tree else Tissue.BODY, radius * 0.45)
+        _add_cell(tip, Tissue.LEAF if g.photosynthesis > 0.5 else Tissue.FIN, 0.38 + g.photosynthesis * 0.65, Vector3(1.6, 0.35, 1.2))
+    rear_anchor_local = Vector3.ZERO
+    focus_anchor_local = Vector3.UP * height * 0.7
+    body_size_hint = height * 0.65
+
+func _develop_upright(g, growth: float) -> void:
+    var height: float = 2.0 + growth * 0.30
+    var hip = Vector3(0.0, height * 0.42, 0.0)
+    var shoulder = Vector3(0.0, height * 0.86, 0.0)
+    var width: float = 0.35 + g.body_width * 0.40
+    _add_chain(hip, shoulder, 7, Tissue.BODY, width)
+    _add_cell(hip, Tissue.SKELETON, width * 0.50, Vector3(1.4, 0.7, 0.8))
+    var head = shoulder + Vector3(0.0, height * 0.20, -0.1)
+    _make_head(g, head, width * (0.7 + g.head_drive * 0.5), growth)
+    _add_cell(shoulder, Tissue.NEURAL, width * 0.25)
+    for side_value in [-1.0, 1.0]:
+        var foot = Vector3(side_value * width * 0.7, 0.0, -0.15)
+        _add_chain(hip + Vector3(side_value * width * 0.55, 0.0, 0.0), foot, 6, Tissue.LEG, width * 0.27)
+        _add_cell(foot, Tissue.LEG, width * 0.30, Vector3(1.0, 0.5, 1.7))
+        var hand = shoulder + Vector3(side_value * width * 1.65, -height * 0.34, -width * 0.25)
+        _add_chain(shoulder, hand, 5, Tissue.BODY, width * 0.18)
+        for digit in range(3):
+            _add_cell(hand + Vector3((digit - 1) * 0.08, -0.1, -g.manipulation * 0.20), Tissue.BODY, 0.07)
+    rear_anchor_local = hip + Vector3(0.0, 0.0, width)
+    focus_anchor_local = head
+    body_size_hint = height
+
+func animate_life(delta: float) -> void:
+    _animation_time += delta
+    _animation_tick += delta
+    if tool_mesh:
+        tool_mesh.visible = owner_life.tool_durability > 0.0
+        tool_mesh.position = focus_anchor_local + Vector3(0.35, -0.25, 0.0)
+        tool_mesh.rotation.x = sin(_animation_time * 5.0) * (0.7 if owner_life.behavior_state == "use_tool" else 0.1)
+    # Animate only sparse appendages at 20 Hz, retaining the body MultiMesh.
+    if _animation_tick < 0.05 or not multimesh_instance:
+        return
+    _animation_tick = 0.0
+    var mm = multimesh_instance.multimesh
+    for i in range(body_cells.size()):
+        var cell: Dictionary = body_cells[i]
+        var tissue: int = int(cell["t"])
+        if tissue not in [Tissue.WING, Tissue.LEG, Tissue.LEAF, Tissue.FEATHER, Tissue.QUILL, Tissue.MEMBRANE]:
+            continue
+        var p: Vector3 = cell["p"]
+        if (tissue == Tissue.WING or bool(cell.get("wing", false))) and owner_life.airborne:
+            p.y += sin(_animation_time * 9.0) * absf(p.x) * 0.30
+        elif tissue == Tissue.LEG and not owner_life.in_water and owner_life.velocity.length() > 0.3:
+            p.z += sin(_animation_time * 7.0 + (PI if p.x < 0.0 else 0.0)) * 0.16
+        elif tissue == Tissue.LEAF:
+            p.x += sin(_animation_time * 1.2 + p.y) * 0.045
+        var shape: Vector3 = cell["s"]
+        mm.set_instance_transform(i, Transform3D(Basis.IDENTITY.scaled(shape * (float(cell["r"]) / 0.30)), p))
 
 func _develop_serpentine(g, growth: float) -> void:
     var body_length: float = 2.8 + growth * 1.35 + float(g.elongation) * 4.0
@@ -256,8 +357,8 @@ func _develop_crustacean(g, growth: float) -> void:
         for side_value in [-1.0, 1.0]:
             var knee = root + Vector3(side_value * leg_len * 0.58, -leg_len * 0.42, 0.0)
             var tip = root + Vector3(side_value * leg_len, -leg_len * 0.80, -leg_len * 0.12)
-            _add_chain(root, knee, 2, Tissue.BODY, width * (0.11 + float(g.limb_thickness) * 0.10))
-            _add_chain(knee, tip, 2, Tissue.BODY, width * 0.10)
+            _add_chain(root, knee, 2, Tissue.LEG, width * (0.11 + float(g.limb_thickness) * 0.10))
+            _add_chain(knee, tip, 2, Tissue.LEG, width * 0.10)
     var head = spine[0] + Vector3(0.0, width * 0.08, -width * 0.92)
     _make_head(g, head, width * (0.82 + float(g.head_drive) * 0.45), growth)
     var tail_start = spine[spine.size() - 1]
@@ -295,29 +396,127 @@ func _add_adaptive_structures(g, growth: float) -> void:
     var center: Vector3 = focus_anchor_local.lerp(rear_anchor_local, 0.48)
     var size: float = maxf(0.45, body_size_hint * 0.22)
     # Wings are broad, sparse appendages rather than another worm-like chain.
-    if float(g.flight_drive) > 0.42 and growth > 1.0:
+    if Traits.flight_body(g) and growth > 1.0:
         var span: float = size * (1.8 + float(g.flight_drive) * 3.6)
         for side_value in [-1.0, 1.0]:
             var root = center + Vector3(side_value * size * 0.35, size * 0.12, 0.0)
             var tip = center + Vector3(side_value * span, size * 0.42, size * 0.22)
-            _add_chain(root, tip, 5, Tissue.FIN, size * 0.16)
+            _add_chain(root, tip, 5, Tissue.WING, size * 0.16)
             for ray in range(3):
                 var rt = tip + Vector3(0.0, -size * (0.25 + ray * 0.18), size * (ray - 1) * 0.30)
-                _add_chain(root, rt, 3, Tissue.FIN, size * 0.08)
+                _add_chain(root, rt, 3, Tissue.WING, size * 0.08)
     # Terrestrial adaptation creates load-bearing paired legs below the body.
-    if float(g.terrestrial_drive) > 0.38 and growth > 0.8:
+    if Traits.walking(g) > 0.20 and growth > 0.8 and not owner_life.stand_upright:
         var leg_len: float = size * (1.2 + float(g.limb_length) * 2.4)
         for zoff in [-size * 0.75, size * 0.55]:
             for side_value in [-1.0, 1.0]:
                 var hip = center + Vector3(side_value * size * 0.48, -size * 0.15, zoff)
                 var foot = hip + Vector3(side_value * size * 0.28, -leg_len, size * 0.12)
-                _add_chain(hip, foot, 4, Tissue.SKELETON if float(g.support_drive) > 0.55 else Tissue.BODY, size * 0.12)
+                _add_chain(hip, foot, 4, Tissue.LEG, size * 0.12)
+    if g.cleaning_drive > 0.66 or g.parasite_drive > 0.72:
+        _add_cell(focus_anchor_local + Vector3(0.0, -size * 0.2, -size * 0.3), Tissue.SKIN, size * 0.28, Vector3(1.6, 0.35, 1.0))
+    if Traits.tools(g):
+        for side_value in [-1.0, 1.0]:
+            var hand = focus_anchor_local + Vector3(side_value * size * 0.9, -size * 0.3, 0.0)
+            _add_chain(center, hand, 3, Tissue.BODY, size * 0.10)
+            for digit in range(3):
+                _add_cell(hand + Vector3((digit - 1) * size * 0.16, 0.0, -size * 0.25), Tissue.BODY, size * 0.06)
     # Aquatic specialists can evolve a caudal fan even when their base topology is radial/branching.
     if float(g.aquatic_drive) > 0.62 and float(g.fin_drive) > 0.42:
         var rear = rear_anchor_local
         var fan: float = size * (0.8 + float(g.fin_drive) * 1.8)
         _add_chain(rear, rear + Vector3(fan, fan * 0.65, fan * 0.18), 3, Tissue.FIN, size * 0.10)
         _add_chain(rear, rear + Vector3(-fan, fan * 0.65, fan * 0.18), 3, Tissue.FIN, size * 0.10)
+
+func _add_body_coverings(g, growth: float) -> void:
+    var samples: Array = []
+    var wings: Array = []
+    # Modify the outer soft tissue itself, avoiding a detached shell around the body.
+    for cell in body_cells:
+        if int(cell["t"]) == Tissue.BODY:
+            cell["t"] = Tissue.SKIN
+            cell["r"] *= 1.0 + float(g.skin_thickness) * 0.14
+            samples.append(cell.duplicate())
+        elif int(cell["t"]) == Tissue.WING:
+            wings.append(cell.duplicate())
+    if samples.is_empty():
+        return
+    var kinds: Array[int] = []
+    if g.feather_cover > 0.45: kinds.append(Tissue.FEATHER)
+    if g.scale_cover > 0.48: kinds.append(Tissue.SCALE)
+    if g.fur_cover > 0.50: kinds.append(Tissue.FUR)
+    if g.mucus_cover > 0.55: kinds.append(Tissue.MUCUS)
+    if g.membrane_cover > 0.55: kinds.append(Tissue.MEMBRANE)
+    if g.horn_drive > 0.55 and g.support_drive > 0.35: kinds.append(Tissue.HORN)
+    if g.beak_drive > 0.55: kinds.append(Tissue.BEAK)
+    if kinds.is_empty():
+        return
+    # Cycle through kinds before spending more on any one covering. This keeps
+    # mixed coats visible at the default budget, rather than dropping late types.
+    for i in range(48):
+        if body_cells.size() >= visual_cap:
+            break
+        var kind: int = kinds[i % kinds.size()]
+        var sample: Dictionary = samples[(i + int(g.seed % samples.size())) % samples.size()]
+        if kind in [Tissue.FEATHER, Tissue.MEMBRANE] and not wings.is_empty():
+            sample = wings[i % wings.size()]
+        var p: Vector3 = sample["p"]
+        var radius: float = float(sample["r"])
+        var shape: Vector3 = sample["s"]
+        # Stagger patches around the upper surface even on a single-cell mantle.
+        var angle: float = float(i) * 2.399963 + float(g.seed % 31) * 0.20
+        var surface_direction: Vector3 = Vector3(sin(angle), 0.35 + absf(cos(angle)), 0.0).normalized()
+        var skin_top: Vector3 = p + surface_direction * shape * radius * 0.93
+        var length: float = (0.35 + minf(1.0, growth * 0.13)) * (0.5 + radius)
+        var start: int = body_cells.size()
+        match kind:
+            Tissue.FEATHER:
+                # Two vanes and a contrasting rachis form a layered feather.
+                # Feathers can grow on body/tail before any flight anatomy exists.
+                _add_cell(skin_top + Vector3(-length * 0.14, length * 0.09, length * 0.25), Tissue.FEATHER, length * 0.65, Vector3(0.26, 0.065, 0.90))
+                _add_cell(skin_top + Vector3(length * 0.14, length * 0.09, length * 0.25), Tissue.FEATHER, length * 0.65, Vector3(0.26, 0.065, 0.90))
+                _add_cell(skin_top + Vector3(0, length * 0.10, length * 0.22), Tissue.QUILL, length * 0.70, Vector3(0.035, 0.04, 1.0))
+            Tissue.SCALE:
+                _add_cell(skin_top, Tissue.SCALE, radius * 0.85, Vector3(0.75, 0.12, 0.85))
+            Tissue.FUR:
+                _add_cell(skin_top + Vector3(-length * 0.07, length * 0.18, 0), Tissue.FUR, length * 0.50, Vector3(0.15, 0.75, 0.13))
+                _add_cell(skin_top + Vector3(length * 0.07, length * 0.12, length * 0.04), Tissue.FUR, length * 0.40, Vector3(0.18, 0.80, 0.15))
+            Tissue.MUCUS:
+                _add_cell(skin_top, Tissue.MUCUS, radius * 0.80, Vector3(0.90, 0.06, 1.05))
+            Tissue.MEMBRANE:
+                _add_cell(skin_top + Vector3(0, length * 0.06, 0), Tissue.MEMBRANE, length, Vector3(1.5, 0.045, 0.85))
+            Tissue.HORN:
+                # Only the first horn belongs on the head; later samples form
+                # short defensive dorsal spines rather than repeated faces.
+                var horn_base: Vector3 = skin_top
+                if i < kinds.size():
+                    horn_base = focus_anchor_local + Vector3(radius * 0.35, radius * 0.55, 0)
+                for segment in range(3):
+                    var horn_radius: float = length * lerpf(0.22, 0.055, float(segment) / 2.0)
+                    _add_cell(horn_base + Vector3(0, length * segment * 0.22, length * segment * 0.06), Tissue.HORN, horn_radius, Vector3(0.7, 1.5, 0.7))
+            Tissue.BEAK:
+                # One beak per head, never another beak on each body segment.
+                if i >= kinds.size():
+                    continue
+                var mouth: Vector3 = focus_anchor_local + Vector3(0, -radius * 0.12, -radius * 0.60)
+                _add_cell(mouth, Tissue.BEAK, length * 0.65, Vector3(0.65, 0.32, 1.1))
+                _add_cell(mouth + Vector3(0, -length * 0.05, -length * 0.55), Tissue.BEAK, length * 0.25, Vector3(0.45, 0.28, 1.0))
+        for j in range(start, body_cells.size()):
+            body_cells[j]["wing"] = int(sample["t"]) == Tissue.WING and kind in [Tissue.FEATHER, Tissue.MEMBRANE]
+
+func _surface_color(cell: Dictionary) -> Color:
+    var color: Color = _cell_color(int(cell["t"]))
+    if view_mode != "natural":
+        return color
+    var p: Vector3 = cell["p"]
+    var g = owner_life.genome
+    if int(cell["t"]) in [Tissue.SKIN, Tissue.SCALE, Tissue.FEATHER, Tissue.FUR]:
+        var pigment: float = sin(p.z * 5.0 + float(g.seed % 17))
+        if g.pattern_drive > 0.68:
+            pigment *= cos(p.x * 7.0 + p.y * 4.0)
+        if pigment > 0.30 and g.pattern_drive > 0.30:
+            color = color.darkened(float(g.pattern_drive) * 0.38)
+    return color
 
 func _paired_appendages(g, spine: Array[Vector3], radius: float, growth: float, requested_pairs: int) -> void:
     if spine.size() < 3:
@@ -384,6 +583,8 @@ func _upload() -> void:
         return
     var mm = multimesh_instance.multimesh
     mm.instance_count = body_cells.size()
+    if owner_life and mm.mesh and mm.mesh.material:
+        mm.mesh.material.roughness = 0.85 if owner_life.rooted else 0.78 - float(owner_life.genome.mucus_cover) * 0.54
     for i in range(body_cells.size()):
         var cell: Dictionary = body_cells[i]
         var radius: float = float(cell["r"])
@@ -393,7 +594,7 @@ func _upload() -> void:
         scale_vec *= shape
         var xf = Transform3D(Basis.IDENTITY.scaled(scale_vec), pos)
         mm.set_instance_transform(i, xf)
-        mm.set_instance_color(i, _cell_color(int(cell["t"])))
+        mm.set_instance_color(i, _surface_color(cell))
 
 func get_rear_anchor_local() -> Vector3:
     return rear_anchor_local
@@ -406,6 +607,20 @@ func get_body_size_hint() -> float:
 
 func _cell_color(tissue: int) -> Color:
     var base: Color = owner_life.genome.base_color() if owner_life else Color.WHITE
+    if view_mode == "natural" or view_mode == "cell":
+        if tissue == Tissue.LEAF: return Color(0.18 + base.r * 0.25, 0.50 + base.g * 0.25, 0.12 + base.b * 0.28)
+        if tissue == Tissue.ROOT: return Color(0.38, 0.26, 0.15)
+        if tissue == Tissue.WING: return base.lightened(0.28)
+        if tissue == Tissue.SKIN: return base.lightened(0.05)
+        if tissue == Tissue.FEATHER: return base.lightened(0.35)
+        if tissue == Tissue.QUILL: return Color(0.86, 0.83, 0.64)
+        if tissue == Tissue.SCALE: return base.darkened(0.20)
+        if tissue == Tissue.FUR: return base.darkened(0.16)
+        if tissue == Tissue.MUCUS: return base.lightened(0.30)
+        if tissue == Tissue.MEMBRANE: return base.lightened(0.22)
+        if tissue == Tissue.HORN: return Color(0.55, 0.45, 0.29)
+        if tissue == Tissue.BEAK: return Color(0.65, 0.45, 0.18)
+        if tissue == Tissue.BARK: return Color(0.28, 0.20, 0.12)
     match view_mode:
         "cell":
             match tissue:

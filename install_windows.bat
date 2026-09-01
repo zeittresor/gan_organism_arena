@@ -1,7 +1,7 @@
 @echo off
 setlocal EnableExtensions
 cd /d "%~dp0"
-set "APP_VERSION=1.0.0-alpha9"
+set "APP_VERSION=1.0.0-alpha12"
 set "RELEASE_DATE=2026-09-01"
 
 echo ============================================================
@@ -11,7 +11,8 @@ echo ============================================================
 echo.
 echo This installer keeps Godot inside this project folder.
 echo No separate Godot installation is required.
-echo The first install needs Internet access to download the portable runtime.
+echo The installer first searches for a checksum-valid cached Godot runtime archive.
+echo Internet is only required if no reusable local copy can be found.
 echo.
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%CD%\tools\install_godot.ps1"
 if errorlevel 1 (

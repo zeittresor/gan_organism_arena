@@ -12,7 +12,7 @@ var follow_velocity = Vector3.ZERO
 func _ready() -> void:
     camera = Camera3D.new()
     camera.current = true
-    camera.fov = 78.0
+    camera.fov = clampf(float(SettingsStore.get_value("camera_fov", 78.0)), 28.0, 105.0)
     camera.near = 0.04
     camera.far = 400.0
     add_child(camera)
@@ -29,10 +29,19 @@ func _unhandled_input(event: InputEvent) -> void:
         pitch = clampf(pitch, deg_to_rad(-88.0), deg_to_rad(88.0))
         rotation = Vector3(pitch, yaw, 0.0)
     elif event is InputEventMouseButton and event.pressed:
-        if event.button_index == MOUSE_BUTTON_WHEEL_UP:
-            move_speed = minf(70.0, move_speed * 1.14)
-        elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
-            move_speed = maxf(1.5, move_speed / 1.14)
+        # Mouse wheel is primarily optical zoom. Hold Shift while scrolling to
+        # retain the older observer-speed adjustment without sacrificing zoom.
+        if event.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN]:
+            if Input.is_key_pressed(KEY_SHIFT):
+                if event.button_index == MOUSE_BUTTON_WHEEL_UP:
+                    move_speed = minf(70.0, move_speed * 1.14)
+                else:
+                    move_speed = maxf(1.5, move_speed / 1.14)
+            else:
+                var direction: float = -1.0 if event.button_index == MOUSE_BUTTON_WHEEL_UP else 1.0
+                var factor: float = maxf(0.25, float(event.factor))
+                var step: float = float(SettingsStore.get_value("zoom_step", 4.0))
+                set_zoom_fov(camera.fov + direction * step * factor, true)
 
 func _process(delta: float) -> void:
     if not enabled:
@@ -88,3 +97,13 @@ func capture_mouse() -> void:
 
 func toggle_follow(target) -> void:
     follow_target = null if follow_target == target else target
+
+func set_zoom_fov(value: float, persist: bool = false) -> void:
+    if not is_instance_valid(camera):
+        return
+    camera.fov = clampf(value, 28.0, 105.0)
+    if persist:
+        SettingsStore.set_value("camera_fov", camera.fov)
+
+func reset_zoom() -> void:
+    set_zoom_fov(float(SettingsStore.defaults.get("camera_fov", 78.0)), true)

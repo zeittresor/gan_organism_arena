@@ -22,10 +22,14 @@ func _ready() -> void:
     _build_hud()
     _build_settings()
     _build_help()
+    get_viewport().size_changed.connect(_layout_hud)
+    _layout_hud()
 
 func _build_hud() -> void:
     hud = Label.new()
     hud.position = Vector2(18, 14)
+    hud.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    hud.mouse_filter = Control.MOUSE_FILTER_IGNORE
     hud.add_theme_font_size_override("font_size", 17)
     add_child(hud)
     thought = Label.new()
@@ -36,7 +40,8 @@ func _build_hud() -> void:
     add_child(thought)
     selection = Label.new()
     selection.position = Vector2(18, 104)
-    selection.size = Vector2(650, 92)
+    selection.size = Vector2(1000, 220)
+    selection.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     selection.add_theme_font_size_override("font_size", 15)
     add_child(selection)
     hint = Label.new()
@@ -75,6 +80,7 @@ func _build_settings() -> void:
 
     _add_option("language", L10n.available_languages(), str(SettingsStore.get_value("language", "en")))
     _add_option("renderer", ["forward_plus", "mobile", "compatibility"], str(SettingsStore.get_value("renderer", "forward_plus")))
+    _add_toggle("auto_reseed", bool(SettingsStore.get_value("auto_reseed", false)))
     _add_toggle("fullscreen", bool(SettingsStore.get_value("fullscreen", true)))
     _add_option("view_mode", ["natural", "cell", "neural", "energy"], str(SettingsStore.get_value("view_mode", "natural")))
     _add_option("light_mode", ["auto_sun", "top_left", "top_right", "bottom_left", "bottom_right", "left_middle", "right_middle", "center", "back"], str(SettingsStore.get_value("light_mode", "auto_sun")))
@@ -100,6 +106,8 @@ func _build_settings() -> void:
     _add_slider("hierarchy_strength", 0.0, 2.0, 0.05, float(SettingsStore.get_value("hierarchy_strength", 0.35)))
     _add_slider("follow_distance", 2.0, 20.0, 0.5, float(SettingsStore.get_value("follow_distance", 6.0)))
     _add_slider("follow_height", 0.0, 8.0, 0.25, float(SettingsStore.get_value("follow_height", 1.6)))
+    _add_slider("camera_fov", 28.0, 105.0, 1.0, float(SettingsStore.get_value("camera_fov", 78.0)))
+    _add_slider("zoom_step", 1.0, 12.0, 0.5, float(SettingsStore.get_value("zoom_step", 4.0)))
     _add_toggle("audio_enabled", bool(SettingsStore.get_value("audio_enabled", true)))
     _add_toggle("ambient_audio", bool(SettingsStore.get_value("ambient_audio", true)))
     _add_toggle("organism_audio", bool(SettingsStore.get_value("organism_audio", true)))
@@ -251,3 +259,14 @@ func refresh_language() -> void:
             close.text = L10n.text("actions.close_help", "Close help")
         if help_text:
             help_text.text = L10n.text("help.content", "Help text unavailable.")
+
+func _layout_hud() -> void:
+    var viewport_size: Vector2 = get_viewport().get_visible_rect().size
+    var width: float = maxf(260.0, viewport_size.x - 36.0)
+    hud.size = Vector2(width, 82)
+    thought.position = Vector2(18, 102)
+    thought.size = Vector2(width, 60)
+    selection.position = Vector2(18, 172)
+    selection.size = Vector2(minf(width, 1150), 220)
+    for item in [hud, thought, selection, hint, crosshair]:
+        item.mouse_filter = Control.MOUSE_FILTER_IGNORE

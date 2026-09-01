@@ -1,5 +1,9 @@
 extends Node3D
 
+const HabitatModelScript = preload("res://game/habitat_model.gd")
+var model = HabitatModelScript.new()
+var resource_positions: Array[Vector3] = []
+
 var habitat_level: int = 5
 var world_size: float = 72.0
 var waterline: float = 21.0
@@ -24,26 +28,15 @@ func _clear_geometry() -> void:
 
 func _rebuild() -> void:
     _clear_geometry()
-    var half: float = world_size * 0.5
-    ground_y = -half * 0.60
-    match habitat_level:
-        5:
-            waterline = half * 0.60
-        6:
-            waterline = half * 0.38
-        7:
-            waterline = half * 0.12
-        8:
-            waterline = -half * 0.08
-        _:
-            waterline = -half * 0.18
+    model.configure(habitat_level, world_size)
+    var half: float = model.half_extent
+    ground_y = model.ground_y
+    waterline = model.waterline
     _build_bounds(half)
-    if habitat_level >= 6:
-        _build_ground(half)
-        _build_land_masses(half)
-    if habitat_level <= 8:
-        _build_water_surface(half)
-    if habitat_level >= 8:
+    _build_terrain()
+    _build_resources()
+    _build_water_surface(half)
+    if model.has_sky():
         _build_air_markers(half)
 
 func _build_bounds(half: float) -> void:
@@ -75,40 +68,55 @@ func _build_bounds(half: float) -> void:
     instance.material_override = mat
     geometry_root.add_child(instance)
 
-func _build_ground(half: float) -> void:
-    var ground = MeshInstance3D.new()
-    var box = BoxMesh.new()
-    box.size = Vector3(half * 2.0, 0.55, half * 2.0)
+func _build_terrain() -> void:
+    var surface = SurfaceTool.new()
+    surface.begin(Mesh.PRIMITIVE_TRIANGLES)
+    for z in range(model.GRID):
+        for x in range(model.GRID):
+            var a: Vector3 = model.vertex(x, z)
+            var b: Vector3 = model.vertex(x + 1, z)
+            var c: Vector3 = model.vertex(x, z + 1)
+            var d: Vector3 = model.vertex(x + 1, z + 1)
+            for p in [a, b, c, b, d, c]:
+                var above: bool = p.y > waterline
+                var color: Color = Color(0.23, 0.30, 0.12) if above else Color(0.13, 0.22, 0.23)
+                if absf(p.y - waterline) < 1.6:
+                    color = Color(0.43, 0.39, 0.25)
+                var dx: float = (model.floor_at(p + Vector3.RIGHT * 0.1) - model.floor_at(p - Vector3.RIGHT * 0.1)) / 0.2
+                var dz: float = (model.floor_at(p + Vector3(0, 0, 0.1)) - model.floor_at(p - Vector3(0, 0, 0.1))) / 0.2
+                surface.set_normal(Vector3(-dx, 1.0, -dz).normalized())
+                surface.set_color(color)
+                surface.add_vertex(p)
+    var mesh = MeshInstance3D.new()
+    mesh.mesh = surface.commit()
     var mat = StandardMaterial3D.new()
-    mat.albedo_color = Color(0.13, 0.18, 0.12)
+    mat.vertex_color_use_as_albedo = true
     mat.roughness = 0.95
-    box.material = mat
-    ground.mesh = box
-    ground.position = Vector3(0.0, ground_y - 0.30, 0.0)
-    geometry_root.add_child(ground)
+    mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+    mesh.material_override = mat
+    geometry_root.add_child(mesh)
 
-func _build_land_masses(half: float) -> void:
+func _build_resources() -> void:
+    resource_positions.clear()
     var rng = RandomNumberGenerator.new()
-    rng.seed = 9127 + habitat_level * 271
-    var count: int = 2 + (habitat_level - 5) * 2
-    for i in range(count):
-        var mound = MeshInstance3D.new()
-        var sphere = SphereMesh.new()
-        sphere.radius = rng.randf_range(3.2, 7.8)
-        sphere.height = sphere.radius * rng.randf_range(0.7, 1.35)
-        sphere.radial_segments = 12
-        sphere.rings = 6
+    rng.seed = 77117
+    for i in range(40):
+        var p = Vector3(rng.randf_range(-0.90, 0.90) * model.half_extent, 0.0, rng.randf_range(-0.90, 0.90) * model.half_extent)
+        p.y = model.floor_at(p)
+        resource_positions.append(p)
+        var instance = MeshInstance3D.new()
+        var stone = SphereMesh.new()
+        stone.radius = 0.8 if i % 3 == 0 else 0.32
+        stone.height = stone.radius * 1.6
+        stone.radial_segments = 6
+        stone.rings = 3
         var mat = StandardMaterial3D.new()
-        mat.albedo_color = Color(0.20 + rng.randf_range(0.0, 0.08), 0.26 + rng.randf_range(0.0, 0.12), 0.12)
-        mat.roughness = 0.90
-        sphere.material = mat
-        mound.mesh = sphere
-        var x = rng.randf_range(-half * 0.72, half * 0.72)
-        var z = rng.randf_range(-half * 0.72, half * 0.72)
-        var above: float = rng.randf_range(1.0, 5.5) + float(habitat_level - 6) * 1.2
-        mound.position = Vector3(x, ground_y + above, z)
-        mound.scale = Vector3(rng.randf_range(1.0, 1.8), rng.randf_range(0.35, 0.75), rng.randf_range(1.0, 1.8))
-        geometry_root.add_child(mound)
+        mat.albedo_color = Color(0.34, 0.32, 0.25) if i % 3 == 0 else Color(0.58, 0.35, 0.14)
+        mat.roughness = 0.95
+        stone.material = mat
+        instance.mesh = stone
+        instance.position = p + Vector3.UP * stone.radius * 0.4
+        geometry_root.add_child(instance)
 
 func _build_water_surface(half: float) -> void:
     var plane = MeshInstance3D.new()

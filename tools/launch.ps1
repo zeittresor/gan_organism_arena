@@ -7,7 +7,7 @@ param(
 $ErrorActionPreference = 'Stop'
 $Root = Split-Path -Parent $PSScriptRoot
 $GodotVersion = '4.7.2'
-$AppVersion = '1.0.0-alpha9'
+$AppVersion = '1.0.0-alpha12'
 $GodotExe = Join-Path $Root "runtime\godot\Godot_v$GodotVersion-stable_win64.exe"
 $SettingsPath = Join-Path $Root 'settings\config.json'
 if (-not (Test-Path -LiteralPath $GodotExe)) {

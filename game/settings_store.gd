@@ -1,6 +1,6 @@
 extends Node
 
-const VERSION = "1.0.0-alpha9"
+const VERSION = "1.0.0-alpha12"
 const RELEASE_DATE = "2026-09-01"
 
 var defaults = {
@@ -10,9 +10,9 @@ var defaults = {
     "evolution_rate": 1.0,
     "organism_cap": 28,
     "initial_organisms": 16,
-    "nutrient_count": 180,
+    "nutrient_count": 540,
     "visual_cell_cap": 180,
-    "world_size": 72.0,
+    "world_size": 144.0,
     "thought_mode": "text",
     "thought_interval": 7.0,
     "tts_voice": "default",
@@ -21,9 +21,13 @@ var defaults = {
     "renderer": "forward_plus",
     "move_speed": 14.0,
     "mouse_sensitivity": 0.0023,
+    "camera_fov": 78.0,
+    "zoom_step": 4.0,
     "show_fps": true,
     "show_help_hint": true,
     "auto_reproduce": true,
+    "auto_reseed": false,
+    "ecology_schema": 1,
     "max_history_events": 32,
     "body_rebuild_interval": 1.0,
     "mutation_strength": 0.14,
@@ -70,6 +74,12 @@ func load_settings() -> void:
         for key in parsed:
             if defaults.has(key):
                 data[key] = parsed[key]
+        # One-time migration: double old dimensions; never double again on restart.
+        if int(parsed.get("ecology_schema", 0)) < 1:
+            data["world_size"] = maxf(144.0, float(parsed.get("world_size", 72.0)) * 2.0)
+            data["nutrient_count"] = maxi(540, int(parsed.get("nutrient_count", 180)))
+            data["ecology_schema"] = 1
+            save_settings()
 
 func save_settings() -> void:
     var dir = path.get_base_dir()

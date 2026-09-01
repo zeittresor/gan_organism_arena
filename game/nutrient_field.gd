@@ -1,5 +1,8 @@
 extends Node3D
 
+const Traits = preload("res://game/ecology_traits.gd")
+var habitat = null
+
 var rng = RandomNumberGenerator.new()
 var points: Array[Vector3] = []
 var multimesh_instance: MultiMeshInstance3D
@@ -43,6 +46,29 @@ func set_count(count: int) -> void:
         points.pop_back()
     _upload()
 
+func set_habitat(model) -> void:
+    habitat = model
+    half_extent = model.half_extent
+    for i in range(points.size()):
+        points[i] = _random_point()
+    _upload()
+
+func nearest_for(org) -> int:
+    var best: int = -1
+    var distance: float = INF
+    var can_water: bool = Traits.water_breathing(org.genome) > 0.28
+    var can_air: bool = Traits.air_breathing(org.genome) > 0.28
+    for i in range(points.size()):
+        var p: Vector3 = points[i]
+        var wet: bool = p.y < habitat.waterline
+        if (wet and not can_water) or (not wet and not can_air):
+            continue
+        var d: float = org.global_position.distance_squared_to(p)
+        if d < distance:
+            distance = d
+            best = i
+    return best
+
 func nearest_index(pos: Vector3) -> int:
     var best = -1
     var best_d = INF
@@ -60,11 +86,16 @@ func respawn(index: int) -> void:
     _update_one(index)
 
 func _random_point() -> Vector3:
-    return Vector3(
-        rng.randf_range(-half_extent, half_extent),
-        rng.randf_range(-half_extent * 0.58, half_extent * 0.58),
-        rng.randf_range(-half_extent, half_extent)
-    )
+    var p = Vector3(rng.randf_range(-half_extent * 0.98, half_extent * 0.98), rng.randf_range(-half_extent * 0.55, half_extent * 0.55), rng.randf_range(-half_extent * 0.98, half_extent * 0.98))
+    if habitat != null:
+        var floor_y: float = habitat.floor_at(p)
+        if floor_y >= habitat.waterline - 0.5:
+            p.y = floor_y + 0.5
+        elif rng.randf() < 0.28:
+            p.y = floor_y + 0.5
+        else:
+            p.y = rng.randf_range(floor_y + 0.4, habitat.waterline - 0.25)
+    return p
 
 func _upload() -> void:
     if not multimesh_instance:

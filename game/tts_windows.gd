@@ -12,7 +12,7 @@ func speak(text: String) -> bool:
     last_pid = OS.create_process("powershell.exe", ["-NoProfile", "-WindowStyle", "Hidden", "-Command", script], false)
     return last_pid > 0
 
-func shutdown() -> void:
+func stop() -> void:
     if last_pid > 0 and OS.is_process_running(last_pid):
         OS.kill(last_pid)
     last_pid = -1

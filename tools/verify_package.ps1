@@ -1,6 +1,6 @@
 $ErrorActionPreference = 'Stop'
 $Root = Split-Path -Parent $PSScriptRoot
-$ExpectedVersion = '1.0.0-alpha9'
+$ExpectedVersion = '1.0.0-alpha12'
 $ExpectedDate = '2026-09-01'
 
 function Require-File([string]$RelativePath) {
@@ -24,6 +24,11 @@ $Required = @(
     'game\organism.gd',
     'game\organism_visual.gd',
     'game\genome.gd',
+    'game\ecology_traits.gd',
+    'game\habitat_model.gd',
+    'game\ecology_system.gd',
+    'game\ecology_test.gd',
+    'game\surface_test.gd',
     'game\arena_ui.gd',
     'game\free_swim_camera.gd',
     'game\habitat_visual.gd',
@@ -67,18 +72,18 @@ foreach ($Gd in $GdFiles) {
     if ($Text -match 'func\s+[^\r\n(]+\([^\r\n)]*:=' ) {
         throw "Invalid GDScript default-argument ':=' syntax in $($Gd.FullName)"
     }
-    if ($Text -match '1\.0\.0-alpha[1-8]') {
-        throw "Stale pre-alpha9 version string in $($Gd.FullName)"
+    if ($Text -match '1\.0\.0-alpha(?:[1-9]|10|11)(?![0-9])') {
+        throw "Stale pre-alpha12 version string in $($Gd.FullName)"
     }
 
-    # GDScript keywords may not be used as variable or parameter names.
-    # Alpha4 failed because organism.gd declared `var signal`, where `signal` is reserved.
-    $Reserved = 'and|as|assert|await|break|breakpoint|class|class_name|const|continue|elif|else|enum|extends|false|for|func|if|in|is|match|namespace|not|null|or|pass|return|self|signal|static|super|true|var|void|while|yield'
-    $BadVar = [regex]::Match($Text, "(?m)^\s*var\s+(?<name>(?:$Reserved))\b")
+    # Check loop bindings as well as var/const declarations. Alpha10 used
+    # `for trait in ...`, which Godot 4.7.2 rejects as a reserved identifier.
+    $Reserved = 'and|as|assert|await|break|breakpoint|class|class_name|const|continue|elif|else|enum|extends|false|for|func|if|in|is|match|namespace|not|null|or|pass|return|self|signal|static|super|trait|true|var|void|while|yield'
+    $BadVar = [regex]::Match($Text, "(?m)^\s*(?:var|const|for)\s+(?<name>(?:$Reserved))\b")
     if ($BadVar.Success) {
-        throw "Reserved GDScript keyword '$($BadVar.Groups['name'].Value)' used as variable name in $($Gd.FullName)"
+        throw "Reserved GDScript keyword '$($BadVar.Groups['name'].Value)' used as variable, constant or loop name in $($Gd.FullName)"
     }
-    $FuncMatches = [regex]::Matches($Text, '(?m)^\s*func\s+[A-Za-z_][A-Za-z0-9_]*\s*\((?<params>[^)]*)\)')
+    $FuncMatches = [regex]::Matches($Text, '(?m)^\s*(?:static\s+)?func\s+[A-Za-z_][A-Za-z0-9_]*\s*\((?<params>[^)]*)\)')
     foreach ($FuncMatch in $FuncMatches) {
         $Params = $FuncMatch.Groups['params'].Value -split ','
         foreach ($Param in $Params) {

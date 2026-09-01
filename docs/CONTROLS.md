@@ -7,7 +7,8 @@
 | A / D | Strafe left / right |
 | Q / E | Descend / ascend |
 | Shift | Boost movement speed |
-| Mouse wheel | Change observer speed |
+| Mouse wheel | Optical zoom in/out |
+| Shift + mouse wheel | Change observer speed |
 | Left click | Select organism under crosshair |
 | Right click | Follow / unfollow selected organism from behind its anatomical rear/tail |
 | Tab | Select next organism |

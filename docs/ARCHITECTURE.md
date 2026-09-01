@@ -1,4 +1,4 @@
-# Architecture — GAN Organism Arena 1.0.0-alpha9
+# Architecture — GAN Organism Arena 1.0.0-alpha12
 
 ## Simulation
 
@@ -44,3 +44,17 @@ Neighbour steering combines cohesion with a preferred separation radius. Very cl
 ## Alpha8 habitat/ecology layer
 
 Habitat rendering is separated in `game/habitat_visual.gd`; ecological selection remains in the simulation core. `aquatic_drive`, `terrestrial_drive`, and `flight_drive` are mutable genome traits. Social vectors now combine spacing, group cohesion, courtship orbiting, hierarchy and predator/prey pressure. `game/audio_ecosystem.gd` synthesizes bounded procedural PCM streams for ambience and spatial organism signaling.
+
+
+## Alpha10 ecological specialization
+
+- `habitat_model.gd`: one sampled, triangulated heightfield for both surface rendering and organism floor queries. Water/land searches stay within the world. Open sky is available in habitats 8/9.
+- `ecology_traits.gd`: shared capability formulas for physiology, movement, decisions and morphology. New ecological genes participate in ordinary mutation, crossover and seeded macro-mutations.
+- `ecology_system.gd`: resource patches, shared prey planning, local pack roles, learned tactic weights, finite host/food transfers, tools and rooted productivity. Respiration emergencies take priority over feeding and courtship.
+- `organism.gd`: oxygen reserve, moisture, stamina, lifetime skills, medium transitions, locomotion and support constraints. There is no forced complexity-based survival score at the population cap.
+- `organism_visual.gd`: scale, upright/rooted/insect-like development and sparse animated wings/legs/leaves; reserves part of the cell budget for adaptive structures.
+- `settings_store.gd`: schema migration doubles legacy world size once; nutrients default to 540. Auto-reseeding is optional and defaults off.
+
+The model is bounded artificial life, not unconstrained body invention, general intelligence, or a validated biological prediction. Trait thresholds and resource conversion coefficients are explicit game mechanics. Learning changes an individual's skills, not inherited memories.
+
+API references: [SurfaceTool](https://docs.godotengine.org/en/stable/classes/class_surfacetool.html), [MultiMesh](https://docs.godotengine.org/en/stable/classes/class_multimesh.html).

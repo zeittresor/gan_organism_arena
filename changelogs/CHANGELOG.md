@@ -1,13 +1,41 @@
 # Changelog
 
+## 1.0.0-alpha12 — 2026-09-01
+
+- Added nine heritable covering genes for skin thickness, scales, feathers, fur/bristles, mucus, membranes, horns/spines, beaks and pigment patterns; normal mutation, crossover and macro-mutation include them.
+- Added visible covering layers and feather quills within the existing per-organism cell budget, mixed coverings, pigment stripes/spots, surface gloss and bark-coloured tree stems. Feathers do not require fins and do not independently unlock flight.
+- Connected coverings to skin respiration, drying, swim drag, insulation, lift/load, bite protection, bite strength and maintenance costs. Added a simple local temperature gradient with cold/heat tradeoffs.
+- Expanded the inspector and EN/DE/FR help. Added 71 covering assertions to the native installer self-test; all pass in the Python source-translation harness alongside 51 ecology assertions. Native Godot/Windows rendering and installation remain unverified here.
+- Retained the alpha11 parser fix, validated runtime cache search, wheel zoom and doubled world dimensions.
+
+## 1.0.0-alpha11 — 2026-09-01
+
+- Fixed the Godot 4.7.2 parser failure at genome.gd:116: renamed reserved loop binding `trait` to `gene_name`. The dependent ecology_test.gd, sim_world.gd and self_test.gd failures originate from this failed genome load.
+- Added `trait` to reserved-name checks; static verification now checks for-loop and constant declarations as well as variables, and includes static-function parameters.
+- Regression check rejects the actual alpha10 genome and accepts the corrected source. The 51 source-level ecological assertions and existing morphology/genome/language tests pass in the substitute-engine harness. A native Windows/Godot rerun remains unverified in the build environment.
+- Preserved ecological behavior, larger world, settings migration, mouse-wheel zoom and checksum-validated cached-runtime reuse.
+
+## 1.0.0-alpha10 — 2026-09-01
+
+- Doubled every default world dimension (144 × 86.4 × 144); one-time legacy settings migration; 540 distributed nutrients.
+- Shared rendered terrain and ground queries; real dry land and water niches.
+- Added 21 heritable ecological traits for respiration, locomotion, light structures, body size, manipulation, feeding and sessility.
+- Oxygen reserves, drying, stamina and structural flight constraints; open sky required. Amphibious shore visits and respiratory escape behavior.
+- Shared pack prey, driving/flanking and learned pursuit/ambush skills; hiding affects detection.
+- Physical, wearing tools extract finite patch food; separate cleaning and parasitic host interactions.
+- Upright, small insect-like, winged and rooted plant/tree-like phenotypes with sparse appendage animations.
+- Finite host energy transfer and locally competing rooted productivity; grazing.
+- Disabled automatic population rescue by default; removed forced intelligence/complexity culling. Increased reproduction opportunities to permit viable lineages to turn over within alpha run times.
+- Expanded EN/DE/FR help and inspector, 51 ecological assertions integrated into installation self-test.
+- Mouse-wheel zoom and SHA-256-validated runtime-cache reuse retained.
+
 ## 1.0.0-alpha9 — 2026-09-01
 
-- Fixed the alpha8 Windows installer false-failure at the runtime smoke-test stage when Godot writes a shutdown diagnostic to stderr.
-- Replaced direct native-process stderr piping with Start-Process stdout/stderr capture so PowerShell 5 does not turn Godot warnings into terminating installer exceptions.
-- Added a dedicated project-context `SmokeTest.tscn` which instantiates the real Main scene, runs 90 frames, performs orderly application/audio/TTS shutdown, frees the scene, waits for queued teardown, then emits an explicit success marker.
-- Added explicit ecosystem-audio and Windows-TTS shutdown hooks to release active playback/stream resources before engine exit.
-- Installer smoke verification now requires `SMOKETEST OK` and still rejects script/parse/load failures; ObjectDB shutdown diagnostics are retained as warnings for investigation rather than blocking installation after a successful smoke test.
-- Added `run_smoketest.bat`; full diagnostics now run package verification, parser test, artificial-life self-test and the clean runtime smoke test.
+- Mouse-wheel optical zoom in free-swim and anatomical follow views; Shift+wheel retains observer-speed control.
+- Added persistent camera FOV and configurable zoom step.
+- Installer now searches checksum-valid local Godot 4.7.2 archives in the current runtime folder, nearby/sibling project trees and the Windows Downloads folder before downloading.
+- Added a dedicated clean-shutdown smoke-test scene and safer native-command logging so benign Godot warnings do not abort installation by themselves.
+- Added explicit audio/TTS cleanup during shutdown.
 
 ## 1.0.0-alpha8 — 2026-09-01
 

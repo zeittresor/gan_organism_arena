@@ -28,6 +28,8 @@ func _run() -> void:
         var genome = GenomeScript.new()
         genome.randomize_from(rng, 100 + plan)
         genome.body_plan = plan
+        genome.size_gene = 0.50
+        genome.root_drive = 0.20
         genome.limb_drive = 0.88
         genome.limb_length = 0.82
         genome.branch_drive = 0.78
@@ -166,10 +168,32 @@ func _run() -> void:
         _finish(21)
         return
 
+
+    var camera_fov: float = float(settings_store.get_value("camera_fov", 78.0))
+    var zoom_step: float = float(settings_store.get_value("zoom_step", 4.0))
+    if camera_fov < 28.0 or camera_fov > 105.0 or zoom_step <= 0.0:
+        printerr("SELFTEST ERROR: camera zoom defaults are invalid")
+        _finish(22)
+        return
+
     var history_cap: int = int(settings_store.get_value("max_history_events", 32))
     var app_log = get_node_or_null("/root/AppLog")
     if app_log != null and app_log.has_method("info"):
-        app_log.info("self-test alpha9: plans=%d total_cells=%d coherent=%.3f unstable=%.3f history_cap=%d" % [plan_signatures.size(), total_cells, coherent.viability_score(), unstable.viability_score(), history_cap])
+        app_log.info("self-test alpha12: plans=%d total_cells=%d coherent=%.3f unstable=%.3f history_cap=%d" % [plan_signatures.size(), total_cells, coherent.viability_score(), unstable.viability_score(), history_cap])
+
+    var ecology_test = preload("res://game/ecology_test.gd").new()
+    add_child(ecology_test)
+    if not ecology_test.run_all():
+        _finish(23)
+        return
+    ecology_test.queue_free()
+
+    var surface_test = preload("res://game/surface_test.gd").new()
+    add_child(surface_test)
+    if not surface_test.run_all():
+        _finish(24)
+        return
+    surface_test.queue_free()
 
     print("SELFTEST OK: morphology_signatures=", plan_signatures.size(), " total_cells=", total_cells, " crossover_family=", child_genome.family_id, " viable=", coherent.viability_score(), " unstable=", unstable.viability_score(), " thought=", thought)
     language_org.queue_free()

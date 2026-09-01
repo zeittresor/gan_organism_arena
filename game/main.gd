@@ -9,7 +9,7 @@ const HabitatVisualScript = preload("res://game/habitat_visual.gd")
 const AudioEcosystemScript = preload("res://game/audio_ecosystem.gd")
 
 const APP_NAME = "GAN Organism Arena"
-const VERSION = "1.0.0-alpha9"
+const VERSION = "1.0.0-alpha12"
 const RELEASE_DATE = "2026-09-01"
 
 var sim_world = null
@@ -30,9 +30,8 @@ var panel_pause = false
 var _rng = RandomNumberGenerator.new()
 var habitat_visual = null
 var audio_ecosystem = null
-var base_world_size: float = 72.0
+var base_world_size: float = 144.0
 var manual_world_delta: float = 0.0
-var _shutdown_prepared: bool = false
 
 func _ready() -> void:
     _rng.randomize()
@@ -40,7 +39,7 @@ func _ready() -> void:
     AppLog.info("Godot: %s | OS: %s | renderer setting: %s" % [Engine.get_version_info().get("string", "unknown"), OS.get_name(), str(SettingsStore.get_value("renderer", "forward_plus"))])
     _apply_window_mode()
     _build_environment()
-    base_world_size = float(SettingsStore.get_value("world_size", 72.0))
+    base_world_size = float(SettingsStore.get_value("world_size", 144.0))
     _create_habitat()
     _build_dust()
     _create_world()
@@ -48,19 +47,6 @@ func _ready() -> void:
     _create_ui()
     _create_audio()
     _apply_light_mode(str(SettingsStore.get_value("light_mode", "auto_sun")))
-
-func prepare_shutdown() -> void:
-    if _shutdown_prepared:
-        return
-    _shutdown_prepared = true
-    set_process(false)
-    if is_instance_valid(audio_ecosystem) and audio_ecosystem.has_method("shutdown"):
-        audio_ecosystem.shutdown()
-    if tts != null and tts.has_method("shutdown"):
-        tts.shutdown()
-
-func _exit_tree() -> void:
-    prepare_shutdown()
 
 func _create_habitat() -> void:
     habitat_visual = HabitatVisualScript.new()
@@ -87,7 +73,7 @@ func _apply_habitat_level(level: int, announce: bool = true) -> void:
     if is_instance_valid(habitat_visual):
         habitat_visual.configure(level, size)
     if is_instance_valid(sim_world):
-        sim_world.set_habitat(level, size, habitat_visual.waterline, habitat_visual.ground_y)
+        sim_world.set_habitat(level, size, habitat_visual.waterline, habitat_visual.ground_y, habitat_visual.model, habitat_visual.resource_positions)
     if is_instance_valid(audio_ecosystem):
         audio_ecosystem.set_habitat_level(level)
     if is_instance_valid(environment) and environment.environment != null:
@@ -119,7 +105,7 @@ func _create_world() -> void:
     add_child(sim_world)
     sim_world.initialize(int(Time.get_unix_time_from_system()) & 0x7fffffff)
     if is_instance_valid(habitat_visual):
-        sim_world.set_habitat(int(SettingsStore.get_value("habitat_level", 5)), _current_world_size(), habitat_visual.waterline, habitat_visual.ground_y)
+        sim_world.set_habitat(int(SettingsStore.get_value("habitat_level", 5)), _current_world_size(), habitat_visual.waterline, habitat_visual.ground_y, habitat_visual.model, habitat_visual.resource_positions)
 
 func _create_camera() -> void:
     swim_camera = CameraScript.new()
@@ -165,7 +151,7 @@ func _build_environment() -> void:
     add_child(sun)
 
 func _build_aquarium_bounds() -> void:
-    var half = float(SettingsStore.get_value("world_size", 72.0)) * 0.5
+    var half = float(SettingsStore.get_value("world_size", 144.0)) * 0.5
     var yhalf = half * 0.60
     var mesh = ImmediateMesh.new()
     mesh.surface_begin(Mesh.PRIMITIVE_LINES)
@@ -217,7 +203,7 @@ func _build_dust() -> void:
     mm.transform_format = MultiMesh.TRANSFORM_3D
     mm.mesh = sphere
     mm.instance_count = 380
-    var half = float(SettingsStore.get_value("world_size", 72.0)) * 0.5
+    var half = float(SettingsStore.get_value("world_size", 144.0)) * 0.5
     for i in range(mm.instance_count):
         var p = Vector3(rng.randf_range(-half, half), rng.randf_range(-half * 0.58, half * 0.58), rng.randf_range(-half, half))
         var s = rng.randf_range(0.6, 2.2)
@@ -378,7 +364,7 @@ func _refresh_hud() -> void:
     var m: Dictionary = sim_world.metrics()
     var paused = manual_pause or panel_pause
     var mode = str(SettingsStore.get_value("view_mode", "natural"))
-    ui.set_hud("%s %s | FPS %.1f | steps %d | organisms %d | forms %d | cells %d | habitat %d %s | world %.1f | max body %.1f | max mind %.2f | view %s%s" % [APP_NAME, VERSION, Performance.get_monitor(Performance.TIME_FPS), int(m["steps"]), int(m["organisms"]), int(m["body_plan_count"]), int(m["visual_cells"]), int(SettingsStore.get_value("habitat_level", 5)), _habitat_name(int(SettingsStore.get_value("habitat_level", 5))), _current_world_size(), float(m["max_complexity"]), float(m["max_intelligence"]), mode, " | PAUSED" if paused else ""])
+    ui.set_hud("%s %s | FPS %.1f | steps %d | organisms %d | forms %d | cells %d\nhabitat %d %s | world %.1f | max body %.1f | max mind %.2f | view %s%s" % [APP_NAME, VERSION, Performance.get_monitor(Performance.TIME_FPS), int(m["steps"]), int(m["organisms"]), int(m["body_plan_count"]), int(m["visual_cells"]), int(SettingsStore.get_value("habitat_level", 5)), _habitat_name(int(SettingsStore.get_value("habitat_level", 5))), _current_world_size(), float(m["max_complexity"]), float(m["max_intelligence"]), mode, " | PAUSED" if paused else ""])
 
 func _refresh_selection_text() -> void:
     if not is_instance_valid(ui):
@@ -387,7 +373,26 @@ func _refresh_selection_text() -> void:
     if not is_instance_valid(org):
         ui.set_selection(L10n.text("ui.no_selection", "No organism selected. Aim at one and left-click, or press Tab."))
         return
-    ui.set_selection("Selected #%d %s | form %s | gen %d | viability %.2f | age %.1fs | energy %.2f | complexity %.2f | intelligence %.3f | language L%d | children %d | behavior %s | habitat stress %.2f" % [org.organism_id, org.family_name, org.body_plan_name(), org.genome.generation, org.development_stability, org.age_seconds, org.energy, org.complexity, org.intelligence, org.language_stage, org.children, org.behavior_state, org.habitat_stress])
+    var labels: Array[String] = []
+    var coverings: Array[String] = []
+    for key in org.ecology_labels():
+        var translated: String = L10n.text("ecology." + key, key.replace("_", " "))
+        if key in ["skin", "feathers", "scales", "fur", "mucus", "membranes", "horns", "beak"]:
+            coverings.append(translated)
+        else:
+            labels.append(translated)
+    if labels.is_empty():
+        labels.append(L10n.text("ecology.generalist", "generalist"))
+    if coverings.is_empty():
+        coverings.append(L10n.text("ecology.plant_tissues", "plant / filter tissues") if org.rooted else L10n.text("ecology.skin", "skin"))
+    var behavior: String = L10n.text("behavior." + org.behavior_state, org.behavior_state.replace("_", " "))
+    var text: String = "#%d %s | %s | Gen %d | %s %.2f | %s %d" % [org.organism_id, org.family_name, org.body_plan_name(), org.genome.generation, L10n.text("ecology.energy", "Energy"), org.energy, L10n.text("ecology.offspring", "Offspring"), org.children]
+    text += "\n%s: %s" % [L10n.text("ecology.traits", "Traits"), ", ".join(labels)]
+    text += "\n%s: %s" % [L10n.text("ecology.covering", "Body covering"), ", ".join(coverings)]
+    text += "\n%s | O2 %d%% | %s %d%% | %s %d%%" % [behavior, int(org.oxygen * 100), L10n.text("ecology.stamina", "Stamina"), int(org.stamina * 100), L10n.text("ecology.moisture", "Moisture"), int(org.moisture * 100)]
+    text += "\n%s %d%% | %s %d%% | %s %d | %s %d" % [L10n.text("ecology.flight", "Flight"), int(org.flight_skill * 100), L10n.text("ecology.tool_user", "Tools"), int(org.tool_skill * 100), L10n.text("ecology.medium_changes", "Water/land changes"), org.medium_changes, L10n.text("ecology.prey", "Prey"), org.prey_id]
+    text += " | %s %.1f °C" % [L10n.text("ecology.temperature", "Environment"), org.ambient_temperature]
+    ui.set_selection(text)
 
 func _on_panels_changed(open: bool) -> void:
     panel_pause = open
@@ -414,6 +419,9 @@ func _on_setting_changed(key: String, value) -> void:
             sim_world.set_view_mode(str(value))
         "light_mode":
             _apply_light_mode(str(value))
+        "camera_fov":
+            if is_instance_valid(swim_camera):
+                swim_camera.set_zoom_fov(float(value), false)
         "visual_cell_cap":
             sim_world.set_visual_cap(int(value))
         "nutrient_count":
@@ -471,7 +479,7 @@ func _reset_world() -> void:
     add_child(sim_world)
     sim_world.initialize(_rng.randi())
     if is_instance_valid(habitat_visual):
-        sim_world.set_habitat(int(SettingsStore.get_value("habitat_level", 5)), _current_world_size(), habitat_visual.waterline, habitat_visual.ground_y)
+        sim_world.set_habitat(int(SettingsStore.get_value("habitat_level", 5)), _current_world_size(), habitat_visual.waterline, habitat_visual.ground_y, habitat_visual.model, habitat_visual.resource_positions)
     ui.set_thought(L10n.text("ui.world_reset", "A new evolutionary world has been generated."))
 
 func _apply_window_mode() -> void:
@@ -500,3 +508,9 @@ func _update_sun(delta: float) -> void:
     if str(SettingsStore.get_value("light_mode", "auto_sun")) == "auto_sun":
         auto_sun_time += delta * 0.055
         sun.rotation = Vector3(-0.65 + sin(auto_sun_time * 0.47) * 0.38, auto_sun_time, 0.0)
+
+func _exit_tree() -> void:
+    if is_instance_valid(audio_ecosystem):
+        audio_ecosystem.shutdown()
+    if tts != null and tts.has_method("stop"):
+        tts.stop()

@@ -1,5 +1,7 @@
 extends Node3D
 
+const Traits = preload("res://game/ecology_traits.gd")
+
 const OrganismVisualScript = preload("res://game/organism_visual.gd")
 
 var organism_id = 0
@@ -34,6 +36,38 @@ var behavior_state: String = "forage"
 var social_rank: float = 0.5
 var pair_target_id: int = -1
 var habitat_stress: float = 0.0
+
+var habitat = null
+var oxygen: float = 1.0
+var ambient_temperature: float = 22.0
+var moisture: float = 1.0
+var stamina: float = 1.0
+var flight_skill: float = 0.0
+var tool_skill: float = 0.0
+var hunting_skill: float = 0.0
+var tool_durability: float = 0.0
+var parasite_load: float = 0.0
+var surface_food: float = 0.12
+var in_water: bool = true
+var grounded: bool = false
+var rooted: bool = false
+var airborne: bool = false
+var hiding: bool = false
+var can_fly: bool = false
+var stand_upright: bool = false
+var medium_timer: float = 0.0
+var decision_timer: float = 0.0
+var refuge = Vector3.ZERO
+var prey_id: int = -1
+var pack_leader_id: int = -1
+var hunt_tactic: String = "pursuit"
+var ambush_point = Vector3.ZERO
+var ambush_timer: float = 0.0
+var tactic_scores: Dictionary = {"pursuit": 0.0, "ambush": 0.0, "flank": 0.0}
+var last_medium: bool = true
+var medium_changes: int = 0
+var tool_uses: int = 0
+var feeding_events: int = 0
 
 
 func _setting(key: String, fallback):
@@ -102,7 +136,12 @@ func think_step(dt: float, nutrient_pos: Vector3, social_vector: Vector3, threat
         steer = -global_transform.basis.z
 
     var morphology_drag: float = 0.82 + float(genome.flattening) * 0.12 + float(genome.armor_drive) * 0.10
-    var target_speed: float = (1.15 + genome.metabolism * 2.0 + minf(2.3, log(1.0 + complexity) * 0.18)) / morphology_drag
+    var target_speed: float = Traits.swim_speed(genome) if in_water else (0.6 + Traits.walking(genome) * 3.0)
+    if airborne:
+        target_speed = 2.0 + Traits.lift(genome) * 5.0
+    target_speed *= (0.40 + stamina * 0.60) / morphology_drag
+    if rooted:
+        target_speed = 0.0
     desired_velocity = steer.normalized() * target_speed
     var steering_response: float = 0.28 + genome.neural_drive * 0.42
     velocity = velocity.lerp(desired_velocity, clampf(dt * steering_response, 0.0, 0.22))
@@ -114,7 +153,10 @@ func think_step(dt: float, nutrient_pos: Vector3, social_vector: Vector3, threat
     senescence = maxf(0.0, (age_seconds - senescence_start) / maxf(60.0, senescence_start))
     var senescence_cost: float = senescence * senescence * 0.0045
     var metabolic_cost: float = dt * (0.0018 + float(genome.metabolism) * 0.0020 + velocity.length() * 0.00042 + morphology_cost + instability_cost + senescence_cost)
-    energy = maxf(0.0, energy - metabolic_cost)
+    metabolic_cost *= 0.45 + float(genome.size_gene) * float(genome.size_gene) * 1.30
+    if rooted:
+        metabolic_cost *= 0.30
+    energy = maxf(0.0, energy - metabolic_cost - dt * Traits.maintenance(genome) * (0.4 if rooted else 1.0))
     experience += dt * (0.035 + curiosity_state * 0.022 + social_state * 0.012)
 
     # Open-ended state: no semantic maximum. Visual cost stays bounded separately.
@@ -130,6 +172,8 @@ func think_step(dt: float, nutrient_pos: Vector3, social_vector: Vector3, threat
 func motion_step(delta: float, world_half_extent: float) -> void:
     if not alive:
         return
+    if rooted:
+        velocity = Vector3.ZERO
     global_position += velocity * delta
     var p = global_position
     var bounced = false
@@ -145,10 +189,25 @@ func motion_step(delta: float, world_half_extent: float) -> void:
         p.z = clampf(p.z, -world_half_extent, world_half_extent)
         velocity.z *= -0.82
         bounced = true
+    if habitat != null:
+        var clearance: float = body_clearance()
+        var floor_y: float = habitat.floor_at(p) + clearance
+        if p.y < floor_y or rooted:
+            p.y = floor_y
+            velocity.y = maxf(0.0, velocity.y) if not rooted else 0.0
+        if habitat.level == 5:
+            p.y = minf(p.y, habitat.waterline - 0.10)
     global_position = p
-    if velocity.length_squared() > 0.01:
-        var target = global_position + velocity.normalized()
-        look_at(target, Vector3.UP)
+    if rooted:
+        rotation = Vector3.ZERO
+    elif velocity.length_squared() > 0.01:
+        var facing: Vector3 = velocity.normalized()
+        if grounded and not in_water:
+            facing.y = 0.0
+        if facing.length_squared() > 0.001 and absf(facing.normalized().dot(Vector3.UP)) < 0.98:
+            look_at(global_position + facing, Vector3.UP)
+    if is_instance_valid(visual):
+        visual.animate_life(delta)
     if bounced:
         fear = minf(1.0, fear + 0.08)
     _body_timer += delta
@@ -157,40 +216,121 @@ func motion_step(delta: float, world_half_extent: float) -> void:
         visual.maybe_rebuild()
 
 
+func body_clearance() -> float:
+    if rooted:
+        return 0.12
+    if is_instance_valid(visual):
+        return maxf(0.25, -float(visual.lowest_point) + 0.12)
+    return 0.65
+
+func apply_environment(dt: float, model) -> void:
+    habitat = model
+    in_water = model.is_water(global_position)
+    var floor_y: float = model.floor_at(global_position)
+    grounded = global_position.y <= floor_y + body_clearance() + 0.35
+    medium_timer += dt
+    if last_medium != in_water:
+        medium_changes += 1
+        medium_timer = 0.0
+        last_medium = in_water
+    if Traits.sessile(genome) and age_seconds > 12.0 and grounded:
+        rooted = true
+    stand_upright = not in_water and not rooted and Traits.upright(genome) and age_seconds > 20.0
+    can_fly = not rooted and model.has_sky() and Traits.flight_body(genome) and age_seconds > 18.0
+    if can_fly and not in_water and energy > 0.35:
+        flight_skill = minf(1.0, flight_skill + dt * 0.020 * (0.4 + genome.neural_drive))
+    airborne = can_fly and flight_skill > 0.22 and not in_water and stamina > 0.18 and energy > 0.25
+    var efficiency: float = Traits.water_breathing(genome) if in_water else Traits.air_breathing(genome)
+    var exertion: float = 0.06 if rooted else 0.12 + velocity.length() * 0.012
+    var reserve: float = 4.0 + float(genome.breath_storage) * 24.0
+    if efficiency >= 0.42:
+        oxygen = minf(1.0, oxygen + dt * efficiency * 0.22)
+    else:
+        oxygen = maxf(0.0, oxygen - dt * (1.0 - efficiency / 0.42) / reserve)
+    if in_water:
+        moisture = minf(1.0, moisture + dt * 0.10)
+    else:
+        moisture = maxf(0.0, moisture - dt * float(genome.moisture_need) * 0.007 * (1.0 if rooted else Traits.water_loss(genome)))
+    ambient_temperature = model.temperature_at(global_position)
+    if not rooted:
+        energy = maxf(0.0, energy - dt * (Traits.covering_cost(genome) + Traits.thermal_cost(genome, in_water, ambient_temperature)))
+    var drying: float = maxf(0.0, 0.30 - moisture) * float(genome.skin_breathing)
+    habitat_stress = clampf((1.0 - oxygen) * 0.80 + drying, 0.0, 1.0)
+    energy = maxf(0.0, energy - dt * (maxf(0.0, 0.20 - oxygen) * 0.16 + drying * 0.025 + parasite_load * 0.003))
+    stamina = clampf(stamina + dt * (0.07 - exertion * (0.90 if airborne else 0.25)), 0.0, 1.0)
+    if not in_water and not grounded and not airborne:
+        velocity.y -= dt * 4.5
+    if rooted:
+        velocity = Vector3.ZERO
+    elif airborne:
+        var cruise: float = maxf(floor_y + body_clearance() + 3.0, model.waterline + 3.5)
+        cruise = minf(cruise, model.half_extent * 0.55)
+        velocity.y = lerpf(velocity.y, clampf(cruise - global_position.y, -2.0, 2.0), minf(1.0, dt * 2.0))
+    elif grounded and not in_water:
+        velocity.y = maxf(0.0, velocity.y)
+    if energy <= 0.0001:
+        alive = false
+        _remember("respiration or energy collapse")
+
+# Compatibility entry point for previous self-tests.
 func apply_habitat(dt: float, habitat_level: int, waterline: float, ground_y: float, world_half_extent: float) -> void:
-    if not alive:
+    var model = preload("res://game/habitat_model.gd").new()
+    model.configure(habitat_level, world_half_extent * 2.0)
+    model.waterline = waterline
+    model.ground_y = ground_y
+    apply_environment(dt, model)
+
+func steer_towards(target: Vector3, weight: float = 1.0, speed_multiplier: float = 1.0) -> void:
+    if rooted:
         return
-    var in_water: bool = global_position.y <= waterline
-    var near_ground: bool = global_position.y <= ground_y + 2.4
-    var aquatic: float = float(genome.aquatic_drive)
-    var terrestrial: float = float(genome.terrestrial_drive)
-    var flight: float = float(genome.flight_drive)
-    var fitness: float = aquatic if in_water else maxf(terrestrial if near_ground else flight, 0.04)
-    if habitat_level <= 5:
-        fitness = aquatic
-    habitat_stress = clampf(1.0 - fitness, 0.0, 1.0)
-    energy = maxf(0.0, energy - dt * habitat_stress * habitat_stress * 0.0035)
-    if not in_water:
-        if flight > 0.48:
-            velocity.y += sin(age_seconds * 0.7 + organism_id) * flight * dt * 0.8
-        elif terrestrial > aquatic:
-            var desired_y: float = ground_y + 0.65 + float(genome.body_width) * 1.2
-            velocity.y += clampf(desired_y - global_position.y, -1.0, 1.0) * dt * (0.9 + terrestrial)
-        else:
-            velocity.y -= dt * (0.55 + habitat_stress)
-    elif aquatic > 0.35:
-        velocity.y += (float(genome.buoyancy) - 0.5) * dt * 0.55
-    if habitat_stress > 0.88 and age_seconds > 8.0:
-        development_stability = maxf(0.02, development_stability - dt * 0.0008)
+    var direction: Vector3 = target - global_position
+    if grounded and not in_water and not airborne:
+        direction.y = 0.0
+    if direction.length_squared() < 0.01:
+        velocity *= 0.8
+        return
+    var speed: float = Traits.swim_speed(genome) if in_water else (0.6 + Traits.walking(genome) * 3.0)
+    if airborne:
+        speed = 2.0 + Traits.lift(genome) * 5.0
+    var steering: Vector3 = direction.normalized() * speed * speed_multiplier * (0.4 + stamina * 0.6)
+    velocity = velocity.lerp(steering, clampf(weight, 0.0, 1.0))
+
+func ecology_labels() -> Array[String]:
+    var labels: Array[String] = []
+    if rooted:
+        labels.append("tree" if not in_water and genome.wood_drive > 0.60 and genome.support_drive > 0.55 else "sessile")
+    if Traits.amphibious(genome): labels.append("amphibious")
+    if Traits.swim_speed(genome) > 3.0: labels.append("fast_swimmer")
+    if can_fly: labels.append("flight" if flight_skill > 0.22 else "flight_practice")
+    if stand_upright: labels.append("upright")
+    if genome.size_gene < 0.28 and genome.limb_drive > 0.55 and genome.armor_drive > 0.45: labels.append("insectoid")
+    if Traits.tools(genome) and age_seconds > 25.0: labels.append("tool_user")
+    if genome.pack_drive * genome.cooperation > 0.34 and genome.predator_drive > 0.45: labels.append("pack_hunter")
+    if genome.cleaning_drive > 0.66: labels.append("cleaner")
+    if genome.parasite_drive > 0.72: labels.append("parasite")
+    if genome.shyness > 0.62: labels.append("shy")
+    if not rooted:
+        if genome.skin_thickness > 0.30: labels.append("skin")
+        if genome.feather_cover > 0.45: labels.append("feathers")
+        if genome.scale_cover > 0.48: labels.append("scales")
+        if genome.fur_cover > 0.50: labels.append("fur")
+        if genome.mucus_cover > 0.55: labels.append("mucus")
+        if genome.membrane_cover > 0.55: labels.append("membranes")
+        if genome.horn_drive > 0.55 and genome.support_drive > 0.35: labels.append("horns")
+        if genome.beak_drive > 0.55: labels.append("beak")
+    if labels.is_empty(): labels.append("generalist")
+    return labels
 
 func receive_predation(amount: float, attacker_id: int) -> float:
     if not alive:
         return 0.0
     var protection: float = 0.20 + float(genome.armor_drive) * 0.36 + float(genome.shell_drive) * 0.36 + development_stability * 0.12
+    protection += Traits.covering_protection(genome) if not rooted else float(genome.wood_drive) * 0.10
     var loss: float = maxf(0.0, amount * (1.0 - clampf(protection, 0.0, 0.88)))
     energy = maxf(0.0, energy - loss)
     fear = minf(1.0, fear + 0.45)
-    _remember("attacked by %d" % attacker_id)
+    if fear < 0.75:
+        _remember("attacked by %d" % attacker_id)
     if energy <= 0.0001:
         alive = false
     return loss
@@ -198,6 +338,7 @@ func receive_predation(amount: float, attacker_id: int) -> float:
 func absorb_nutrient(value: float) -> void:
     energy = minf(1.45, energy + value)
     experience += value * 4.0
+    feeding_events += 1
     _remember("fed")
 
 func can_reproduce() -> bool:
@@ -205,7 +346,7 @@ func can_reproduce() -> bool:
     return alive and mate_cooldown <= 0.0 and age_seconds > 18.0 and energy > 1.02 and genome.reproduction > 0.28 and development_stability >= threshold
 
 func reproduction_probability(dt: float) -> float:
-    return dt * (0.0012 + genome.reproduction * 0.0045) * clampf(energy - 0.86, 0.0, 0.7)
+    return dt * (0.008 + genome.reproduction * 0.035) * clampf(energy - 0.86, 0.0, 0.7)
 
 func parent_cost() -> void:
     energy *= 0.68
@@ -237,7 +378,7 @@ func follow_camera_data() -> Dictionary:
     }
 
 func evolutionary_score() -> float:
-    return log(1.0 + age_seconds) * 0.22 + log(1.0 + complexity) * 0.38 + intelligence * 0.60 + children * 0.12 + energy * 0.20 + development_stability * 0.24
+    return energy + oxygen * 0.2 - senescence * 0.2
 
 func _language_stage() -> int:
     var language_signal: float = intelligence + log(1.0 + complexity) * 0.10 + float(genome.vocal_drive) * 0.32 + float(genome.generation) * 0.008
