@@ -2,18 +2,16 @@
 
 **Version 1.0.0-alpha9 — 2026-09-01**
 
-### Alpha8 habitats, ecology and sound
+## Short
 
-Alpha8 extends the working 3D evolution loop beyond a permanently aquatic box. Keys **5-9** switch between increasingly mixed habitats, from open water to water/land/sky. Habitat adaptation is heritable, so organisms are selected by aquatic, terrestrial and flight competence rather than being magically converted. Social evolution now includes courtship, group cohesion, simple hierarchy and predator/prey pressure. Procedural 3D organism calls and changing habitat ambience are independent from Windows TTS. At the population cap, weak organisms may be displaced by viable offspring so generation turnover can continue.
+GAN Organism Arena is now a real **3D artificial-life aquarium** instead of a 2D cellular simulation with a 3D visualization layer. Organisms exist and move in X/Y/Z, consume resources in a volume, reproduce through mutation and two-parent genetic crossover, build three-dimensional bodies, accumulate bounded experience, and develop increasingly expressive communication.
 
-**New controls:** 5-9 habitat stages; NumPad + / - expands or shrinks the XYZ world.
+<img width="2560" height="1080" alt="2026-09-01 19_19_17-Greenshot" src="https://github.com/user-attachments/assets/2fe20b1b-1969-4685-80be-c70fa8cb9c0c" />
+
+<img width="2560" height="1080" alt="2026-09-01 19_21_26-Greenshot" src="https://github.com/user-attachments/assets/4b1d0a0c-0f6c-4387-90a6-503ff94bfade" />
 
 **Engine target:** Godot 4.7.2 stable  
 **License:** MIT
-
-## TL;DR
-
-GAN Organism Arena is now a real **3D artificial-life aquarium** instead of a 2D cellular simulation with a 3D visualization layer. Organisms exist and move in X/Y/Z, consume resources in a volume, reproduce through mutation and two-parent genetic crossover, build three-dimensional bodies, accumulate bounded experience, and develop increasingly expressive communication.
 
 On Windows, run:
 
@@ -78,6 +76,14 @@ Renderer changes require a restart because Godot selects the graphics backend be
 ## Performance model
 
 The project deliberately decouples simulation from rendering. Organism decision/evolution ticks default to 12 Hz while the camera can render at the display frame rate. Every organism is one moving Node3D containing a MultiMesh of local biological cells, so all cells are not individually transformed every frame. Morphology is rebuilt only when development visibly changes. Per-organism event memory is bounded.
+
+
+### Alpha8 habitats, ecology and sound
+
+Alpha8 extends the working 3D evolution loop beyond a permanently aquatic box. Keys **5-9** switch between increasingly mixed habitats, from open water to water/land/sky. Habitat adaptation is heritable, so organisms are selected by aquatic, terrestrial and flight competence rather than being magically converted. Social evolution now includes courtship, group cohesion, simple hierarchy and predator/prey pressure. Procedural 3D organism calls and changing habitat ambience are independent from Windows TTS. At the population cap, weak organisms may be displaced by viable offspring so generation turnover can continue.
+
+**New controls:** 5-9 habitat stages; NumPad + / - expands or shrinks the XYZ world.
+
 
 The most useful performance controls are:
 
