@@ -1,6 +1,6 @@
 # GAN Organism Arena
 
-**Version 1.0.0-alpha12 — 2026-09-01**
+**Version 1.0.0-alpha18 — 2026-09-02**
 
 ## Short
 
