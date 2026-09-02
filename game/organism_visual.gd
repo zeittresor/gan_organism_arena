@@ -1,12 +1,38 @@
 extends Node3D
 
 const Traits = preload("res://game/ecology_traits.gd")
-enum Tissue { BODY, SKIN, SKELETON, NEURAL, SENSOR, FIN, ARMOR, LEAF, ROOT, WING, LEG, FEATHER, QUILL, SCALE, FUR, MUCUS, MEMBRANE, HORN, BEAK, BARK }
+const Cycle = preload("res://game/life_cycle.gd")
+const Rig = preload("res://game/anatomical_rig.gd")
+enum Tissue { BODY, SKIN, SKELETON, NEURAL, SENSOR, FIN, ARMOR, LEAF, ROOT, WING, LEG, FEATHER, QUILL, SCALE, FUR, MUCUS, MEMBRANE, HORN, BEAK, BARK, GONAD, REPRO_DUCT, REPRO_OPENING, CLASPER, ORNAMENT, BROOD_SAC, COCOON, IRIS, PUPIL, FACET }
 var lowest_point: float = -0.5
 var _phenotype: String = ""
 var _animation_time: float = 0.0
 var _animation_tick: float = 0.0
+var gait_phase: float = 0.0
+var gait_activity: float = 0.0
 var tool_mesh: MeshInstance3D
+var links_instance: MultiMeshInstance3D
+var posed_cells: Array = []
+var posed_bases: Array = []
+var anatomy_counts: Dictionary = {}
+var collision_cells: Array = []
+var contact_radius: float = 1.0
+var pose_revision: int = 0
+var contact_cache: Dictionary = {}
+var ground_cache: Dictionary = {}
+var render_scales: Array = []
+var render_bases: Array = []
+var link_radii: Array = []
+var colors_dirty: bool = true
+var _color_energy: float = -INF
+var ground_cache_hits: int = 0
+var ground_fast_checks: int = 0
+var ground_detail_checks: int = 0
+var contact_builds: int = 0
+var render_active: bool = true
+var render_pending: bool = false
+var render_uploads: int = 0
+var skipped_uploads: int = 0
 
 var owner_life = null
 var multimesh_instance: MultiMeshInstance3D
@@ -21,6 +47,8 @@ var body_size_hint = 3.0
 func _ready() -> void:
     multimesh_instance = MultiMeshInstance3D.new()
     add_child(multimesh_instance)
+    links_instance = MultiMeshInstance3D.new()
+    add_child(links_instance)
     _create_render_resources()
     tool_mesh = MeshInstance3D.new()
     var tool = BoxMesh.new()
@@ -48,6 +76,11 @@ func _create_render_resources() -> void:
     mm.use_colors = true
     mm.mesh = sphere
     multimesh_instance.multimesh = mm
+    var links = MultiMesh.new()
+    links.transform_format = MultiMesh.TRANSFORM_3D
+    links.use_colors = true
+    links.mesh = sphere
+    links_instance.multimesh = links
 
 func recreate_render_resources() -> void:
     if not multimesh_instance:
@@ -68,6 +101,7 @@ func set_visual_cap(cap: int) -> void:
 
 func set_view_mode(mode: String) -> void:
     view_mode = mode
+    _prepare_render()
     _upload()
 
 func maybe_rebuild() -> void:
@@ -86,8 +120,20 @@ func rebuild(force = false) -> void:
         return
     _last_revision = revision
     _phenotype = phenotype_key()
+    var previous_cells: Array = body_cells.duplicate()
     body_cells.clear()
     _develop_body(c)
+    _build_rig()
+    # Growing/restyling a compatible segment must not restart its joint pose.
+    for i in range(mini(previous_cells.size(), body_cells.size())):
+        var old: Dictionary = previous_cells[i]
+        var cell: Dictionary = body_cells[i]
+        if old.get("t") != cell["t"] or old.get("parent") != cell["parent"] or old.get("joint_mode") != cell["joint_mode"]: continue
+        if float(cell["joint_muscle"]) <= 0.0 or old["p"].distance_to(cell["p"]) > maxf(0.05, float(old["r"])): continue
+        cell["joint_angle"] = clampf(float(old.get("joint_angle", 0.0)), -float(cell["joint_limit"]), float(cell["joint_limit"]))
+        cell["joint_rate"] = float(old.get("joint_rate", 0.0))
+    _pose_body()
+    _prepare_render()
     _upload()
 
 func _develop_body(complexity: float) -> void:
@@ -96,7 +142,12 @@ func _develop_body(complexity: float) -> void:
     var plan: int = int(g.body_plan)
     var budget: int = visual_cap
     visual_cap = maxi(24, int(budget * (0.68 if owner_life.rooted else 0.62)))
-    if owner_life.rooted:
+    var life_stage: String = Cycle.stage(owner_life)
+    if life_stage == "pupa":
+        _develop_pupa(g)
+    elif life_stage == "larva":
+        _develop_larva(g, growth)
+    elif owner_life.rooted:
         _develop_rooted(g, growth)
     elif owner_life.stand_upright:
         _develop_upright(g, growth)
@@ -111,13 +162,16 @@ func _develop_body(complexity: float) -> void:
             5: _develop_crustacean(g, growth)
             6: _develop_cephalopod(g, growth)
             _: _develop_serpentine(g, growth)
-    visual_cap = budget if owner_life.rooted else maxi(32, int(budget * 0.84))
-    if not owner_life.rooted:
+    visual_cap = budget if owner_life.rooted else maxi(32, int(budget * 0.78))
+    if not owner_life.rooted and Cycle.locomotor_maturity(owner_life):
         _add_adaptive_structures(g, growth)
+    visual_cap = maxi(body_cells.size(), budget - maxi(8, int(budget * 0.12)))
+    if life_stage not in ["larva", "pupa"]:
+        _add_reproductive_structures(g)
     visual_cap = budget
-    if not owner_life.rooted:
+    if not owner_life.rooted and life_stage != "pupa":
         _add_body_coverings(g, growth)
-    var size_scale: float = Traits.body_scale(g)
+    var size_scale: float = Traits.body_scale(g) * Cycle.size_factor(owner_life)
     lowest_point = 0.0
     for cell in body_cells:
         cell["p"] *= size_scale
@@ -128,7 +182,7 @@ func _develop_body(complexity: float) -> void:
     body_size_hint *= size_scale
 
 func phenotype_key() -> String:
-    return "%s:%s:%s" % [owner_life.rooted, owner_life.stand_upright, owner_life.in_water]
+    return "%s:%s:%s:%s:%d:%d:%d" % [owner_life.rooted, owner_life.stand_upright, owner_life.in_water, Cycle.stage(owner_life), int(Cycle.development_fraction(owner_life) * 8.0), owner_life.carrying_count, int(owner_life.reproduction_progress * 4.0)]
 
 func _develop_rooted(g, growth: float) -> void:
     var tree: bool = not owner_life.in_water and g.wood_drive > 0.60 and g.support_drive > 0.55
@@ -169,32 +223,100 @@ func _develop_upright(g, growth: float) -> void:
     focus_anchor_local = head
     body_size_hint = height
 
-func animate_life(delta: float) -> void:
-    _animation_time += delta
-    _animation_tick += delta
-    if tool_mesh:
-        tool_mesh.visible = owner_life.tool_durability > 0.0
-        tool_mesh.position = focus_anchor_local + Vector3(0.35, -0.25, 0.0)
-        tool_mesh.rotation.x = sin(_animation_time * 5.0) * (0.7 if owner_life.behavior_state == "use_tool" else 0.1)
-    # Animate only sparse appendages at 20 Hz, retaining the body MultiMesh.
-    if _animation_tick < 0.05 or not multimesh_instance:
-        return
-    _animation_tick = 0.0
-    var mm = multimesh_instance.multimesh
+# Every tissue cell has an earlier attachment parent. Bone endpoints are posed
+# first, then both skin and connecting tissue use those exact endpoints.
+func _build_rig() -> void:
+    collision_cells.clear()
+    anatomy_counts = {"fixed": 0, "cartilage": 0, "membrane": 0, "hydrostat": 0, "active": 0}
     for i in range(body_cells.size()):
         var cell: Dictionary = body_cells[i]
+        if not cell.has("parent"):
+            cell["parent"] = _nearest_anchor(cell["p"], i)
+        Rig.configure(cell, owner_life.genome, owner_life.rooted)
+        anatomy_counts[cell["joint_mode"]] += 1
+        if cell["joint"] and float(cell["joint_muscle"]) > 0.0: anatomy_counts["active"] += 1
         var tissue: int = int(cell["t"])
-        if tissue not in [Tissue.WING, Tissue.LEG, Tissue.LEAF, Tissue.FEATHER, Tissue.QUILL, Tissue.MEMBRANE]:
-            continue
-        var p: Vector3 = cell["p"]
-        if (tissue == Tissue.WING or bool(cell.get("wing", false))) and owner_life.airborne:
-            p.y += sin(_animation_time * 9.0) * absf(p.x) * 0.30
-        elif tissue == Tissue.LEG and not owner_life.in_water and owner_life.velocity.length() > 0.3:
-            p.z += sin(_animation_time * 7.0 + (PI if p.x < 0.0 else 0.0)) * 0.16
-        elif tissue == Tissue.LEAF:
-            p.x += sin(_animation_time * 1.2 + p.y) * 0.045
-        var shape: Vector3 = cell["s"]
-        mm.set_instance_transform(i, Transform3D(Basis.IDENTITY.scaled(shape * (float(cell["r"]) / 0.30)), p))
+        if tissue in [Tissue.BODY, Tissue.SKIN, Tissue.ARMOR, Tissue.COCOON, Tissue.LEG, Tissue.ROOT, Tissue.BARK]:
+            collision_cells.append(i)
+    if collision_cells.is_empty() and not body_cells.is_empty(): collision_cells.append(0)
+
+func _nearest_anchor(p: Vector3, before: int) -> int:
+    var best: int = -1
+    var score: float = INF
+    for i in range(before):
+        var cell: Dictionary = body_cells[i]
+        if int(cell["t"]) in [Tissue.NEURAL, Tissue.SKELETON, Tissue.GONAD, Tissue.REPRO_DUCT]: continue
+        var gap: float = p.distance_to(cell["p"]) - float(cell["r"]) * 0.7
+        if gap < score:
+            best = i
+            score = gap
+    return best
+
+func spine_flexibility() -> float:
+    var g = owner_life.genome
+    return clampf((0.12 + g.muscle_drive * 0.65 + g.tail_drive * 0.23) * (1.0 - g.armor_drive * 0.60) * (1.0 - g.wood_drive * 0.65), 0.02, 0.95)
+
+func _pose_body(delta: float = 0.0) -> void:
+    pose_revision += 1
+    posed_cells.clear()
+    posed_bases.clear()
+    contact_radius = 0.0
+    var active: float = gait_activity
+    var phase: float = gait_phase
+    for i in range(body_cells.size()):
+        var cell: Dictionary = body_cells[i]
+        var rest: Vector3 = cell["p"]
+        var parent: int = int(cell.get("parent", -1))
+        var p: Vector3 = rest
+        var frame: Basis = Basis.IDENTITY
+        if parent >= 0:
+            var base: Dictionary = body_cells[parent]
+            var offset: Vector3 = rest - base["p"]
+            frame = posed_bases[parent]
+            var angle: float = Rig.advance(cell, active, phase, owner_life.turn_yaw_speed, body_size_hint, delta)
+            if angle != 0.0:
+                var pivot: Vector3 = offset * float(cell["joint_pivot"])
+                p = posed_cells[parent] + frame * pivot
+                frame = frame * Basis(cell["joint_axis"], angle)
+                p += frame * (offset - pivot)
+            else:
+                p = posed_cells[parent] + frame * offset
+        if bool(cell.get("eye_surface", false)) and parent >= 0:
+            var eye_radius: float = float(body_cells[parent]["r"])
+            var forward: Vector3 = owner_life.gaze_direction if owner_life.genome.eye_focus > 0.25 and owner_life.genome.muscle_drive > 0.0 else frame * Vector3.FORWARD
+            p = posed_cells[parent] + forward * eye_radius * float(cell.get("eye_depth", 0.92))
+        posed_cells.append(p)
+        posed_bases.append(frame)
+        var extent: Vector3 = cell["s"] * float(cell["r"])
+        contact_radius = maxf(contact_radius, p.length() + maxf(extent.x, maxf(extent.y, extent.z)))
+
+func animate_life(delta: float) -> void:
+    _animation_time += delta
+    var activity: float = clampf(owner_life.velocity.length() / 3.0, 0.0, 1.0)
+    gait_activity = lerpf(gait_activity, activity, 1.0 - exp(-delta * 6.0))
+    # Integrate frequency: elapsed_time * current_frequency jumps on any speed
+    # change, especially after a long run or a contact impulse.
+    gait_phase = fposmod(gait_phase + delta * (2.0 + gait_activity * 4.0), TAU)
+    _animation_tick += delta
+    if _animation_tick < 0.05: return
+    var pose_delta: float = _animation_tick
+    _animation_tick = 0.0
+    _pose_body(pose_delta)
+    if render_active:
+        _upload()
+    else:
+        render_pending = true
+        skipped_uploads += 1
+    if is_instance_valid(tool_mesh):
+        tool_mesh.visible = owner_life.tool_durability > 0.0
+        tool_mesh.position = get_focus_anchor_local() + Vector3(0.28, -0.15, -0.30)
+
+func set_render_active(value: bool) -> void:
+    render_active = value
+    if value: flush_render()
+
+func flush_render() -> void:
+    if render_pending: _upload()
 
 func _develop_serpentine(g, growth: float) -> void:
     var body_length: float = 2.8 + growth * 1.35 + float(g.elongation) * 4.0
@@ -436,8 +558,10 @@ func _add_body_coverings(g, growth: float) -> void:
         if int(cell["t"]) == Tissue.BODY:
             cell["t"] = Tissue.SKIN
             cell["r"] *= 1.0 + float(g.skin_thickness) * 0.14
+            cell["sample_index"] = body_cells.find(cell)
             samples.append(cell.duplicate())
         elif int(cell["t"]) == Tissue.WING:
+            cell["sample_index"] = body_cells.find(cell)
             wings.append(cell.duplicate())
     if samples.is_empty():
         return
@@ -502,9 +626,14 @@ func _add_body_coverings(g, growth: float) -> void:
                 _add_cell(mouth, Tissue.BEAK, length * 0.65, Vector3(0.65, 0.32, 1.1))
                 _add_cell(mouth + Vector3(0, -length * 0.05, -length * 0.55), Tissue.BEAK, length * 0.25, Vector3(0.45, 0.28, 1.0))
         for j in range(start, body_cells.size()):
+            body_cells[j]["parent"] = int(sample.get("sample_index", 0))
             body_cells[j]["wing"] = int(sample["t"]) == Tissue.WING and kind in [Tissue.FEATHER, Tissue.MEMBRANE]
 
 func _surface_color(cell: Dictionary) -> Color:
+    if view_mode == "natural":
+        if int(cell["t"]) == Tissue.PUPIL: return Color(0.008, 0.01, 0.015)
+        if int(cell["t"]) == Tissue.IRIS: return Color.from_hsv(fposmod(owner_life.genome.hue + 0.24, 1.0), 0.88, 0.48)
+        if int(cell["t"]) == Tissue.FACET: return Color.from_hsv(fposmod(owner_life.genome.hue + 0.12, 1.0), 0.62, 0.32 + fposmod(cell["p"].x * 13.0, 0.25))
     var color: Color = _cell_color(int(cell["t"]))
     if view_mode != "natural":
         return color
@@ -551,11 +680,16 @@ func _paired_appendages(g, spine: Array[Vector3], radius: float, growth: float, 
                     _add_chain(tip, fin_tip, 2, Tissue.FIN, limb_radius * 0.30)
 
 func _make_head(g, head: Vector3, radius: float, growth: float) -> void:
+    radius *= 1.16 - Cycle.development_fraction(owner_life) * 0.16
     _add_cell(head, Tissue.BODY, radius, Vector3(1.08 + float(g.body_width) * 0.28, 0.92, 1.05))
     if growth > 0.8:
-        _add_cell(head + Vector3(-radius * 0.44, radius * 0.18, -radius * 0.52), Tissue.SENSOR, radius * 0.16)
-        _add_cell(head + Vector3(radius * 0.44, radius * 0.18, -radius * 0.52), Tissue.SENSOR, radius * 0.16)
-    if growth > 2.4 and float(g.sensory_drive) > 0.45:
+        for side in [-1.0, 1.0]:
+            var eye = head + Vector3(side * radius * 0.64, radius * 0.23, -radius * 0.69)
+            if g.compound_eye_drive > 0.58:
+                _add_compound_eye(eye, radius * 0.25)
+            else:
+                _add_focused_eye(eye, radius * (0.18 + g.sensory_drive * 0.08))
+    if growth > 1.2 and g.antenna_drive > 0.45:
         var antenna_len: float = radius * (0.65 + float(g.sensory_drive) * 1.25)
         _add_chain(head + Vector3(-radius * 0.28, radius * 0.46, -radius * 0.20), head + Vector3(-radius * 0.48, radius * 0.55, -antenna_len), 4, Tissue.SENSOR, radius * 0.08)
         _add_chain(head + Vector3(radius * 0.28, radius * 0.46, -radius * 0.20), head + Vector3(radius * 0.48, radius * 0.55, -antenna_len), 4, Tissue.SENSOR, radius * 0.08)
@@ -572,29 +706,106 @@ func _add_cell(pos: Vector3, tissue: int, radius: float, shape: Vector3 = Vector
     body_cells.append({"p": pos, "t": tissue, "r": clampf(radius, 0.055, 1.8), "s": shape})
 
 func _add_chain(a: Vector3, b: Vector3, count: int, tissue: int, radius: float) -> void:
-    for i in range(count):
-        if body_cells.size() >= visual_cap:
-            return
-        var t: float = float(i + 1) / float(count + 1)
+    # A truncated branch still ends at its last connected joint; no isolated tip.
+    var previous: int = _nearest_anchor(a, body_cells.size())
+    for i in range(maxi(2, count)):
+        if body_cells.size() >= visual_cap: return
+        var t: float = float(i) / float(maxi(1, count - 1))
         _add_cell(a.lerp(b, t), tissue, radius * lerpf(1.0, 0.62, t))
+        var index: int = body_cells.size() - 1
+        body_cells[index]["parent"] = previous
+        body_cells[index]["chain_index"] = i
+        body_cells[index]["chain_count"] = maxi(2, count)
+        body_cells[index]["chain_axis"] = (b - a).normalized()
+        previous = index
+
+func _link_transform(a: Vector3, b: Vector3, radius: float) -> Transform3D:
+    var delta: Vector3 = b - a
+    var length_value: float = delta.length()
+    var axis: Vector3 = delta / length_value if length_value > 0.001 else Vector3.UP
+    var reference: Vector3 = Vector3.RIGHT if absf(axis.dot(Vector3.UP)) > 0.95 else Vector3.UP
+    var right: Vector3 = reference.cross(axis).normalized()
+    var width: float = radius / 0.30
+    var basis_value: Basis = Basis(right * width, axis * ((length_value * 0.5 + radius) / 0.30), right.cross(axis) * width)
+    return Transform3D(basis_value, (a + b) * 0.5)
+
+func _prepare_render() -> void:
+    # Anatomy, view-dependent scales and link thickness change only on rebuild
+    # or view changes. Animation updates positions, not these static values.
+    render_scales.clear()
+    render_bases.clear()
+    link_radii.clear()
+    colors_dirty = true
+    for cell in body_cells:
+        var shape: Vector3 = cell["s"]
+        var radius: float = float(cell["r"])
+        var scale_vec: Vector3 = shape * (radius / 0.30)
+        if int(cell["t"]) in [Tissue.GONAD, Tissue.REPRO_DUCT] and view_mode == "natural":
+            scale_vec = Vector3.ZERO
+        elif view_mode == "cell" and int(cell["t"]) in [Tissue.SKIN, Tissue.BODY]:
+            scale_vec *= 0.55
+        render_scales.append(scale_vec)
+        render_bases.append(Basis.from_scale(scale_vec))
+        var parent: int = int(cell.get("parent", -1))
+        var link_radius: float = 0.0
+        if parent >= 0 and scale_vec != Vector3.ZERO:
+            var base: Dictionary = body_cells[parent]
+            var e: Vector3 = base["s"] * float(base["r"])
+            link_radius = minf(minf(e.x, minf(e.y, e.z)), radius * minf(shape.x, minf(shape.y, shape.z))) * 0.78
+            if view_mode == "cell": link_radius *= 0.45 if cell["joint"] else 0.0
+        link_radii.append(maxf(0.0001, link_radius))
+    if owner_life and multimesh_instance and multimesh_instance.multimesh:
+        multimesh_instance.multimesh.mesh.material.roughness = 0.85 if owner_life.rooted else 0.78 - float(owner_life.genome.mucus_cover) * 0.54
 
 func _upload() -> void:
     if not multimesh_instance or not multimesh_instance.multimesh:
         return
+    render_pending = false
+    render_uploads += 1
     var mm = multimesh_instance.multimesh
-    mm.instance_count = body_cells.size()
-    if owner_life and mm.mesh and mm.mesh.material:
-        mm.mesh.material.roughness = 0.85 if owner_life.rooted else 0.78 - float(owner_life.genome.mucus_cover) * 0.54
+    var links = links_instance.multimesh
+    if mm.instance_count != body_cells.size():
+        mm.instance_count = body_cells.size()
+        colors_dirty = true
+    if links.instance_count != maxi(0, body_cells.size() - 1):
+        links.instance_count = maxi(0, body_cells.size() - 1)
+        colors_dirty = true
+    # Explicit conservative bounds avoid automatic per-instance AABB rebuilds.
+    var bounds = AABB(Vector3.ONE * -contact_radius, Vector3.ONE * (contact_radius * 2.0))
+    mm.custom_aabb = bounds
+    links.custom_aabb = bounds
+    var energy_value: float = clampf(float(owner_life.energy), 0.0, 1.0)
+    var update_colors: bool = colors_dirty or (view_mode == "energy" and energy_value != _color_energy)
     for i in range(body_cells.size()):
         var cell: Dictionary = body_cells[i]
-        var radius: float = float(cell["r"])
-        var pos: Vector3 = cell["p"]
-        var shape: Vector3 = cell.get("s", Vector3.ONE)
-        var scale_vec: Vector3 = Vector3.ONE * (radius / 0.30)
-        scale_vec *= shape
-        var xf = Transform3D(Basis.IDENTITY.scaled(scale_vec), pos)
+        var pos: Vector3 = posed_cells[i] if posed_cells.size() == body_cells.size() else cell["p"]
+        var scale_vec: Vector3 = render_scales[i]
+        var render_basis: Basis = posed_bases[i] * render_bases[i]
+        if bool(cell.get("eye_surface", false)):
+            var forward: Vector3 = owner_life.gaze_direction if owner_life.genome.eye_focus > 0.25 and owner_life.genome.muscle_drive > 0.0 else posed_bases[i] * Vector3.FORWARD
+            var right: Vector3 = Vector3.UP.cross(forward).normalized()
+            render_basis = Basis(right * scale_vec.x, forward.cross(right).normalized() * scale_vec.y, forward * scale_vec.z)
+        var xf = Transform3D(render_basis, pos)
         mm.set_instance_transform(i, xf)
-        mm.set_instance_color(i, _surface_color(cell))
+        if update_colors:
+            var color: Color = _surface_color(cell)
+            mm.set_instance_color(i, color)
+            if i > 0:
+                var link_color: Color = color
+                if view_mode == "cell" and cell["joint"]:
+                    link_color = Color(0.90, 0.30, 0.23) if cell["joint_mode"] == "hydrostat" else Color(0.25, 0.85, 0.90)
+                links.set_instance_color(i - 1, link_color)
+        if i > 0:
+            var parent: int = int(cell.get("parent", 0))
+            var anchor: Vector3 = posed_cells[parent] if parent >= 0 and posed_cells.size() == body_cells.size() else pos
+            if view_mode == "cell" and cell["joint"] and parent >= 0:
+                var offset: Vector3 = cell["p"] - body_cells[parent]["p"]
+                var pivot: Vector3 = anchor + posed_bases[parent] * offset * float(cell["joint_pivot"])
+                links.set_instance_transform(i - 1, Transform3D(Basis.from_scale(Vector3.ONE * link_radii[i] / 0.30), pivot))
+            else:
+                links.set_instance_transform(i - 1, _link_transform(anchor, pos, link_radii[i]))
+    colors_dirty = false
+    _color_energy = energy_value
 
 func get_rear_anchor_local() -> Vector3:
     return rear_anchor_local
@@ -621,6 +832,13 @@ func _cell_color(tissue: int) -> Color:
         if tissue == Tissue.HORN: return Color(0.55, 0.45, 0.29)
         if tissue == Tissue.BEAK: return Color(0.65, 0.45, 0.18)
         if tissue == Tissue.BARK: return Color(0.28, 0.20, 0.12)
+        if tissue == Tissue.GONAD: return Color(0.85, 0.35, 0.68)
+        if tissue == Tissue.REPRO_DUCT: return Color(0.92, 0.64, 0.42)
+        if tissue == Tissue.REPRO_OPENING: return base.darkened(0.45)
+        if tissue == Tissue.CLASPER: return base.lightened(0.12)
+        if tissue == Tissue.ORNAMENT: return base.lightened(0.48)
+        if tissue == Tissue.BROOD_SAC: return base.lightened(0.18)
+        if tissue == Tissue.COCOON: return Color(0.45, 0.39, 0.22)
     match view_mode:
         "cell":
             match tissue:
@@ -645,3 +863,69 @@ func _cell_color(tissue: int) -> Color:
                 Tissue.NEURAL: return base.lightened(0.08)
                 Tissue.SKELETON: return base.darkened(0.18)
                 _: return base
+
+func _develop_larva(g, growth: float) -> void:
+    var length: float = 2.0 + growth * 0.28
+    for i in range(7):
+        var z: float = float(i) / 6.0 * length
+        _add_cell(Vector3(0, 0, z), Tissue.BODY, 0.30 + sin(float(i) / 6.0 * PI) * 0.16)
+    _make_head(g, Vector3(0, 0, -0.25), 0.45, 1.2)
+    _add_chain(Vector3(0, 0, length), Vector3(0, 0, length + 1.0), 4, Tissue.FIN, 0.15)
+    rear_anchor_local = Vector3(0, 0, length + 1.0)
+    focus_anchor_local = Vector3(0, 0, -0.25)
+    body_size_hint = length
+
+func _develop_pupa(g) -> void:
+    _add_cell(Vector3.ZERO, Tissue.COCOON, 0.65, Vector3(1.0, 0.8, 1.7))
+    _add_cell(Vector3(0, 0, -0.35), Tissue.NEURAL, 0.20)
+    rear_anchor_local = Vector3(0, 0, 1.0)
+    focus_anchor_local = Vector3(0, 0, -0.6)
+    body_size_hint = 1.2 + g.size_gene
+
+func _add_reproductive_structures(g) -> void:
+    var maturity: float = Cycle.development_fraction(owner_life)
+    if maturity < 0.70: return
+    var center: Vector3 = focus_anchor_local.lerp(rear_anchor_local, 0.62)
+    var size: float = maxf(0.30, body_size_hint * 0.15)
+    var maturation: float = clampf((maturity - 0.60) / 0.40, 0.0, 1.0)
+    if owner_life.rooted and g.photosynthesis > 0.50:
+        _add_cell(focus_anchor_local, Tissue.ORNAMENT, size * 0.7 * maturation, Vector3(1.5, 0.5, 1.5))
+        return
+    # Schematic gonads/ducts are exposed by the scientific cell view; the
+    # natural view shows only the small opening and applicable appendages.
+    _add_cell(center + Vector3(0, -size * 0.8, 0), Tissue.REPRO_OPENING, size * 0.20, Vector3(1.4, 0.2, 1.0))
+    var role: String = Cycle.sex_role(g)
+    if g.internal_fertilization >= 0.50 and role != "female":
+        _add_cell(center + Vector3(size * 0.6, -size * 0.75, 0), Tissue.CLASPER, size * 0.25 * maturation, Vector3(0.45, 0.45, 1.5))
+    if owner_life.carrying_count > 0:
+        var bulge: float = 1.0 + owner_life.reproduction_progress * 0.4
+        _add_cell(center + Vector3(0, -size * 0.65, 0), Tissue.BROOD_SAC, size * bulge, Vector3(0.9, 0.7, 1.0))
+    var display: float = g.ornament_drive * g.dimorphism * maturation
+    if display > 0.12:
+        var sex_scale: float = 1.0 if role == "male" else (0.80 if role == "hermaphrodite" else 0.55)
+        _add_cell(focus_anchor_local + Vector3(0, size, 0), Tissue.ORNAMENT, size * display * sex_scale, Vector3(0.3, 2.0, 1.2))
+    _add_cell(center + Vector3(-size * 0.4, 0, 0), Tissue.GONAD, size * 0.32 * maturation)
+    _add_cell(center + Vector3(size * 0.4, 0, 0), Tissue.GONAD, size * 0.32 * maturation)
+    _add_chain(center, center + Vector3(0, -size * 0.6, 0), 2, Tissue.REPRO_DUCT, size * 0.10)
+
+func _add_focused_eye(center: Vector3, radius: float) -> void:
+    if visual_cap - body_cells.size() < 3: return
+    var eye: int = body_cells.size()
+    _add_cell(center, Tissue.SENSOR, radius)
+    _add_cell(center + Vector3(0, 0, -radius * 0.92), Tissue.IRIS, radius, Vector3(0.69, 0.69, 0.18))
+    body_cells.back()["parent"] = eye
+    body_cells.back()["eye_surface"] = true
+    body_cells.back()["eye_depth"] = 0.92
+    _add_cell(center + Vector3(0, 0, -radius * 1.07), Tissue.PUPIL, radius, Vector3(0.30, 0.42, 0.07))
+    body_cells.back()["parent"] = eye
+    body_cells.back()["eye_surface"] = true
+    body_cells.back()["eye_depth"] = 1.07
+
+func _add_compound_eye(center: Vector3, radius: float) -> void:
+    if visual_cap - body_cells.size() < 7: return
+    var eye: int = body_cells.size()
+    _add_cell(center, Tissue.SENSOR, radius)
+    for i in range(6):
+        var angle: float = float(i) * TAU / 6.0
+        _add_cell(center + Vector3(cos(angle) * radius * 0.58, sin(angle) * radius * 0.58, -radius * 0.68), Tissue.FACET, radius * 0.45)
+        body_cells.back()["parent"] = eye

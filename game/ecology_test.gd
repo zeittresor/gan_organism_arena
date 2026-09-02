@@ -23,6 +23,7 @@ func creature(g, p: Vector3 = Vector3.ZERO):
     next_id += 1
     org.initialize(next_id, g, p, 180, "natural")
     org.age_seconds = 40.0
+    org.development_progress = clampf(40.0 / (24.0 + org.genome.maturation_gene * 60.0), 0.0, 1.0)
     org.complexity = 35.0
     org.intelligence = 0.6
     org.energy = 1.0
@@ -106,7 +107,8 @@ func run_all() -> bool:
     var eco = Ecology.new()
     var patch: Vector3 = land
     patch.y = model.floor_at(patch)
-    eco.configure(model, [patch])
+    var resource_positions: Array[Vector3] = [patch]
+    eco.configure(model, resource_positions)
     var tree_g = Genome.new()
     tree_g.root_drive = 1.0
     tree_g.photosynthesis = 1.0

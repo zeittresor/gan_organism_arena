@@ -1,6 +1,21 @@
 extends Node3D
 
+const Affect = preload("res://game/affect_model.gd")
+const ThoughtLanguage = preload("res://game/thought_language.gd")
+const Contact = preload("res://game/body_contact.gd")
+const Locomotion = preload("res://game/locomotion.gd")
+var contact_quality: int = 100
+var heading_yaw: float = 0.0
+var heading_pitch: float = 0.0
+var turn_yaw_speed: float = 0.0
+var turn_pitch_speed: float = 0.0
+var body_roll: float = 0.0
+var food_target_index: int = -1
+var food_target_position: Vector3 = Vector3.ZERO
+var food_retarget_timer: float = 0.0
 const Traits = preload("res://game/ecology_traits.gd")
+const Physiology = preload("res://game/physiology.gd")
+const Cycle = preload("res://game/life_cycle.gd")
 
 const OrganismVisualScript = preload("res://game/organism_visual.gd")
 
@@ -15,13 +30,22 @@ var experience = 0.0
 var children = 0
 var velocity = Vector3.ZERO
 var desired_velocity = Vector3.ZERO
+var cruise_altitude: float = 0.0
 var hunger = 0.0
 var fear = 0.0
 var curiosity_state = 0.5
 var social_state = 0.5
 var language_stage = 0
+var affect_valence: float = 0.0
+var affect_arousal: float = 0.0
+var affect_bond: float = 0.0
+var emotion: String = "reflex"
+var eye_target = Vector3(0, 0, -5)
+var gaze_direction = Vector3.FORWARD
 var last_thought = ""
 var thought_counter = 0
+var last_thought_index: int = 0
+var last_thought_state: String = "observe"
 var alive = true
 var selected = false
 var family_name = ""
@@ -68,12 +92,43 @@ var last_medium: bool = true
 var medium_changes: int = 0
 var tool_uses: int = 0
 var feeding_events: int = 0
+var maturity_delay: float = 0.0
+var development_progress: float = 0.0
+var growth_investment: float = 0.0
+var gamete_investment: float = 0.0
+var somatic_cells: int = 16
+var mitotic_divisions: int = 0
+var mitotic_investment: float = 0.0
+var tissue_damage: float = 0.0
+var repair_investment: float = 0.0
+var repair_divisions: int = 0
+var meiosis_cycles: int = 0
+var polar_bodies: int = 0
+var egg_genomes: Array = []
+var sperm_genomes: Array = []
+var egg_reserve: float = 0.0
+var sperm_reserve: float = 0.0
+var bud_reserve: float = 0.0
+var reproduction_state: String = "idle"
+var reproduction_progress: float = 0.0
+var carrying_count: int = 0
+var reproduction_event_timer: float = 0.0
+var parent_a: int = -1
+var parent_b: int = -1
+var burst_time: float = 0.0
+var burst_cooldown: float = 0.0
+var burst_kind: String = ""
+var returning_medium: String = ""
+var strike_timer: float = 0.0
 
 
 func _setting(key: String, fallback):
     # Keep the organism core usable in deterministic/headless tests as well as
     # the normal project. In the real game SettingsStore is an autoload; tests
     # fall back cleanly if that singleton is intentionally absent.
+    var world = get_parent()
+    if world != null and world.has_method("_setting"):
+        return world._setting(key, fallback)
     var store = get_node_or_null("/root/SettingsStore")
     if store != null and store.has_method("get_value"):
         return store.get_value(key, fallback)
@@ -82,6 +137,7 @@ func _setting(key: String, fallback):
 func initialize(p_id: int, p_genome, spawn: Vector3, visual_cap: int, view_mode: String) -> void:
     organism_id = p_id
     genome = p_genome
+    genome.ensure_diploid()
     position = spawn
     family_name = "F%03d" % genome.family_id
     energy = 0.58 + genome.metabolism * 0.28
@@ -92,6 +148,7 @@ func initialize(p_id: int, p_genome, spawn: Vector3, visual_cap: int, view_mode:
     desired_velocity = Vector3(0.0, 0.0, -1.0).rotated(Vector3.UP, float(genome.seed % 628) / 100.0)
     wander_direction = desired_velocity.normalized()
     velocity = desired_velocity * (1.2 + genome.metabolism)
+    Locomotion.initialize(self, desired_velocity)
     if development_stability < float(_setting("viability_threshold", 0.18)):
         energy *= lerpf(0.12, 0.52, development_stability)
         _remember("unstable development")
@@ -104,6 +161,9 @@ func think_step(dt: float, nutrient_pos: Vector3, social_vector: Vector3, threat
         return
     age_seconds += dt
     mate_cooldown = maxf(0.0, mate_cooldown - dt)
+    reproduction_event_timer = maxf(0.0, reproduction_event_timer - dt)
+    if carrying_count == 0 and pair_target_id < 0 and reproduction_event_timer <= 0.0:
+        reproduction_state = "idle"
     hunger = clampf(1.0 - energy, 0.0, 1.0)
     curiosity_state = clampf(0.25 + genome.curiosity * 0.65 + sin(age_seconds * 0.17 + float(organism_id)) * 0.10, 0.0, 1.0)
     social_state = clampf(genome.cooperation * (0.55 + energy * 0.45), 0.0, 1.0)
@@ -127,8 +187,17 @@ func think_step(dt: float, nutrient_pos: Vector3, social_vector: Vector3, threat
 
     var food_delta: Vector3 = nutrient_pos - global_position
     var food_dir: Vector3 = food_delta.normalized() if food_delta.length_squared() > 0.001 else Vector3.ZERO
+    eye_target = nutrient_pos
+    var world = get_parent()
+    if world != null and world.has_method("population_cap"):
+        var target_id: int = prey_id if prey_id >= 0 else pair_target_id
+        if target_id >= 0:
+            var target = world.reproduction.find_id(world, target_id)
+            if target != null: eye_target = target.global_position
+    Affect.advance(self, dt, social_vector, threat_vector)
     var steer = food_dir * (0.30 + hunger * 1.35)
     steer += social_vector * genome.cooperation * 0.42
+    steer += Affect.steering(self, social_vector, threat_vector)
     steer -= threat_vector * (0.28 + genome.aggression * 0.34)
     steer += wander_direction * (0.14 + genome.curiosity * 0.24)
     steer.y += (genome.buoyancy - 0.5) * 0.18
@@ -140,13 +209,14 @@ func think_step(dt: float, nutrient_pos: Vector3, social_vector: Vector3, threat
     if airborne:
         target_speed = 2.0 + Traits.lift(genome) * 5.0
     target_speed *= (0.40 + stamina * 0.60) / morphology_drag
-    if rooted:
+    if rooted or Cycle.stage(self) == "pupa":
         target_speed = 0.0
     desired_velocity = steer.normalized() * target_speed
-    var steering_response: float = 0.28 + genome.neural_drive * 0.42
-    velocity = velocity.lerp(desired_velocity, clampf(dt * steering_response, 0.0, 0.22))
+    if prey_id < 0 and pair_target_id < 0 and threat_vector.length_squared() < 0.64:
+        desired_velocity *= clampf(food_delta.length() / 3.0, 0.20, 1.0)
 
     var morphology_cost: float = 0.00020 * (float(genome.armor_drive) + float(genome.shell_drive))
+    morphology_cost += genome.ornament_drive * genome.dimorphism * Cycle.development_fraction(self) * 0.0005
     morphology_cost += 0.00016 * float(genome.limb_drive) * float(genome.limb_length)
     var instability_cost: float = pow(maxf(0.0, 1.0 - development_stability), 2.0) * 0.010
     var senescence_start: float = 150.0 + float(genome.longevity) * 540.0 + float(genome.support_drive) * 90.0
@@ -154,9 +224,11 @@ func think_step(dt: float, nutrient_pos: Vector3, social_vector: Vector3, threat
     var senescence_cost: float = senescence * senescence * 0.0045
     var metabolic_cost: float = dt * (0.0018 + float(genome.metabolism) * 0.0020 + velocity.length() * 0.00042 + morphology_cost + instability_cost + senescence_cost)
     metabolic_cost *= 0.45 + float(genome.size_gene) * float(genome.size_gene) * 1.30
-    if rooted:
+    metabolic_cost *= 0.45 + Cycle.size_factor(self) * 0.55
+    if rooted or Cycle.stage(self) == "pupa":
         metabolic_cost *= 0.30
     energy = maxf(0.0, energy - metabolic_cost - dt * Traits.maintenance(genome) * (0.4 if rooted else 1.0))
+    Physiology.advance(self, dt)
     experience += dt * (0.035 + curiosity_state * 0.022 + social_state * 0.012)
 
     # Open-ended state: no semantic maximum. Visual cost stays bounded separately.
@@ -172,41 +244,48 @@ func think_step(dt: float, nutrient_pos: Vector3, social_vector: Vector3, threat
 func motion_step(delta: float, world_half_extent: float) -> void:
     if not alive:
         return
-    if rooted:
+    Locomotion.step(self, delta, world_half_extent)
+    burst_cooldown = maxf(0.0, burst_cooldown - delta)
+    strike_timer = maxf(0.0, strike_timer - delta)
+    if burst_time > 0.0:
+        burst_time = maxf(0.0, burst_time - delta)
+        if not in_water:
+            velocity.y -= delta * 4.5
+        if burst_time <= 0.0:
+            returning_medium = "water" if burst_kind == "breach" else ("air" if burst_kind == "dive" else "")
+            burst_kind = ""
+    if rooted or Cycle.stage(self) == "pupa":
         velocity = Vector3.ZERO
+    if not in_water and not airborne and not rooted and burst_time <= 0.0:
+        velocity.y = minf(0.0, velocity.y) - delta * 9.8
+    if tissue_damage > 0.0: velocity *= maxf(0.0, 1.0 - delta * tissue_damage * 0.6)
+    var previous: Vector3 = global_position
     global_position += velocity * delta
     var p = global_position
     var bounced = false
     if absf(p.x) > world_half_extent:
         p.x = clampf(p.x, -world_half_extent, world_half_extent)
-        velocity.x *= -0.82
+        velocity.x = 0.0
         bounced = true
     if absf(p.y) > world_half_extent * 0.60:
         p.y = clampf(p.y, -world_half_extent * 0.60, world_half_extent * 0.60)
-        velocity.y *= -0.82
+        velocity.y = 0.0
         bounced = true
     if absf(p.z) > world_half_extent:
         p.z = clampf(p.z, -world_half_extent, world_half_extent)
-        velocity.z *= -0.82
+        velocity.z = 0.0
         bounced = true
     if habitat != null:
-        var clearance: float = body_clearance()
-        var floor_y: float = habitat.floor_at(p) + clearance
-        if p.y < floor_y or rooted:
-            p.y = floor_y
-            velocity.y = maxf(0.0, velocity.y) if not rooted else 0.0
-        if habitat.level == 5:
-            p.y = minf(p.y, habitat.waterline - 0.10)
+        # Aquatic ancestors cannot climb an emergent shore via floor correction.
+        if habitat.is_water(previous) and not habitat.is_water(p) and burst_time <= 0.0 and not can_fly:
+            if Traits.walking(genome) < 0.18 or not Cycle.locomotor_maturity(self):
+                p = previous
+                velocity.y = minf(0.0, velocity.y)
     global_position = p
-    if rooted:
-        rotation = Vector3.ZERO
-    elif velocity.length_squared() > 0.01:
-        var facing: Vector3 = velocity.normalized()
-        if grounded and not in_water:
-            facing.y = 0.0
-        if facing.length_squared() > 0.001 and absf(facing.normalized().dot(Vector3.UP)) < 0.98:
-            look_at(global_position + facing, Vector3.UP)
     if is_instance_valid(visual):
+        var target_direction: Vector3 = global_transform.basis.inverse() * (eye_target - global_position).normalized()
+        target_direction.z = minf(-0.15, target_direction.z)
+        gaze_direction = gaze_direction.lerp(target_direction.normalized(), minf(1.0, delta * (2.0 + genome.eye_focus * 8.0))).normalized()
         visual.animate_life(delta)
     if bounced:
         fear = minf(1.0, fear + 0.08)
@@ -214,6 +293,7 @@ func motion_step(delta: float, world_half_extent: float) -> void:
     if _body_timer >= float(_setting("body_rebuild_interval", 1.0)):
         _body_timer = 0.0
         visual.maybe_rebuild()
+    Contact.ground(self, world_half_extent)
 
 
 func body_clearance() -> float:
@@ -225,9 +305,16 @@ func body_clearance() -> float:
 
 func apply_environment(dt: float, model) -> void:
     habitat = model
-    in_water = model.is_water(global_position)
+    var depth: float = model.waterline - global_position.y
+    if model.floor_at(global_position) >= model.waterline:
+        in_water = false
+    elif depth > 0.12:
+        in_water = true
+    elif depth < -0.12:
+        in_water = false
     var floor_y: float = model.floor_at(global_position)
-    grounded = global_position.y <= floor_y + body_clearance() + 0.35
+    # Full-body contact is also established when a test/spawn changes position.
+    Contact.ground(self, model.half_extent)
     medium_timer += dt
     if last_medium != in_water:
         medium_changes += 1
@@ -235,12 +322,12 @@ func apply_environment(dt: float, model) -> void:
         last_medium = in_water
     if Traits.sessile(genome) and age_seconds > 12.0 and grounded:
         rooted = true
-    stand_upright = not in_water and not rooted and Traits.upright(genome) and age_seconds > 20.0
-    can_fly = not rooted and model.has_sky() and Traits.flight_body(genome) and age_seconds > 18.0
+    stand_upright = not in_water and not rooted and Traits.upright(genome) and Cycle.locomotor_maturity(self)
+    can_fly = not rooted and model.has_sky() and Traits.flight_body(genome) and Cycle.locomotor_maturity(self) and Cycle.development_fraction(self) >= 0.82
     if can_fly and not in_water and energy > 0.35:
         flight_skill = minf(1.0, flight_skill + dt * 0.020 * (0.4 + genome.neural_drive))
     airborne = can_fly and flight_skill > 0.22 and not in_water and stamina > 0.18 and energy > 0.25
-    var efficiency: float = Traits.water_breathing(genome) if in_water else Traits.air_breathing(genome)
+    var efficiency: float = Cycle.water_breathing(self) if in_water else Cycle.air_breathing(self)
     var exertion: float = 0.06 if rooted else 0.12 + velocity.length() * 0.012
     var reserve: float = 4.0 + float(genome.breath_storage) * 24.0
     if efficiency >= 0.42:
@@ -251,22 +338,18 @@ func apply_environment(dt: float, model) -> void:
         moisture = minf(1.0, moisture + dt * 0.10)
     else:
         moisture = maxf(0.0, moisture - dt * float(genome.moisture_need) * 0.007 * (1.0 if rooted else Traits.water_loss(genome)))
-    ambient_temperature = model.temperature_at(global_position)
+    ambient_temperature = model.temperature_at(global_position) + float(_setting("temperature_offset", 0.0))
     if not rooted:
         energy = maxf(0.0, energy - dt * (Traits.covering_cost(genome) + Traits.thermal_cost(genome, in_water, ambient_temperature)))
     var drying: float = maxf(0.0, 0.30 - moisture) * float(genome.skin_breathing)
     habitat_stress = clampf((1.0 - oxygen) * 0.80 + drying, 0.0, 1.0)
     energy = maxf(0.0, energy - dt * (maxf(0.0, 0.20 - oxygen) * 0.16 + drying * 0.025 + parasite_load * 0.003))
     stamina = clampf(stamina + dt * (0.07 - exertion * (0.90 if airborne else 0.25)), 0.0, 1.0)
-    if not in_water and not grounded and not airborne:
-        velocity.y -= dt * 4.5
     if rooted:
         velocity = Vector3.ZERO
-    elif airborne:
-        var cruise: float = maxf(floor_y + body_clearance() + 3.0, model.waterline + 3.5)
-        cruise = minf(cruise, model.half_extent * 0.55)
-        velocity.y = lerpf(velocity.y, clampf(cruise - global_position.y, -2.0, 2.0), minf(1.0, dt * 2.0))
-    elif grounded and not in_water:
+    elif airborne and burst_time <= 0.0:
+        cruise_altitude = minf(maxf(floor_y + body_clearance() + 3.0, model.waterline + 3.5), model.half_extent * 0.55)
+    elif grounded and not in_water and burst_time <= 0.0:
         velocity.y = maxf(0.0, velocity.y)
     if energy <= 0.0001:
         alive = false
@@ -281,19 +364,20 @@ func apply_habitat(dt: float, habitat_level: int, waterline: float, ground_y: fl
     apply_environment(dt, model)
 
 func steer_towards(target: Vector3, weight: float = 1.0, speed_multiplier: float = 1.0) -> void:
-    if rooted:
+    if rooted or burst_time > 0.0 or Cycle.stage(self) == "pupa":
         return
     var direction: Vector3 = target - global_position
     if grounded and not in_water and not airborne:
         direction.y = 0.0
     if direction.length_squared() < 0.01:
-        velocity *= 0.8
+        desired_velocity = Vector3.ZERO
         return
     var speed: float = Traits.swim_speed(genome) if in_water else (0.6 + Traits.walking(genome) * 3.0)
     if airborne:
         speed = 2.0 + Traits.lift(genome) * 5.0
     var steering: Vector3 = direction.normalized() * speed * speed_multiplier * (0.4 + stamina * 0.6)
-    velocity = velocity.lerp(steering, clampf(weight, 0.0, 1.0))
+    steering *= clampf(direction.length() / 2.5, 0.0, 1.0)
+    desired_velocity = desired_velocity.lerp(steering, clampf(weight, 0.0, 1.0))
 
 func ecology_labels() -> Array[String]:
     var labels: Array[String] = []
@@ -328,6 +412,7 @@ func receive_predation(amount: float, attacker_id: int) -> float:
     protection += Traits.covering_protection(genome) if not rooted else float(genome.wood_drive) * 0.10
     var loss: float = maxf(0.0, amount * (1.0 - clampf(protection, 0.0, 0.88)))
     energy = maxf(0.0, energy - loss)
+    tissue_damage = clampf(tissue_damage + loss * 0.5, 0.0, 1.0)
     fear = minf(1.0, fear + 0.45)
     if fear < 0.75:
         _remember("attacked by %d" % attacker_id)
@@ -343,16 +428,10 @@ func absorb_nutrient(value: float) -> void:
 
 func can_reproduce() -> bool:
     var threshold: float = float(_setting("viability_threshold", 0.18))
-    return alive and mate_cooldown <= 0.0 and age_seconds > 18.0 and energy > 1.02 and genome.reproduction > 0.28 and development_stability >= threshold
+    return alive and mate_cooldown <= 0.0 and carrying_count == 0 and Cycle.stage(self) in ["adult", "senescent"] and energy > 0.65 and Physiology.reproductive_ready(self) and genome.reproduction > 0.28 and genome.fertility_factor > 0.15 and development_stability >= threshold
 
 func reproduction_probability(dt: float) -> float:
-    return dt * (0.008 + genome.reproduction * 0.035) * clampf(energy - 0.86, 0.0, 0.7)
-
-func parent_cost() -> void:
-    energy *= 0.68
-    children += 1
-    mate_cooldown = float(_setting("mate_cooldown", 24.0))
-    _remember("offspring %d" % children)
+    return dt * (0.012 + genome.reproduction * 0.065) * clampf(energy - 0.45, 0.0, 1.0) * genome.fertility_factor / (1.0 + senescence)
 
 func body_plan_name() -> String:
     if genome != null and genome.has_method("body_plan_name"):
@@ -394,7 +473,7 @@ func _language_stage() -> int:
         return 4
     return 5 + int(floor((language_signal - 2.30) / 0.65))
 
-func generate_thought(rng: RandomNumberGenerator) -> String:
+func generate_thought(rng: RandomNumberGenerator, language: String = "en") -> String:
     thought_counter += 1
     var state = _dominant_state()
     var options: Array = []
@@ -414,8 +493,10 @@ func generate_thought(rng: RandomNumberGenerator) -> String:
     if options.is_empty():
         options = ["..."]
     var index = abs((thought_counter * 7 + organism_id * 13 + rng.randi()) % options.size())
+    last_thought_index = index
+    last_thought_state = state
     last_thought = options[index]
-    return last_thought
+    return thought_in_language(language)
 
 func _dominant_state() -> String:
     if energy < 0.32:
@@ -463,7 +544,7 @@ func _tokens(state: String) -> Array:
         "hunt": ["TRACK PREY", "CLOSE DISTANCE", "CLAIM SPACE"],
         "social": ["KIN NEAR", "FOLLOW FAMILY", "SHARE SPACE"],
         "curious": ["NEW SIGNAL", "INSPECT LIGHT", "UNKNOWN FORM"],
-        "reproduce": ["ENERGY HIGH / DIVIDE", "MAKE OFFSPRING", "PASS PATTERN"],
+        "reproduce": ["ENERGY HIGH / REPRODUCE", "MAKE OFFSPRING", "PASS PATTERN"],
         "observe": ["DRIFT / WATCH", "STABLE WATER", "SCAN AROUND"]
     }
     return map.get(state, ["SCAN"])
@@ -475,7 +556,7 @@ func _phrases(state: String) -> Array:
         "hunt": ["That weaker signal may be useful.", "Approach carefully, then take the resource.", "I can dominate this patch."],
         "social": ["My kin are close.", "Stay near the familiar signals.", "Moving together may be safer."],
         "curious": ["There is a pattern I have not sampled.", "I want to inspect the unfamiliar motion.", "The water changes in that direction."],
-        "reproduce": ["I have enough energy to divide.", "A descendant could survive here.", "This body pattern may be worth passing on."],
+        "reproduce": ["I have enough energy for reproduction.", "A descendant could survive here.", "This body pattern may be worth passing on."],
         "observe": ["The currents are quiet here.", "I will keep scanning while I drift.", "Nothing urgent is changing nearby."]
     }
     return map.get(state, ["I observe."])
@@ -528,3 +609,40 @@ func _remember(event: String) -> void:
     var cap = int(_setting("max_history_events", 32))
     while event_history.size() > cap:
         event_history.pop_front()
+
+func begin_burst(target: Vector3, kind: String) -> bool:
+    if rooted or burst_time > 0.0 or burst_cooldown > 0.0 or stamina < 0.55 or oxygen < 0.65 or not Cycle.locomotor_maturity(self):
+        return false
+    var power: float = float(genome.muscle_drive) * float(genome.burst_drive)
+    if kind in ["breach", "leap_snap"] and power < 0.32:
+        return false
+    if kind == "dive" and genome.dive_drive < 0.45:
+        return false
+    var direction: Vector3 = target - global_position
+    var horizontal: Vector3 = Vector3(direction.x, 0.0, direction.z).normalized()
+    if horizontal.length_squared() > 0.01 and Locomotion.forward(heading_yaw, 0.0).dot(horizontal) < 0.90:
+        steer_towards(target, 1.0, 0.65)
+        return false
+    burst_kind = kind
+    burst_time = 2.0 if kind == "dive" else 2.8
+    burst_cooldown = 7.0 + (1.0 - genome.burst_drive) * 5.0
+    if kind == "dive":
+        velocity = direction.normalized() * (4.0 + genome.dive_drive * 4.0)
+    else:
+        velocity = horizontal * (2.0 + power * 3.0) + Vector3.UP * (3.5 + power * 3.0)
+    stamina = maxf(0.0, stamina - 0.32)
+    energy = maxf(0.0, energy - 0.015)
+    return true
+
+func thought_in_language(language: String) -> String:
+    var text: String = last_thought
+    if language in ["de", "fr"]:
+        var choices: Array = ThoughtLanguage.options(self, last_thought_state, language)
+        text = str(choices[last_thought_index % choices.size()]) if not choices.is_empty() else "..."
+    if language_stage >= 4 and emotion != "reflex":
+        var feelings: Dictionary = {
+            "en": {"distress": "I feel distressed and seek safety.", "attachment": "I feel attached to familiar companions.", "contentment": "I feel content and can explore.", "curiosity": "I am curious about new signals.", "caution": "I feel cautious."},
+            "de": {"distress": "Ich bin beunruhigt und suche Sicherheit.", "attachment": "Ich fühle mich vertrauten Wesen verbunden.", "contentment": "Ich bin zufrieden und kann Neues erkunden.", "curiosity": "Neue Signale machen mich neugierig.", "caution": "Ich bin vorsichtig."},
+            "fr": {"distress": "Je suis inquiet et cherche un abri.", "attachment": "Je me sens lié aux êtres familiers.", "contentment": "Je suis satisfait et peux explorer.", "curiosity": "Les nouveaux signaux éveillent ma curiosité.", "caution": "Je suis prudent."}}
+        text += " " + str(feelings.get(language, feelings["en"]).get(emotion, ""))
+    return text

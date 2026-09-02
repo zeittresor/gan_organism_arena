@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "organism-arena": {
+      "command": "py",
+      "args": ["-3", "E:\\YOUR_FOLDER\\GAN_Organism_Arena\\integrations\\arena_mcp.py"]
+    }
+  }
+}

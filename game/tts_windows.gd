@@ -1,18 +1,28 @@
 extends RefCounted
 
-var last_pid = -1
+var last_error: String = ""
 
-func speak(text: String) -> bool:
-    if OS.get_name() != "Windows" or text.strip_edges() == "":
+static func select_voice(voices: Array, language: String, preferred: String) -> String:
+    var fallback: String = ""
+    for voice in voices:
+        var code: String = str(voice.get("language", "")).to_lower().replace("_", "-")
+        if code != language and not code.begins_with(language + "-"): continue
+        var id: String = str(voice.get("id", ""))
+        if fallback == "": fallback = id
+        if id == preferred: return id
+    return fallback
+
+func speak(text: String, language: String = "en", preferred: String = "default") -> bool:
+    last_error = ""
+    if text.strip_edges() == "": return false
+    var voices: Array = DisplayServer.tts_get_voices()
+    var voice: String = select_voice(voices, language, preferred)
+    if voice == "":
+        last_error = "tts_missing"
         return false
-    if last_pid > 0 and OS.is_process_running(last_pid):
-        return false
-    var safe = text.replace("'", "''").replace("\n", " ")
-    var script = "$v=New-Object -ComObject SAPI.SpVoice; $v.Rate=0; $v.Volume=85; [void]$v.Speak('%s')" % safe
-    last_pid = OS.create_process("powershell.exe", ["-NoProfile", "-WindowStyle", "Hidden", "-Command", script], false)
-    return last_pid > 0
+    if DisplayServer.tts_is_speaking(): return false
+    DisplayServer.tts_speak(text, voice, 85, 1.0, 1.0)
+    return true
 
 func stop() -> void:
-    if last_pid > 0 and OS.is_process_running(last_pid):
-        OS.kill(last_pid)
-    last_pid = -1
+    DisplayServer.tts_stop()

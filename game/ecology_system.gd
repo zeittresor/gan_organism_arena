@@ -1,6 +1,7 @@
 extends RefCounted
 
 const Traits = preload("res://game/ecology_traits.gd")
+const Cycle = preload("res://game/life_cycle.gd")
 var habitat = null
 var predation_strength: float = 0.45
 var group_strength: float = 0.55
@@ -40,8 +41,9 @@ func begin_tick(snapshot: Array, dt: float) -> void:
         if not is_instance_valid(org) or not org.alive:
             continue
         org.pack_leader_id = org.organism_id
+        var previous_prey: int = org.prey_id
         org.prey_id = -1
-        if predation_strength <= 0.0 or org.rooted or org.genome.predator_drive < 0.45 or org.energy > 1.10:
+        if predation_strength <= 0.0 or org.rooted or Cycle.stage(org) == "pupa" or org.genome.predator_drive < 0.45 or org.energy > 1.10:
             continue
         var best: float = INF
         for other in snapshot:
@@ -50,9 +52,9 @@ func begin_tick(snapshot: Array, dt: float) -> void:
             var d: float = org.global_position.distance_to(other.global_position)
             if is_packmate(org, other) and other.genome.predator_drive > 0.45 and d < 22.0:
                 org.pack_leader_id = mini(org.pack_leader_id, other.organism_id)
-            if other.genome.family_id == org.genome.family_id:
+            if other.genome.family_id == org.genome.family_id or other.organism_id == org.pair_target_id:
                 continue
-            if not reachable(org, other.global_position):
+            if not hunt_reachable(org, other.global_position):
                 continue
             var detection: float = 15.0 + org.genome.sensory_drive * 20.0
             if other.hiding:
@@ -63,6 +65,7 @@ func begin_tick(snapshot: Array, dt: float) -> void:
             if strength > 1.65 and org.genome.pack_drive * org.genome.cooperation < 0.34:
                 continue
             var score: float = d * (0.75 + strength * 0.4) + other.genome.armor_drive * 4.0
+            if other.organism_id == previous_prey: score *= 0.75
             if score < best:
                 best = score
                 org.prey_id = other.organism_id
@@ -76,7 +79,7 @@ func begin_tick(snapshot: Array, dt: float) -> void:
         var leader = id_map.get(org.pack_leader_id)
         if is_instance_valid(leader):
             var shared = id_map.get(int(planned_prey.get(leader.organism_id, -1)))
-            if is_instance_valid(shared) and shared.alive and reachable(org, shared.global_position):
+            if is_instance_valid(shared) and shared.alive and hunt_reachable(org, shared.global_position):
                 org.prey_id = shared.organism_id
 
 func is_packmate(a, b) -> bool:
@@ -84,9 +87,9 @@ func is_packmate(a, b) -> bool:
 
 func reachable(org, p: Vector3) -> bool:
     var wet: bool = habitat.is_water(p)
-    if wet and Traits.water_breathing(org.genome) < 0.28:
+    if wet and Cycle.water_breathing(org) < 0.28:
         return false
-    if not wet and Traits.air_breathing(org.genome) < 0.28:
+    if not wet and Cycle.air_breathing(org) < 0.28:
         return false
     if not wet and p.y > habitat.floor_at(p) + 6.0 and not org.can_fly:
         return false
@@ -95,6 +98,27 @@ func reachable(org, p: Vector3) -> bool:
 func act(org, dt: float, rng: RandomNumberGenerator) -> void:
     if not org.alive:
         return
+    if Cycle.stage(org) == "pupa":
+        org.behavior_state = "metamorphosing"
+        org.velocity = Vector3.ZERO
+        return
+    if org.burst_time > 0.0:
+        org.behavior_state = org.burst_kind
+        var burst_prey = id_map.get(org.prey_id)
+        if is_instance_valid(burst_prey) and burst_prey.alive:
+            _cross_bite(org, burst_prey, dt)
+        return
+    if org.returning_medium != "":
+        var seek_water: bool = org.returning_medium == "water"
+        if (seek_water and org.in_water) or (not seek_water and not org.in_water):
+            org.returning_medium = ""
+        else:
+            org.behavior_state = "seek_water" if seek_water else "seek_land"
+            var return_target: Vector3 = habitat.nearest_medium(org.global_position, seek_water, org.body_clearance())
+            if not seek_water and org.can_fly:
+                return_target = org.global_position + Vector3.UP * maxf(2.0, habitat.waterline - org.global_position.y + 2.0)
+            org.steer_towards(return_target, minf(1.0, dt * 6.0))
+            return
     org.hiding = false
     var film_growth: float = minf(0.15 - org.surface_food, dt * 0.0007)
     org.surface_food += film_growth
@@ -104,7 +128,7 @@ func act(org, dt: float, rng: RandomNumberGenerator) -> void:
         _feed_rooted(org, dt)
         return
     # Respiration outranks all food, reproduction and curiosity decisions.
-    var breathing: float = Traits.water_breathing(org.genome) if org.in_water else Traits.air_breathing(org.genome)
+    var breathing: float = Cycle.water_breathing(org) if org.in_water else Cycle.air_breathing(org)
     var want_water: bool = not org.in_water
     var leave_medium: bool = breathing < 0.38 and org.oxygen < 0.65
     if not org.in_water and org.moisture < 0.35 and org.genome.moisture_need > 0.45:
@@ -112,9 +136,9 @@ func act(org, dt: float, rng: RandomNumberGenerator) -> void:
         want_water = true
     # Amphibious individuals revisit shore/water according to their own
     # moisture budget and exploratory preference, with a minimum dwell time.
-    if Traits.amphibious(org.genome) and org.medium_timer > 24.0 + (1.0 - org.genome.curiosity) * 45.0:
+    if Traits.amphibious(org.genome) and Cycle.locomotor_maturity(org) and org.medium_timer > 24.0 + (1.0 - org.genome.curiosity) * 45.0:
         leave_medium = true
-    if Traits.flight_body(org.genome) and habitat.has_sky() and org.in_water and org.age_seconds > 18.0 and org.energy > 0.65:
+    if org.can_fly and habitat.has_sky() and org.in_water and org.age_seconds > 18.0 and org.energy > 0.65:
         leave_medium = true
         want_water = false
     if leave_medium:
@@ -180,7 +204,7 @@ func _threat_for(org):
     for other in population:
         if not is_instance_valid(other) or not other.alive or other == org or other.rooted:
             continue
-        if other.genome.family_id == org.genome.family_id or other.genome.predator_drive < 0.50:
+        if other.organism_id == org.pair_target_id or other.genome.family_id == org.genome.family_id or other.genome.predator_drive < 0.50:
             continue
         var d: float = org.global_position.distance_to(other.global_position)
         if d < best:
@@ -283,6 +307,10 @@ func _hunt(org, dt: float, rng: RandomNumberGenerator) -> void:
     var prey = id_map.get(org.prey_id)
     if not is_instance_valid(prey) or not prey.alive:
         return
+    var cross_mode: String = strike_mode(org, prey.global_position)
+    if cross_mode != "":
+        _cross_hunt(org, prey, cross_mode, dt)
+        return
     var pack: bool = false
     for other in population:
         if other != org and is_instance_valid(other) and other.alive and other.prey_id == org.prey_id and is_packmate(org, other) and org.global_position.distance_to(other.global_position) < 22.0:
@@ -344,3 +372,50 @@ func _transfer_food(org, victim, amount: float, efficiency: float) -> float:
     var taken: float = victim.receive_predation(amount, org.organism_id)
     org.energy = minf(1.45, org.energy + taken * efficiency)
     return taken
+
+func hunt_reachable(org, p: Vector3) -> bool:
+    return reachable(org, p) or strike_mode(org, p) != ""
+
+func strike_mode(org, p: Vector3) -> String:
+    if org.rooted or not Cycle.locomotor_maturity(org) or org.oxygen < 0.45: return ""
+    var wet: bool = habitat.is_water(p)
+    var horizontal: float = Vector2(p.x - org.global_position.x, p.z - org.global_position.z).length()
+    var power: float = org.genome.muscle_drive * org.genome.burst_drive
+    var reach: float = 0.8 + org.genome.reach_drive * 1.8 + org.visual.get_body_size_hint() * 0.18
+    if org.in_water and not wet and habitat.floor_at(p) < habitat.waterline and power > 0.32:
+        var jump_height: float = pow(3.5 + power * 3.0, 2.0) / 9.0
+        if p.y - habitat.waterline <= jump_height + reach and horizontal < 8.0:
+            return "breach"
+    if org.airborne and wet and org.genome.dive_drive > 0.45:
+        if habitat.waterline - p.y < 2.0 + org.genome.dive_drive * 4.0 and horizontal < 9.0:
+            return "dive"
+    if not org.in_water and not org.airborne and Cycle.air_breathing(org) >= 0.42:
+        var delta_y: float = p.y - org.global_position.y
+        if wet and org.global_position.distance_to(p) < reach + 1.0 and absf(delta_y) < reach:
+            return "shore_snap"
+        if not wet and delta_y > reach and delta_y < pow(3.5 + power * 3.0, 2.0) / 9.0 + reach and horizontal < 5.0 and power > 0.32 and Traits.walking(org.genome) > 0.30:
+            return "leap_snap"
+    return ""
+
+func _cross_hunt(org, prey, mode: String, dt: float) -> void:
+    org.behavior_state = mode
+    var target: Vector3 = prey.global_position
+    if mode == "shore_snap":
+        org.velocity *= 0.8
+        _cross_bite(org, prey, dt)
+        return
+    if mode == "breach" and org.global_position.y < habitat.waterline - 0.75:
+        target.y = habitat.waterline - 0.25
+        org.steer_towards(target, minf(1.0, dt * 4.0))
+        return
+    org.begin_burst(target, mode)
+    _cross_bite(org, prey, dt)
+
+func _cross_bite(org, prey, dt: float) -> void:
+    var reach: float = 0.65 + org.genome.reach_drive * 1.8 + (org.visual.get_body_size_hint() + prey.visual.get_body_size_hint()) * 0.18
+    if org.global_position.distance_to(prey.global_position) > reach: return
+    var taken: float = _transfer_food(org, prey, dt * (0.045 + org.genome.predator_drive * 0.065) * (1.0 + org.genome.beak_drive * 0.12) * predation_strength / 0.45, 0.72)
+    if taken > 0.0:
+        org.strike_timer = 0.35
+        org.hunting_skill = minf(1.0, org.hunting_skill + taken * 0.12)
+        hunt_events += 1

@@ -36,6 +36,7 @@ func _rebuild() -> void:
     _build_terrain()
     _build_resources()
     _build_water_surface(half)
+    _build_shoreline()
     if model.has_sky():
         _build_air_markers(half)
 
@@ -122,14 +123,14 @@ func _build_water_surface(half: float) -> void:
     var plane = MeshInstance3D.new()
     var mesh = PlaneMesh.new()
     mesh.size = Vector2(half * 2.0, half * 2.0)
-    var mat = StandardMaterial3D.new()
-    mat.albedo_color = Color(0.03, 0.22, 0.31, 0.19)
-    mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-    mat.metallic = 0.08
-    mat.roughness = 0.22
+    mesh.subdivide_width = 96
+    mesh.subdivide_depth = 96
+    var mat = ShaderMaterial.new()
+    mat.shader = preload("res://game/water_surface.gdshader")
     mesh.material = mat
     plane.mesh = mesh
     plane.position.y = waterline
+    plane.extra_cull_margin = 0.20
     geometry_root.add_child(plane)
 
 func _build_air_markers(half: float) -> void:
@@ -154,3 +155,38 @@ func _build_air_markers(half: float) -> void:
         mm.set_instance_transform(i, Transform3D(Basis.IDENTITY, p))
     mm_instance.multimesh = mm
     geometry_root.add_child(mm_instance)
+
+func _build_shoreline() -> void:
+    # Intersect the actual terrain triangles with the mean water plane.
+    var points: Array[Vector3] = []
+    for z in range(model.GRID):
+        for x in range(model.GRID):
+            var a: Vector3 = model.vertex(x, z)
+            var b: Vector3 = model.vertex(x + 1, z)
+            var c: Vector3 = model.vertex(x, z + 1)
+            var d: Vector3 = model.vertex(x + 1, z + 1)
+            for triangle in [[a, b, c], [b, d, c]]:
+                var crossings: Array[Vector3] = []
+                for edge in [[0, 1], [1, 2], [2, 0]]:
+                    var u: Vector3 = triangle[edge[0]]
+                    var v: Vector3 = triangle[edge[1]]
+                    if (u.y - waterline) * (v.y - waterline) < 0.0:
+                        var p: Vector3 = u.lerp(v, (waterline - u.y) / (v.y - u.y))
+                        p.y = waterline + 0.15
+                        crossings.append(p)
+                if crossings.size() == 2:
+                    points.append_array(crossings)
+    if points.is_empty(): return
+    var mesh = ImmediateMesh.new()
+    mesh.surface_begin(Mesh.PRIMITIVE_LINES)
+    for p in points:
+        mesh.surface_add_vertex(p)
+    mesh.surface_end()
+    var instance = MeshInstance3D.new()
+    instance.mesh = mesh
+    var material = StandardMaterial3D.new()
+    material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+    material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+    material.albedo_color = Color(0.72, 0.88, 0.85, 0.72)
+    instance.material_override = material
+    geometry_root.add_child(instance)

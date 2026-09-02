@@ -1,5 +1,26 @@
 # Changelog
 
+## 1.0.0-alpha14 — 2026-09-02
+
+- Fix des gemeldeten alpha13-Installationsabbruchs: explizite Array[Vector3]-Argumente für Ressourcenlisten in Test- und Weltinitialisierung.
+- 84 diploide Merkmalsloci mit Meiose, Kopplung/Rekombination, partieller Dominanz, vererbter Geschlechtskonstellation und acht rezessiven Belastungsloci.
+- Energieabhängiges Wachstum und Reife, kostenpflichtige Ei-/Spermien-/Propagulusreserven, temperatur- und sauerstoffabhängige Embryonalphasen.
+- Endliche Nahrungspartikel mit zeitlichem Nachschub; zusätzliche biologische Messwerte im Inspektor.
+- Optionale MCP-stdio-Schnittstelle, laufende Beobachtung, explizite Versuchsschritte, Zustands-/Genomexport und verifizierbare Versuchsprotokolle.
+- Adapter zum vorhandenen VKLP 0.1: Claims lesen, mit Provenienz für Versuche nutzen und Erkenntnisse aus der Simulation mit Evidenz einreichen.
+- Aktivierung der Schnittstellen verändert keine Weltparameter, sperrt keine bisherigen Bedienelemente und erzwingt keinen Schrittbetrieb. Normale Anwendung ohne Python/Protokolle bleibt vollständig nutzbar.
+- Neue biologische und Schnittstellen-Regressionen; Prüfung gegen Original-VKLP-Dienst. Native Windows/Godot-Prüfung bleibt ein Installer-Gate und wurde in dieser Buildumgebung nicht ausgeführt.
+
+
+## 1.0.0-alpha13 — 2026-09-01
+
+- Default to coastal habitat 7, including usable sky, and initialize aquatic founders in accessible water. Migrate only the old default habitat once. Descendants are not reset to founder limits.
+- Replace instant reproduction and unconditional cloning fallback with compatible roles/anatomy, timed courtship/contact, fertilization, egg/embryo development and birth. Add distinct spawning, internal egg-laying, retained-yolk, maternal-nutrition and propagule routes; reserve population slots for unborn offspring.
+- Add twenty inherited lifecycle/interaction genes, genetic compatibility and reduced hybrid fertility, parentage, nutritional maturation delays, larval/pupal/adult stages, schematic reproductive tissue, secondary displays and resource-funded parental care.
+- Add finite-range shore bites, ballistic breaches/leaps, shallow dives, breath/stamina costs and return behavior. Prevent unadapted aquatic founders from climbing land through terrain correction.
+- Add two-sided animated water with stronger highlights/opacity and terrain-intersected shore contours. L picks and saves a new fixed random light direction; auto_sun restores movement.
+- Expand EN/DE/FR inspector/help and scientific-limit documentation. Add 115 lifecycle assertions; 237 ecology/covering/lifecycle assertions plus core tests pass in the source harness. Native Godot/Windows/shader validation remains unperformed here.
+
 ## 1.0.0-alpha12 — 2026-09-01
 
 - Added nine heritable covering genes for skin thickness, scales, feathers, fur/bristles, mucus, membranes, horns/spines, beaks and pigment patterns; normal mutation, crossover and macro-mutation include them.

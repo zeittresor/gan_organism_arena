@@ -1,0 +1,26 @@
+GAN Organism Arena alpha18 build verification (2026-09-02)
+
+Reported native evidence: the user's alpha17 Godot 4.7.2 log shows successful per-file parsing followed by an invalid untyped Array assignment to nutrient_field.points at locomotion_test.gd:113, exit code 29. Native self-test/smoke completion was not reached.
+Alpha18 correction: construct a local Array[Vector3] before assignment; attach the food fixture node to the test owner for cleanup.
+
+Native Godot, Windows installer execution, PowerShell execution, GPU rendering and TTS were NOT performed here. Source execution substitutes engine objects and does not implement Godot's full runtime type system.
+
+Fresh source checks:
+41 GDScripts grammar-parsed; native parse registrations, references, reserved identifiers, duplicate functions and active versions checked.
+54 settings/actions retain complete labels and explanatory tooltips in English, German and French.
+Typed-array member audit: event_history, points, resource_positions, resources, stocks, voice_players.
+Regression guard rejects the original alpha17 literal assignment to points; corrected project has no such assignments. The same conservative rule is included in the Windows package verifier.
+
+LOCOMOTION SELFTEST:  3371  checks;  0  failures
+INTERACTION SELFTEST:  5443  checks;  0  failures
+ECOLOGY SELFTEST:  51  checks;  0  failures
+SURFACE SELFTEST:  71  checks;  0  failures
+LIFE CYCLE SELFTEST:  115  checks;  0  failures
+BIOLOGY SELFTEST:  617  checks;  0  failures
+EXPERIMENT SELFTEST:  18  checks;  0  failures
+SELFTEST OK: morphology_signatures= 7  total_cells= 1548  crossover_family= 99  viable= 0.92  unstable= 0.0  thought= Approach carefully, then take the resource.
+
+All 9686 named source assertions and the core self-test passed after the fix. This result is not native runtime validation.
+
+Hotfix scope check: compared with the released alpha17 archive, GDScript changes are limited to the corrected locomotion-test fixture and version strings. Simulation behavior algorithms are unchanged.
+Archive gate: package_alpha18.py verifies ZIP CRC, all payload SHA-256 entries and file counts after fresh extraction before distribution. Runtime/test logs and personal settings are excluded.

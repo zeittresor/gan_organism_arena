@@ -1,42 +1,44 @@
-# Testing — 1.0.0-alpha12 (2026-09-01)
+# Testing — 1.0.0-alpha18 (2026-09-02)
 
-## Alpha11 parser regression
+## Reported Windows failure and correction
 
-The supplied Windows 4.7.2 log located the first failure at `genome.gd:116`, the `for trait` declaration. The other three script failures followed that failed preload. Alpha11 changes only that loop identifier in the evolutionary code, plus version metadata and verification/documentation.
+The supplied alpha17 Windows log confirms that Godot 4.7.2 loaded and instantiated every script in the native per-file parser list. At installer step 5, `locomotion_test.gd:113` then failed while assigning an untyped Array literal to the typed `nutrient_field.points: Array[Vector3]` property. The self-test returned exit code 29; the remaining installer stages were not reached. The ObjectDB/resource warnings appeared after this aborted test.
 
-The updated reserved-name expression was exercised against the actual alpha10 ZIP source (rejected), alpha11 source (accepted), bad loop/constant/variable examples, and legitimate names/comments/string examples. All 22 alpha11 scripts pass this declaration check. The source-harness self-tests were rerun successfully. Native Godot/Windows validation has not been performed here.
+Alpha18 creates an explicit local `Array[Vector3]` and assigns that value. The food fixture is also attached to the test node for owned cleanup. The production locomotion, anatomy, ecology, contact and reproduction algorithms are the Alpha17 implementation.
 
-## Alpha12 covering checks
+The native Godot executable and Windows GUI are not available in this build environment. The Python source-execution harness substitutes engine objects and does not reproduce Godot's full type system. This limitation allowed the original typed-array assignment to pass source checks. Successful grammar parsing also cannot detect every runtime property-assignment error.
 
-71 assertions execute the covering implementation: feathers without fins/flight, visible tissue types at small and normal cell budgets, mixed coverings, bounded rebuilds, insulation, water drag, moisture retention, skin permeability, actual bite protection, energy costs, inheritance, crossover and mutation bounds. These passed in the source-translation harness, along with the 51 ecology assertions and existing core tests. The full source simulation was rerun across habitats 5–9 after integrating the new physiology costs.
+## Fresh Alpha18 checks
 
-## Validation of the ecological implementation
+- Full source self-test: 3,371 locomotion, 5,443 interaction, 51 ecology, 71 covering, 115 lifecycle, 617 biology and 18 experiment assertions, plus the core morphology/genome/language checks.
+- All 41 GDScripts grammar-parsed with gdtoolkit; reserved names, duplicate functions, preload references, native parse registration and active versions checked.
+- Every declared typed-array member was audited for direct property assignment from array literals. A new conservative source rule rejects such assignments in both the Windows verifier and the build checker. It is not a general-purpose GDScript type checker.
+- Regression check: the new rule rejects the original alpha17 `food.points = [...]` assignment and accepts the corrected project. Untyped `reserves` and `sex_chromosomes` arrays remain valid.
+- EN/DE/FR JSON, formatted HUD fields, all 54 option/action labels and tooltips, and disabled-by-default protocol permissions checked.
+- ZIP CRC, complete SHA-256 manifest and payload count verified after fresh extraction. Personal settings and runtime/test logs are excluded from the distributable.
 
-- Structural source checks across 23 GDScript files: balanced delimiters, reserved variable names, duplicate functions, preload targets and current version metadata.
-- English/German/French JSON parsed and ecological translation keys compared.
-- 51 ecological assertions executed using a Python source-translation test harness with substitutes for Godot nodes, vectors and rendering resources: respiration, amphibious breathing, flight prerequisites, flight without sky, power/cost tradeoff, rooted productivity/anchoring, upright anatomy, finite tool food and wear, cleaning, parasitism, pack targeting, inheritance and reproducible mutation.
-- The existing morphology/genome/language self-test also ran under that harness: seven distinct morphology signatures, valid crossover, viable versus unsupported construction and advanced procedural language output.
-- The source simulation loop ran for 120 ticks in each of habitats 5–9 with 16 starting organisms. Assertions checked finite positions, terrain floor constraints and physiological ranges. Extinction cleanup did not secretly inject replacements.
-- The settings migration block was executed against old defaults, a custom old world size and an already migrated configuration. A second load did not double the size again.
-- Final archive integrity and per-file SHA-256 manifest verified during packaging.
+Exact results are recorded in `BUILD_VERIFICATION.txt`. Alpha18 has not been installed or rendered natively here. The Windows installer retains native parser, full self-test and smoke-scene gates, including script-error scanning; no failing test has been disabled.
 
-**Limits:** The source-translation harness is not the Godot interpreter and uses simplified engine substitutes. It cannot establish Godot parser/type-checker compatibility, actual rendering, UI layout, audio, Windows PowerShell installation behavior or long-run ecological balance. No native Godot or Windows runtime test was possible in the build environment. This package is an alpha for testing, not a claim that every ecological niche will emerge in every run.
+## Earlier integration evidence
 
-## Native Windows checks included
+Alpha17 source checks also exercised five habitats, mating/gestation/birth, resource and population bounds, deterministic experiment reset/stepping, 42 rotated terrain-contact comparisons, cache invalidation, visibility and offscreen biology. Fifteen Python adapter tests and the real MCP stdio/TCP path into a substitute-engine execution of the production game API passed. These are earlier results, not fresh native Alpha18 execution. The user reported fluent Alpha16 gameplay.
 
-1. Extract the complete ZIP to a writable directory.
-2. Run `install_windows.bat`. It reuses a checksum-valid nearby Godot 4.7.2 ZIP before attempting a download.
-3. The installer runs package verification, the native GDScript parser probe, the original self-test **all 51 ecological assertions and 71 covering assertions**, then the clean-startup/shutdown smoke scene. Explicit script errors cause installation to fail even if a native process returns zero.
-4. If it passes, the arena launches after the cancellable ten-second delay.
-5. `run_selftest.bat` reruns the original, ecological and covering assertions in the project context. `run_parse_test.bat` checks scripts separately.
+Normal installation and gameplay do not need Python. Optional adapter tests:
 
-## Visual and behavioral acceptance
+```text
+py -3 -m unittest discover -s tests -v
+```
 
-- Wheel zoom in free and follow views; Shift+wheel still changes observer speed.
-- Keys 5–9: the shoreline matches the visible terrain; swimmers stay above the bed, grounded forms rest on the surface, and powered flight is confined to habitats 8/9.
-- Select organisms with Tab/LMB. Watch oxygen, moisture, stamina, adaptations and current actions in the inspector.
-- With suitable inherited traits and enough time, observe small arthropod-like bodies, upright forms, wings, rooted plants/filters and supported land trees. These are possible outcomes, not guaranteed unlocks.
-- In the Natural view inspect skin, feathers/quills, scales, fur, membranes, horns and beaks across suitable inherited combinations. Feathered bodies must also exist without flight. Confirm the separate covering line and temperature remain readable. These visual/UI checks require native Godot and remain unverified here.
-- Verify visible flank/drive hunting, hiding near cover, food extraction with a visible tool, and changing finite host/food resources. Skills should start fresh for offspring.
-- Check longer runs for energy balance, starvation, survival diversity and generational turnover. With rescue off, genuine extinction is possible; G injects a new organism.
-- If Vulkan does not open, use `run_compatibility.bat`. For diagnostics use `run_diagnostics.bat` and retain `logs/install/install_*.log`, the related parse/self-test/smoke logs and `logs/latest_runtime.log`.
+For a native MCP integration check in a separate test project folder, enable MCP in F10 and run:
+
+```text
+py -3 tests/live_arena_check.py --headless
+```
+
+That integration scenario deliberately resets its test world.
+
+## Movement model and visual checks
+
+The [Alpha17 movement notes](ALPHA17_DE.md) describe limited turning, rigid skeletal segments, muscle-driven joints and soft-body articulation. The model uses schematic inherited mechanical parameters rather than measured tissue properties. Individual tendon forces, self-collision and full foot inverse kinematics are not implemented.
+
+Windows checks still include the visible movement through turns, limb attachment, courtship contact, slopes, directed eyes, all view modes and localized system speech. Alpha18 corrects the reported installer blocker; native appearance and FPS require a successful Windows run.

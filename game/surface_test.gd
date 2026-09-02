@@ -28,6 +28,7 @@ func create_body(g, cap: int = 180):
     next_id += 1
     org.initialize(next_id, g, Vector3.ZERO, cap, "natural")
     org.age_seconds = 40.0
+    org.development_progress = clampf(40.0 / (24.0 + org.genome.maturation_gene * 60.0), 0.0, 1.0)
     org.complexity = 35.0
     org.visual.rebuild(true)
     return org

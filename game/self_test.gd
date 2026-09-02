@@ -12,6 +12,20 @@ func _finish(code: int) -> void:
     get_tree().quit(code)
 
 func _run() -> void:
+    var locomotion_test = preload("res://game/locomotion_test.gd").new()
+    add_child(locomotion_test)
+    var locomotion_ok: bool = locomotion_test.run_all()
+    locomotion_test.queue_free()
+    if not locomotion_ok:
+        _finish(29)
+        return
+    var interaction_test = preload("res://game/interaction_test.gd").new()
+    add_child(interaction_test)
+    var interactions_ok: bool = interaction_test.run_all()
+    interaction_test.queue_free()
+    if not interactions_ok:
+        _finish(27)
+        return
     var rng: RandomNumberGenerator = RandomNumberGenerator.new()
     rng.seed = 424242
 
@@ -19,6 +33,14 @@ func _run() -> void:
     if settings_store == null or not settings_store.has_method("get_value"):
         printerr("SELFTEST ERROR: SettingsStore autoload unavailable in project-context self-test")
         _finish(15)
+        return
+
+    var profile_ok: Dictionary = settings_store.validate_profile({"language": "de", "speech_language": "fr", "mcp_enabled": false, "simulation_speed": 1.5})
+    var profile_bad: Dictionary = settings_store.validate_profile({"language": "de", "simulation_speed": -2.0})
+    var profile_type: Dictionary = settings_store.validate_profile({"mcp_enabled": "false"})
+    if not profile_ok.has("settings") or not profile_bad.has("error") or not profile_type.has("error"):
+        printerr("SELFTEST ERROR: settings profile validation")
+        _finish(28)
         return
 
     # Verify every topology can build a genuinely 3D visible body.
@@ -45,6 +67,8 @@ func _run() -> void:
         var org = OrganismScript.new()
         add_child(org)
         org.initialize(plan + 1, genome, Vector3.ZERO, 300, "cell")
+        org.age_seconds = preload("res://game/life_cycle.gd").maturity_age(genome) + 1.0
+        org.development_progress = 1.0
         org.complexity = 240.0
         org.intelligence = 3.4
         org.energy = 1.1
@@ -179,7 +203,7 @@ func _run() -> void:
     var history_cap: int = int(settings_store.get_value("max_history_events", 32))
     var app_log = get_node_or_null("/root/AppLog")
     if app_log != null and app_log.has_method("info"):
-        app_log.info("self-test alpha12: plans=%d total_cells=%d coherent=%.3f unstable=%.3f history_cap=%d" % [plan_signatures.size(), total_cells, coherent.viability_score(), unstable.viability_score(), history_cap])
+        app_log.info("self-test alpha16: plans=%d total_cells=%d coherent=%.3f unstable=%.3f history_cap=%d" % [plan_signatures.size(), total_cells, coherent.viability_score(), unstable.viability_score(), history_cap])
 
     var ecology_test = preload("res://game/ecology_test.gd").new()
     add_child(ecology_test)
@@ -194,6 +218,27 @@ func _run() -> void:
         _finish(24)
         return
     surface_test.queue_free()
+
+    var life_cycle_test = preload("res://game/life_cycle_test.gd").new()
+    add_child(life_cycle_test)
+    if not life_cycle_test.run_all():
+        _finish(25)
+        return
+    life_cycle_test.queue_free()
+
+    var biology_test = preload("res://game/biology_test.gd").new()
+    add_child(biology_test)
+    if not biology_test.run_all():
+        _finish(26)
+        return
+    biology_test.queue_free()
+
+    var experiment_test = preload("res://game/experiment_test.gd").new()
+    add_child(experiment_test)
+    if not experiment_test.run_all():
+        _finish(27)
+        return
+    experiment_test.queue_free()
 
     print("SELFTEST OK: morphology_signatures=", plan_signatures.size(), " total_cells=", total_cells, " crossover_family=", child_genome.family_id, " viable=", coherent.viability_score(), " unstable=", unstable.viability_score(), " thought=", thought)
     language_org.queue_free()

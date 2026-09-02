@@ -13,6 +13,7 @@
 | Right click | Follow / unfollow selected organism from behind its anatomical rear/tail |
 | Tab | Select next organism |
 | Space | Pause / resume |
+| L | Set a new random fixed light direction; choose auto_sun in Settings for movement |
 | F10 | Settings |
 | F1 | Help / project guide |
 | 1 | Natural view |
@@ -29,10 +30,15 @@
 
 - `5`: open water only
 - `6`: water with seabed / emerging islands
-- `7`: coast with water and substantial land
+- `7`: default coast with water, substantial land and usable sky
 - `8`: land, shallows and usable air volume
 - `9`: combined water + land + open sky
 - `NumPad +`: expand the simulation volume by one configured world unit
 - `NumPad -`: shrink the simulation volume by one configured world unit
 
 The habitat stage itself also grows the world by one configured unit per level above 5.
+
+New founders start underwater. The former default habitat 5 migrates to 7 once; other saved habitats are preserved.
+
+
+Alpha15 F10 additions: MCP and VKLP on/off; VKLP submissions on/off; VKLP URL; spoken language and matching installed voice; test speech; save/load named JSON settings profiles; export selected DNA. Every option/action has an EN/DE/FR tooltip. Profiles save settings, not the population/world state. OBJ export includes the current articulated tissue geometry and its connections.

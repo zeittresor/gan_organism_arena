@@ -1,7 +1,7 @@
 $ErrorActionPreference = 'Stop'
 $Root = Split-Path -Parent $PSScriptRoot
-$ExpectedVersion = '1.0.0-alpha12'
-$ExpectedDate = '2026-09-01'
+$ExpectedVersion = '1.0.0-alpha18'
+$ExpectedDate = '2026-09-02'
 
 function Require-File([string]$RelativePath) {
     $Path = Join-Path $Root $RelativePath
@@ -24,11 +24,36 @@ $Required = @(
     'game\organism.gd',
     'game\organism_visual.gd',
     'game\genome.gd',
+    'game\dna_codec.gd',
+    'game\cell_cycle.gd',
+    'game\affect_model.gd',
+    'game\thought_language.gd',
+    'game\body_contact.gd',
+    'game\locomotion.gd',
+    'game\anatomical_rig.gd',
+    'game\locomotion_test.gd',
+    'game\interaction_test.gd',
+    'game\physiology.gd',
+    'game\experiment_api.gd',
+    'game\ai_gateway.gd',
+    'game\biology_test.gd',
+    'game\experiment_test.gd',
+    'integrations\arena_mcp.py',
+    'integrations\arena_client.py',
+    'integrations\arena_vklp.py',
+    'integrations\verify_transcript.py',
+    'run_mcp.bat',
+    'run_ai_example.bat',
     'game\ecology_traits.gd',
     'game\habitat_model.gd',
     'game\ecology_system.gd',
     'game\ecology_test.gd',
     'game\surface_test.gd',
+    'game\life_cycle.gd',
+    'game\reproduction_system.gd',
+    'game\reproduction_test_world.gd',
+    'game\life_cycle_test.gd',
+    'game\water_surface.gdshader',
     'game\arena_ui.gd',
     'game\free_swim_camera.gd',
     'game\habitat_visual.gd',
@@ -67,13 +92,33 @@ foreach ($Code in @('en','de','fr')) {
 # Parser regression checks: reject syntax/identifier mistakes that previously escaped static packaging.
 # The latter was the exact alpha3 parser failure hidden behind organism.gd preload.
 $GdFiles = Get-ChildItem -LiteralPath (Join-Path $Root 'game') -Filter '*.gd' -File -Recurse
+# Conservative source rule for this project: property names declared as typed
+# arrays must receive an explicitly typed value, never a bare Array literal.
+# Dynamic property assignment otherwise passes parsing and fails at runtime.
+$TypedArrayMembers = @{}
+foreach ($Gd in $GdFiles) {
+    $Source = Get-Content -Raw -LiteralPath $Gd.FullName
+    foreach ($Binding in [regex]::Matches($Source, '(?m)^var\s+(?<name>[A-Za-z_][A-Za-z0-9_]*)\s*:\s*Array\s*\[[^\]\r\n]+\]')) {
+        $TypedArrayMembers[$Binding.Groups['name'].Value] = $true
+    }
+}
 foreach ($Gd in $GdFiles) {
     $Text = Get-Content -Raw -LiteralPath $Gd.FullName
+    foreach ($Assignment in [regex]::Matches($Text, '(?m)\.(?<name>[A-Za-z_][A-Za-z0-9_]*)\s*=\s*\[')) {
+        $MemberName = $Assignment.Groups['name'].Value
+        if ($TypedArrayMembers.ContainsKey($MemberName)) {
+            throw "Typed array assignment regression in $($Gd.Name): .$MemberName must receive an explicitly typed array value."
+        }
+    }
     if ($Text -match 'func\s+[^\r\n(]+\([^\r\n)]*:=' ) {
         throw "Invalid GDScript default-argument ':=' syntax in $($Gd.FullName)"
     }
-    if ($Text -match '1\.0\.0-alpha(?:[1-9]|10|11)(?![0-9])') {
-        throw "Stale pre-alpha12 version string in $($Gd.FullName)"
+    if ($Text -match '1\.0\.0-alpha(?:[1-9]|10|11|12|13|14|15|16|17)(?![0-9])') {
+        throw "Stale pre-alpha18 version string in $($Gd.FullName)"
+    }
+
+    if ($Text -match '(?:ecology|eco)\.configure\([^\r\n]*,\s*\[' -or $Text -match '\.set_habitat\([^\r\n]*,\s*\[') {
+        throw "Typed resource-array regression in $($Gd.FullName): pass an explicit Array[Vector3] variable."
     }
 
     # Check loop bindings as well as var/const declarations. Alpha10 used

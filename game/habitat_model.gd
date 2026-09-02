@@ -6,6 +6,10 @@ var level: int = 5
 var waterline: float = 43.2
 var ground_y: float = -43.2
 var heights: PackedFloat32Array = PackedFloat32Array()
+const HEIGHT_TILE: int = 4
+const HEIGHT_TILES: int = 16
+var height_ceiling: PackedFloat32Array = PackedFloat32Array()
+var revision: int = 0
 
 func configure(p_level: int, size: float) -> void:
     level = clampi(p_level, 5, 9)
@@ -17,6 +21,30 @@ func configure(p_level: int, size: float) -> void:
     for z in range(GRID + 1):
         for x in range(GRID + 1):
             heights[z * (GRID + 1) + x] = _height_raw(float(x) / GRID * 2.0 - 1.0, float(z) / GRID * 2.0 - 1.0)
+    # A triangle cannot exceed its highest vertex. Cache conservative maxima
+    # once per terrain change, including both edges of every tile.
+    height_ceiling.resize(HEIGHT_TILES * HEIGHT_TILES)
+    for tz in range(HEIGHT_TILES):
+        for tx in range(HEIGHT_TILES):
+            var ceiling: float = -INF
+            for z in range(tz * HEIGHT_TILE, (tz + 1) * HEIGHT_TILE + 1):
+                for x in range(tx * HEIGHT_TILE, (tx + 1) * HEIGHT_TILE + 1):
+                    ceiling = maxf(ceiling, heights[z * (GRID + 1) + x])
+            height_ceiling[tz * HEIGHT_TILES + tx] = ceiling
+    revision += 1
+
+func floor_upper_bound(p: Vector3, radius: float) -> float:
+    if height_ceiling.is_empty(): return ground_y
+    var scale_value: float = float(HEIGHT_TILES) / (half_extent * 2.0)
+    var x0: int = clampi(floori((p.x - radius + half_extent) * scale_value), 0, HEIGHT_TILES - 1)
+    var x1: int = clampi(floori((p.x + radius + half_extent) * scale_value), 0, HEIGHT_TILES - 1)
+    var z0: int = clampi(floori((p.z - radius + half_extent) * scale_value), 0, HEIGHT_TILES - 1)
+    var z1: int = clampi(floori((p.z + radius + half_extent) * scale_value), 0, HEIGHT_TILES - 1)
+    var ceiling: float = -INF
+    for z in range(z0, z1 + 1):
+        for x in range(x0, x1 + 1):
+            ceiling = maxf(ceiling, height_ceiling[z * HEIGHT_TILES + x])
+    return ceiling
 
 func _height_raw(x: float, z: float) -> float:
     if level == 5:
@@ -52,7 +80,7 @@ func floor_at(p: Vector3) -> float:
     return d + (c - d) * (1.0 - u) + (b - d) * (1.0 - v)
 
 func has_sky() -> bool:
-    return level >= 8
+    return level >= 7
 
 func is_water(p: Vector3) -> bool:
     return p.y < waterline and floor_at(p) < waterline

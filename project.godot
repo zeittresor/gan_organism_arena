@@ -4,13 +4,16 @@ config_version=5
 [application]
 config/name="GAN Organism Arena"
 config/description="Volumetric artificial-life aquarium with open-ended body and cognitive evolution"
-config/version="1.0.0-alpha12"
+config/version="1.0.0-alpha18"
 run/main_scene="res://scenes/Main.tscn"
 
 [autoload]
 SettingsStore="*res://game/settings_store.gd"
 L10n="*res://game/localization.gd"
 AppLog="*res://game/app_log.gd"
+
+[audio]
+general/text_to_speech=true
 
 [display]
 window/size/viewport_width=1920

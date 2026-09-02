@@ -1,16 +1,29 @@
 extends Node3D
 
+const Contact = preload("res://game/body_contact.gd")
 const GenomeScript = preload("res://game/genome.gd")
 const OrganismScript = preload("res://game/organism.gd")
 const NutrientFieldScript = preload("res://game/nutrient_field.gd")
 const EcologyScript = preload("res://game/ecology_system.gd")
 const HabitatModelScript = preload("res://game/habitat_model.gd")
+const ReproductionScript = preload("res://game/reproduction_system.gd")
+const Cycle = preload("res://game/life_cycle.gd")
+var reproduction = ReproductionScript.new()
 var habitat = HabitatModelScript.new()
 var ecology = EcologyScript.new()
 const BODY_PLAN_COUNT: int = 7
 
 signal organism_born(organism)
 signal organism_died(organism_id: int)
+
+var run_seed: int = 1337
+var experiment_mode: bool = false
+var experiment_settings: Dictionary = {}
+var event_log: Array = []
+var event_sequence: int = 0
+var experiment_revision: int = 0
+var nutrient_input: float = 0.0
+var temperature_offset: float = 0.0
 
 var rng: RandomNumberGenerator = RandomNumberGenerator.new()
 var organisms: Array = []
@@ -27,28 +40,39 @@ var visual_cap: int = 180
 var failed_developments: int = 0
 var crossover_births: int = 0
 var mutation_births: int = 0
-var habitat_level: int = 5
+var habitat_level: int = 7
 var waterline: float = 21.0
 var ground_y: float = -21.0
 var predation_events: int = 0
 var courtship_events: int = 0
 var hierarchy_events: int = 0
+var contact_quality: int = 85
+var perf_frames: int = 0
+var perf_motion_usec: int = 0
+var perf_biology_usec: int = 0
+var perf_contact_usec: int = 0
+var perf_peak_usec: int = 0
+var observer_camera = null
 
 func initialize(seed_value: int = 1337) -> void:
+    contact_quality = clampi(int(_setting("contact_quality", 85)), 0, 100)
+    temperature_offset = float(_setting("temperature_offset", 0.0))
+    run_seed = seed_value
     rng.seed = seed_value
-    half_extent = float(SettingsStore.get_value("world_size", 144.0)) * 0.5
-    view_mode = str(SettingsStore.get_value("view_mode", "natural"))
-    visual_cap = int(SettingsStore.get_value("visual_cell_cap", 180))
-    habitat.configure(int(SettingsStore.get_value("habitat_level", 5)), half_extent * 2.0)
+    half_extent = float(_setting("world_size", 144.0)) * 0.5
+    view_mode = str(_setting("view_mode", "natural"))
+    visual_cap = int(_setting("visual_cell_cap", 180))
+    habitat.configure(int(_setting("habitat_level", 7)), half_extent * 2.0)
     habitat_level = habitat.level
     waterline = habitat.waterline
     ground_y = habitat.ground_y
-    ecology.configure(habitat, [])
+    var empty_resources: Array[Vector3] = []
+    ecology.configure(habitat, empty_resources)
     nutrient_field = NutrientFieldScript.new()
     add_child(nutrient_field)
-    nutrient_field.initialize(int(SettingsStore.get_value("nutrient_count", 540)), half_extent, seed_value + 91)
+    nutrient_field.initialize(int(_setting("nutrient_count", 540)), half_extent, seed_value + 91)
     nutrient_field.set_habitat(habitat)
-    var initial: int = int(SettingsStore.get_value("initial_organisms", 16))
+    var initial: int = int(_setting("initial_organisms", 16))
     for i in range(initial):
         # The first population deliberately spans topology-space. Selection may
         # later remove any of these forms; the seed itself is not worm-biased.
@@ -74,41 +98,55 @@ func set_habitat(level: int, world_size: float, p_waterline: float, p_ground_y: 
             p.y = clampf(p.y, -half_extent * 0.60, half_extent * 0.60)
             p.z = clampf(p.z, -half_extent, half_extent)
             p.y = maxf(p.y, habitat.floor_at(p) + org.body_clearance())
+            if sim_steps == 0 and org.genome.generation == 0:
+                p = habitat.nearest_medium(p, true, org.body_clearance() + 0.5)
             org.global_position = p
             org.habitat = habitat
             org.rooted = false
             org.decision_timer = 0.0
 
 func _process(delta: float) -> void:
-    var speed: float = float(SettingsStore.get_value("simulation_speed", 1.0))
+    if experiment_mode: return
+    var started: int = Time.get_ticks_usec()
+    _update_render_visibility(delta)
+    var speed: float = float(_setting("simulation_speed", 1.0))
     for org in organisms:
         if is_instance_valid(org):
             org.motion_step(delta * speed, half_extent)
+    var after_motion: int = Time.get_ticks_usec()
+    perf_motion_usec += after_motion - started
+    _resolve_contacts()
+    var before_biology: int = Time.get_ticks_usec()
     sim_accumulator += delta * speed
-    var hz: float = clampf(float(SettingsStore.get_value("simulation_tick_hz", 12.0)), 2.0, 30.0)
+    var hz: float = clampf(float(_setting("simulation_tick_hz", 12.0)), 2.0, 30.0)
     var tick: float = 1.0 / hz
     var guard: int = 0
     while sim_accumulator >= tick and guard < 4:
         sim_accumulator -= tick
-        _simulation_tick(tick)
+        _simulation_tick(tick, true)
         guard += 1
+    var elapsed: int = Time.get_ticks_usec() - started
+    perf_biology_usec += Time.get_ticks_usec() - before_biology
+    perf_peak_usec = maxi(perf_peak_usec, elapsed)
+    perf_frames += 1
 
-func _simulation_tick(dt: float) -> void:
+func _simulation_tick(dt: float, contacts_ready: bool = false) -> void:
     sim_steps += 1
     elapsed_sim_time += dt
-    var evolution_rate: float = float(SettingsStore.get_value("evolution_rate", 1.0))
-    var spacing: float = float(SettingsStore.get_value("social_spacing", 4.5))
+    var evolution_rate: float = float(_setting("evolution_rate", 1.0))
+    var spacing: float = float(_setting("social_spacing", 4.5))
     var org_snapshot: Array = organisms.duplicate()
-    ecology.predation_strength = float(SettingsStore.get_value("predation_strength", 0.45))
-    ecology.group_strength = float(SettingsStore.get_value("group_strength", 0.55))
+    ecology.predation_strength = float(_setting("predation_strength", 0.45))
+    ecology.group_strength = float(_setting("group_strength", 0.55))
     ecology.begin_tick(org_snapshot, dt)
+    nutrient_input += nutrient_field.replenish(dt, float(_setting("nutrient_renewal", 1.0)))
     for org in org_snapshot:
         if not is_instance_valid(org) or not org.alive:
             continue
         org.apply_environment(dt, habitat)
         if not org.alive:
             continue
-        var nutrient_idx: int = nutrient_field.nearest_for(org)
+        var nutrient_idx: int = nutrient_field.nearest_for(org, dt)
         var nutrient_pos: Vector3 = org.global_position
         if nutrient_idx >= 0:
             nutrient_pos = nutrient_field.points[nutrient_idx]
@@ -120,7 +158,6 @@ func _simulation_tick(dt: float) -> void:
         # alpha6 "permanent mating wobble" feedback loop.
         var social: Vector3 = Vector3.ZERO
         var threat: Vector3 = Vector3.ZERO
-        var courtship: Vector3 = Vector3.ZERO
         for other in org_snapshot:
             if other == org or not is_instance_valid(other) or not other.alive:
                 continue
@@ -133,135 +170,67 @@ func _simulation_tick(dt: float) -> void:
             var org_size: float = float(org.visual.get_body_size_hint()) if is_instance_valid(org.visual) and org.visual.has_method("get_body_size_hint") else 2.0
             var other_size: float = float(other.visual.get_body_size_hint()) if is_instance_valid(other.visual) and other.visual.has_method("get_body_size_hint") else 2.0
             var preferred: float = spacing + minf(3.0, (org_size + other_size) * 0.10)
+            if other.organism_id == org.pair_target_id:
+                continue
             if distance < preferred:
                 var push: float = (preferred - distance) / maxf(0.25, preferred)
                 social -= direction * (0.95 + push * 2.2)
             elif distance < 16.0 and other.genome.family_id == org.genome.family_id:
                 var pull: float = (16.0 - distance) / 16.0
-                social += direction * pull * 0.34 * float(SettingsStore.get_value("group_strength", 0.55)) * (0.35 + float(org.genome.pack_drive))
+                social += direction * pull * 0.34 * float(_setting("group_strength", 0.55)) * (0.35 + float(org.genome.pack_drive))
                 if absf(float(other.social_rank) - float(org.social_rank)) > 0.30 and distance < 8.0:
-                    var rank_push: float = float(SettingsStore.get_value("hierarchy_strength", 0.35)) * 0.18
+                    var rank_push: float = float(_setting("hierarchy_strength", 0.35)) * 0.18
                     social += (-direction if org.social_rank < other.social_rank else direction) * rank_push
                     hierarchy_events += 1
             elif distance < 12.0 and (float(other.genome.cooperation) + float(org.genome.cooperation)) * 0.5 > 0.58:
-                social += direction * 0.10 * float(SettingsStore.get_value("group_strength", 0.55))
+                social += direction * 0.10 * float(_setting("group_strength", 0.55))
 
-            if org.can_reproduce() and other.can_reproduce() and distance < float(SettingsStore.get_value("mating_radius", 12.0)):
-                var compatibility: float = 0.30 + (1.0 - absf(float(org.genome.courtship_drive) - float(other.genome.courtship_drive))) * 0.45
-                if int(org.genome.body_plan) != int(other.genome.body_plan):
-                    compatibility += 0.12
-                var ritual_strength: float = compatibility * float(SettingsStore.get_value("courtship_strength", 0.75))
-                courtship += direction * ritual_strength
-                if distance < 8.0:
-                    var tangent: Vector3 = Vector3.UP.cross(direction).normalized()
-                    courtship += tangent * sin(elapsed_sim_time * 1.25 + float(org.organism_id)) * ritual_strength * 0.28
-                if compatibility > 0.62:
-                    org.pair_target_id = other.organism_id
-
-            if other.genome.family_id != org.genome.family_id and float(other.genome.predator_drive) > 0.50 and distance < 13.0:
+            if other.organism_id != org.pair_target_id and other.genome.family_id != org.genome.family_id and float(other.genome.predator_drive) > 0.50 and distance < 13.0:
                 threat += direction * ((13.0 - distance) / 13.0)
 
-        social += courtship
         org.think_step(dt, nutrient_pos, social, threat, rng, evolution_rate)
-        if courtship.length() > 0.4:
-            org.behavior_state = "courtship"
-            courtship_events += 1
         ecology.act(org, dt, rng)
-        if nutrient_idx >= 0 and org.global_position.distance_squared_to(nutrient_pos) < 1.65:
-            org.absorb_nutrient((0.18 + rng.randf_range(0.02, 0.14)) * (0.75 if org.rooted else 1.0))
-            nutrient_field.respawn(nutrient_idx)
+        if nutrient_idx >= 0 and Cycle.stage(org) != "pupa" and org.global_position.distance_squared_to(nutrient_pos) < 1.65:
+            org.absorb_nutrient(nutrient_field.consume(nutrient_idx) * (0.75 if org.rooted else 1.0))
 
+    # Live frames already resolved motion. Decisions change velocities; they
+    # do not move bodies. Explicit experiment/test stepping resolves here.
+    if not contacts_ready: _resolve_contacts()
     predation_events = ecology.hunt_events
     _cleanup_dead()
-    if bool(SettingsStore.get_value("auto_reproduce", true)):
-        _reproduction_pass(dt)
+    var population_before: int = organisms.size()
+    _reproduction_pass(dt)
+    if organisms.size() != population_before: _resolve_contacts()
+    courtship_events = reproduction.mating_events
     _cleanup_dead()
 
 func _reproduction_pass(dt: float) -> void:
-    var cap: int = int(SettingsStore.get_value("organism_cap", 28))
-    # No complexity/intelligence ranking or forced culling: natural mortality
-    # and finite resources open slots. Small, simple and sessile forms can win.
-    if organisms.size() >= cap:
-        return
-    var candidates: Array = organisms.duplicate()
-    for i in range(candidates.size() - 1, 0, -1):
-        var j: int = rng.randi_range(0, i)
-        var tmp = candidates[i]
-        candidates[i] = candidates[j]
-        candidates[j] = tmp
-    var used: Dictionary = {}
-    var mutation_strength: float = float(SettingsStore.get_value("mutation_strength", 0.14))
-    var macro_rate: float = float(SettingsStore.get_value("macro_mutation_rate", 0.14))
-    var crossover_rate: float = float(SettingsStore.get_value("crossover_rate", 0.82))
+    # Existing embryos continue developing when new reproduction is disabled.
+    reproduction.step(self, dt, bool(_setting("auto_reproduce", true)))
 
-    for parent in candidates:
-        if organisms.size() >= cap:
-            break
-        if not is_instance_valid(parent) or not parent.can_reproduce() or used.has(parent.organism_id):
-            continue
-        if rng.randf() >= parent.reproduction_probability(dt):
-            continue
+func population_cap() -> int:
+    return int(_setting("organism_cap", 28))
 
-        var partner = _find_mate(parent, candidates, used)
-        var child_genome = null
-        var birth_mode: String = "mutation"
-        var spawn_position: Vector3 = parent.global_position
-        var inherited_complexity: float = parent.complexity
-        var inherited_intelligence: float = parent.intelligence
+func mating_radius() -> float:
+    return float(_setting("mating_radius", 18.0))
 
-        if is_instance_valid(partner) and rng.randf() < crossover_rate:
-            var child_family: int = parent.genome.family_id
-            if partner.genome.family_id != parent.genome.family_id or int(partner.genome.body_plan) != int(parent.genome.body_plan):
-                child_family = next_family
-                next_family += 1
-            child_genome = parent.genome.crossover(partner.genome, rng, mutation_strength, macro_rate, child_family)
-            birth_mode = "crossover"
-            spawn_position = (parent.global_position + partner.global_position) * 0.5
-            inherited_complexity = (parent.complexity + partner.complexity) * 0.5
-            inherited_intelligence = (parent.intelligence + partner.intelligence) * 0.5
-            parent.parent_cost()
-            partner.parent_cost()
-            used[parent.organism_id] = true
-            used[partner.organism_id] = true
-            crossover_births += 1
-        else:
-            child_genome = parent.genome.mutated(rng, mutation_strength, macro_rate)
-            parent.parent_cost()
-            used[parent.organism_id] = true
-            mutation_births += 1
+func mate_delay() -> float:
+    return float(_setting("mate_cooldown", 16.0))
 
-        spawn_position += Vector3(rng.randf_range(-3.4, 3.4), rng.randf_range(-2.0, 2.0), rng.randf_range(-3.4, 3.4))
-        var child = spawn_genome(child_genome, spawn_position)
-        if is_instance_valid(child):
-            child.complexity = maxf(0.5, inherited_complexity * rng.randf_range(0.08, 0.24))
-            child.intelligence = maxf(0.02, inherited_intelligence * rng.randf_range(0.14, 0.34))
-            child.visual.rebuild(true)
-            AppLog.info("birth id=%d mode=%s family=%d generation=%d plan=%s viability=%.3f" % [child.organism_id, birth_mode, child.genome.family_id, child.genome.generation, child.body_plan_name(), child.development_stability])
+func courtship_strength() -> float:
+    return float(_setting("courtship_strength", 0.75))
 
-func _find_mate(parent, candidates: Array, used: Dictionary):
-    var best = null
-    var best_score: float = INF
-    var mating_radius: float = float(SettingsStore.get_value("mating_radius", 12.0))
-    for candidate in candidates:
-        if candidate == parent or not is_instance_valid(candidate) or not candidate.can_reproduce():
-            continue
-        if used.has(candidate.organism_id):
-            continue
-        var distance: float = parent.global_position.distance_to(candidate.global_position)
-        if distance > mating_radius:
-            continue
-        # Cross-family and cross-plan pairings are slightly favoured to keep the
-        # gene pool from converging into one visual template.
-        var diversity_bonus: float = 0.0
-        if candidate.genome.family_id != parent.genome.family_id:
-            diversity_bonus += 1.5
-        if int(candidate.genome.body_plan) != int(parent.genome.body_plan):
-            diversity_bonus += 2.0
-        var score: float = distance - diversity_bonus
-        if score < best_score:
-            best_score = score
-            best = candidate
-    return best
+func sexual_attempt_rate() -> float:
+    return float(_setting("crossover_rate", 0.90))
+
+func mutation_strength() -> float:
+    return float(_setting("mutation_strength", 0.14))
+
+func macro_rate() -> float:
+    return float(_setting("macro_mutation_rate", 0.014))
+
+func viability_threshold() -> float:
+    return float(_setting("viability_threshold", 0.18))
 
 func _cleanup_dead() -> void:
     for i in range(organisms.size() - 1, -1, -1):
@@ -270,7 +239,8 @@ func _cleanup_dead() -> void:
             var oid: int = -1
             if is_instance_valid(org):
                 oid = int(org.organism_id)
-                if float(org.development_stability) < float(SettingsStore.get_value("viability_threshold", 0.18)):
+                record_event("death", {"id": oid, "age": org.age_seconds, "energy": org.energy, "oxygen": org.oxygen, "offspring": org.children, "genetic_health": org.genome.genetic_health()})
+                if float(org.development_stability) < float(_setting("viability_threshold", 0.18)):
                     failed_developments += 1
                     AppLog.info("development failed id=%d family=%d plan=%s viability=%.3f age=%.1f" % [org.organism_id, org.genome.family_id, org.body_plan_name(), org.development_stability, org.age_seconds])
             if selected == org:
@@ -279,25 +249,34 @@ func _cleanup_dead() -> void:
             if is_instance_valid(org):
                 org.queue_free()
             organism_died.emit(oid)
-            var minimum_population: int = maxi(6, int(int(SettingsStore.get_value("initial_organisms", 16)) / 2))
-            if bool(SettingsStore.get_value("auto_reseed", false)) and organisms.size() < minimum_population:
+            var minimum_population: int = maxi(6, int(int(_setting("initial_organisms", 16)) / 2))
+            if bool(_setting("auto_reseed", false)) and organisms.size() < minimum_population:
                 spawn_random()
 
 func spawn_random(forced_plan: int = -1):
+    if reproduction.available_slots(self) <= 0:
+        return null
     var genome = GenomeScript.new()
     genome.randomize_from(rng, next_family, forced_plan)
+    genome.aquatic_founder()
     next_family += 1
     var spawn = Vector3(rng.randf_range(-half_extent * 0.75, half_extent * 0.75), -half_extent * 0.15, rng.randf_range(-half_extent * 0.75, half_extent * 0.75))
     # Seed aquatic ancestors in accessible water rather than dry air or rock.
     spawn = habitat.nearest_medium(spawn, true, 1.0)
-    return spawn_genome(genome, spawn)
+    var founder = spawn_genome(genome, spawn)
+    if is_instance_valid(founder):
+        founder.global_position = habitat.nearest_medium(founder.global_position, true, founder.body_clearance() + 0.5)
+        founder.in_water = true
+        record_event("founder_injection", {"id": founder.organism_id, "family": genome.family_id, "plan": genome.body_plan})
+    return founder
 
 func spawn_genome(genome, spawn: Vector3):
-    if organisms.size() >= int(SettingsStore.get_value("organism_cap", 28)):
+    if organisms.size() >= population_cap():
         return null
     var org = OrganismScript.new()
     add_child(org)
     org.initialize(next_id, genome, spawn, visual_cap, view_mode)
+    org.contact_quality = contact_quality
     org.habitat = habitat
     var p: Vector3 = org.global_position
     p.x = clampf(p.x, -half_extent + 0.5, half_extent - 0.5)
@@ -380,5 +359,113 @@ func metrics() -> Dictionary:
         "pack_events": ecology.pack_events,
         "tool_events": ecology.tool_events,
         "cleaning_events": ecology.cleaning_events,
-        "parasitic_events": ecology.parasitic_events
+        "parasitic_events": ecology.parasitic_events,
+        "embryos": reproduction.reserved_count(),
+        "conceptions": reproduction.conceptions,
+        "brood_losses": reproduction.losses
     }
+
+func _setting(key: String, fallback = null):
+    return experiment_settings.get(key, SettingsStore.get_value(key, fallback))
+
+func record_event(kind: String, details: Dictionary) -> void:
+    event_sequence += 1
+    event_log.append({"sequence": event_sequence, "step": sim_steps, "time": elapsed_sim_time, "kind": kind, "data": details})
+    if event_log.size() > 2048: event_log.pop_front()
+
+func advance_experiment(steps: int) -> void:
+    var dt: float = 1.0 / 12.0
+    for i in range(steps):
+        for org in organisms:
+            if is_instance_valid(org): org.motion_step(dt, half_extent)
+        _simulation_tick(dt)
+
+func reset_experiment(seed_value: int, parameters: Dictionary) -> void:
+    for brood in reproduction.broods:
+        brood["marker"].queue_free()
+    for org in organisms:
+        org.queue_free()
+    organisms.clear()
+    if is_instance_valid(nutrient_field): nutrient_field.queue_free()
+    selected = null
+    var resources: Array[Vector3] = ecology.resources.duplicate()
+    reproduction = ReproductionScript.new()
+    ecology = EcologyScript.new()
+    next_id = 1
+    next_family = 1
+    sim_steps = 0
+    sim_accumulator = 0.0
+    elapsed_sim_time = 0.0
+    failed_developments = 0
+    crossover_births = 0
+    mutation_births = 0
+    predation_events = 0
+    courtship_events = 0
+    hierarchy_events = 0
+    nutrient_input = 0.0
+    event_log.clear()
+    event_sequence = 0
+    experiment_revision += 1
+    experiment_settings = parameters.duplicate(true)
+    temperature_offset = float(parameters.get("temperature_offset", 0.0))
+    initialize(seed_value)
+    ecology.configure(habitat, resources)
+    record_event("reset", {"seed": seed_value, "parameters": parameters.duplicate(true)})
+
+func _resolve_contacts() -> void:
+    var started: int = Time.get_ticks_usec()
+    var iterations: int = 2 + int(round(float(contact_quality) * 0.06))
+    Contact.solve(organisms, iterations, contact_quality)
+    for org in organisms:
+        if is_instance_valid(org) and org.alive: Contact.ground(org, half_extent)
+    perf_contact_usec += Time.get_ticks_usec() - started
+
+func set_contact_quality(value: int) -> void:
+    contact_quality = clampi(value, 0, 100)
+    for org in organisms:
+        if is_instance_valid(org): org.contact_quality = contact_quality
+
+func take_performance() -> Dictionary:
+    var frames: float = float(maxi(1, perf_frames))
+    var report: Dictionary = {"motion_ms": perf_motion_usec / frames / 1000.0, "biology_ms": perf_biology_usec / frames / 1000.0, "contacts_ms": perf_contact_usec / frames / 1000.0, "peak_world_ms": perf_peak_usec / 1000.0, "ground_detail": 0, "ground_fast": 0, "ground_cached": 0, "envelopes": 0, "quality": contact_quality}
+    report["render_uploads"] = 0
+    report["skipped_uploads"] = 0
+    for org in organisms:
+        if not is_instance_valid(org) or not is_instance_valid(org.visual): continue
+        var visual = org.visual
+        report["ground_detail"] += visual.ground_detail_checks
+        report["ground_fast"] += visual.ground_fast_checks
+        report["ground_cached"] += visual.ground_cache_hits
+        report["envelopes"] += visual.contact_builds
+        report["render_uploads"] += visual.render_uploads
+        report["skipped_uploads"] += visual.skipped_uploads
+        visual.ground_detail_checks = 0
+        visual.ground_fast_checks = 0
+        visual.ground_cache_hits = 0
+        visual.contact_builds = 0
+        visual.render_uploads = 0
+        visual.skipped_uploads = 0
+    perf_frames = 0
+    perf_motion_usec = 0
+    perf_biology_usec = 0
+    perf_contact_usec = 0
+    perf_peak_usec = 0
+    return report
+
+func _update_render_visibility(delta: float) -> void:
+    if not is_instance_valid(observer_camera): return
+    var planes: Array = observer_camera.get_frustum()
+    var screen_center: Vector2 = observer_camera.get_viewport().get_visible_rect().size * 0.5
+    var inside: Vector3 = observer_camera.project_position(screen_center, (observer_camera.near + observer_camera.far) * 0.5)
+    # Orient towards the exterior explicitly, independent of plane ordering.
+    for i in range(planes.size()):
+        if planes[i].distance_to(inside) > 0.0: planes[i] = -planes[i]
+    for org in organisms:
+        if not is_instance_valid(org) or not is_instance_valid(org.visual): continue
+        var radius: float = org.visual.contact_radius + org.velocity.length() * delta * 3.0 + 1.0
+        org.visual.set_render_active(sphere_visible(org.global_position, radius, planes))
+
+static func sphere_visible(center: Vector3, radius: float, planes: Array) -> bool:
+    for plane in planes:
+        if plane.distance_to(center) > radius: return false
+    return true

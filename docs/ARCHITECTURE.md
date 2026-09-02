@@ -1,4 +1,4 @@
-# Architecture — GAN Organism Arena 1.0.0-alpha12
+# Architecture — GAN Organism Arena 1.0.0-alpha15
 
 ## Simulation
 
@@ -48,7 +48,7 @@ Habitat rendering is separated in `game/habitat_visual.gd`; ecological selection
 
 ## Alpha10 ecological specialization
 
-- `habitat_model.gd`: one sampled, triangulated heightfield for both surface rendering and organism floor queries. Water/land searches stay within the world. Open sky is available in habitats 8/9.
+- `habitat_model.gd`: one sampled, triangulated heightfield for both surface rendering and organism floor queries. Water/land searches stay within the world. Open sky is available in habitats 7/8/9 as of alpha13.
 - `ecology_traits.gd`: shared capability formulas for physiology, movement, decisions and morphology. New ecological genes participate in ordinary mutation, crossover and seeded macro-mutations.
 - `ecology_system.gd`: resource patches, shared prey planning, local pack roles, learned tactic weights, finite host/food transfers, tools and rooted productivity. Respiration emergencies take priority over feeding and courtship.
 - `organism.gd`: oxygen reserve, moisture, stamina, lifetime skills, medium transitions, locomotion and support constraints. There is no forced complexity-based survival score at the population cap.
@@ -58,3 +58,26 @@ Habitat rendering is separated in `game/habitat_visual.gd`; ecological selection
 The model is bounded artificial life, not unconstrained body invention, general intelligence, or a validated biological prediction. Trait thresholds and resource conversion coefficients are explicit game mechanics. Learning changes an individual's skills, not inherited memories.
 
 API references: [SurfaceTool](https://docs.godotengine.org/en/stable/classes/class_surfacetool.html), [MultiMesh](https://docs.godotengine.org/en/stable/classes/class_multimesh.html).
+
+
+## Alpha13 lifecycle and interactions
+
+- `life_cycle.gd`: shared maturation, stage-specific respiration, sex roles, reproductive modes and genetic compatibility proxies. Somatic development and population evolution are separate.
+- `reproduction_system.gd`: bounded pairs and broods, continuous contact before fertilization, maternal/yolk budgets, external egg survival, reserved birth slots, parentage and resource-conserving parental care. Existing embryos continue when new reproduction is disabled. No immediate sexual offspring or unconditional cloning fallback remains.
+- `genome.gd`: twenty inherited lifecycle/interaction loci; the aquatic founder limiter is called only by random ancestor injection. `fertility_factor` carries reduced hybrid fertility separately from mutable morphological genes.
+- `organism.gd` / `organism_visual.gd`: nutritional maturation delays, juvenile scaling, larva/pupa/adult bodies, reproductive tissue and displays; temporary ballistic/dive states suppress sustained flight steering and spend stamina.
+- `ecology_system.gd`: persistent-habitat reach and brief hunting reach are separate. Bite transfer requires spatial contact; predation never creates reproductive hybrids.
+- `water_surface.gdshader`: two-sided, transparent lit surface with analytic wave normals. No screen-texture/depth-buffer dependency. Coast contour intersects the same terrain triangles used for floor queries; cosmetic waves do not change the mean waterline used by ecology.
+- `life_cycle_test.gd` and `reproduction_test_world.gd`: deterministic production-code checks with a subclass overriding settings reads; tests do not write user settings.
+
+The renderer still uses one instanced body mesh per organism. New anatomy uses the existing cell budget. Each brood uses one small marker mesh and all unborn offspring count against reserved population capacity. Pair/brood/history storage remains bounded by the active population limits.
+
+## Alpha14 biological state and optional adapters
+
+Genome retains paired alleles independently of phenotype. Physiology allocates reserves to development and gametes; reproduction consumes those pools and develops embryos. The fixed-step experiment API reads and operates on the same SimWorld. An optional loopback gateway is loaded only with --arena-api. The stdio MCP adapter is a separate Python-standard-library process; VKLP uses the existing zeittresor/VKLP HTTP contract. Normal game startup imports no Python modules and opens no network listener. Connecting does not select step mode or lock UI controls. Claims and external-knowledge interventions carry explicit provenance. See BIOLOGY_RESEARCH_DE.md and AI_INTERFACES_DE.md.
+
+
+Alpha15 modules: `body_contact.gd` constrains articulated envelopes and terrain footprints; `organism_visual.gd` maintains one acyclic attachment graph for pose and connecting tissue. Render cost is bounded by `visual_cell_cap` tissues plus at most `cap-1` connectors. Contact envelopes are conservative and do not simulate elastic tissue deformation or self-collision of an individual.
+`cell_cycle.gd` handles paid somatic mitoses, tissue repair and finite haploid gamete pools. `genome.gd` constructs reciprocal meiotic tetrads and reunites stored gametes. `dna_codec.gd` maps alleles to a fictional regulatory nucleotide code and provides substitutions.
+`affect_model.gd` supplies cognition-dependent affect variables used by steering. Four additional inherited sensory/affective loci choose eye focus, compound eyes, antennae and affective plasticity.
+Settings profiles are validated transactionally and applied through the same UI setting signals. `ai_gateway.gd` enforces per-protocol permissions against SettingsStore on each request; adapters also check current config before access. `arena_vklp.py` is the direct HTTP client usable with MCP disabled.

@@ -1,5 +1,7 @@
 extends RefCounted
 
+const DNA = preload("res://game/dna_codec.gd")
+
 # Morphology plans deliberately describe topology, not a fixed animal species.
 # Continuous genes below still reshape each topology strongly, and macro-mutation
 # can move descendants into a different topology over evolutionary time.
@@ -33,6 +35,10 @@ var fin_drive: float = 0.35
 var armor_drive: float = 0.25
 var shell_drive: float = 0.12
 var support_drive: float = 0.50
+var eye_focus: float = 0.6
+var compound_eye_drive: float = 0.2
+var antenna_drive: float = 0.4
+var affective_plasticity: float = 0.5
 var sensory_drive: float = 0.55
 var neural_drive: float = 0.50
 var cooperation: float = 0.45
@@ -84,6 +90,28 @@ var horn_drive: float = 0.08
 var beak_drive: float = 0.10
 var pattern_drive: float = 0.35
 
+var sex_system: float = 0.2
+var internal_fertilization: float = 0.2
+var live_birth: float = 0.1
+var maternal_nourishment: float = 0.25
+var egg_protection: float = 0.2
+var gestation_gene: float = 0.35
+var maturation_gene: float = 0.2
+var metamorphosis: float = 0.1
+var aquatic_larva: float = 0.2
+var asexual_drive: float = 0.05
+var reproductive_anatomy: float = 0.6
+var dimorphism: float = 0.25
+var ornament_drive: float = 0.2
+var gamete_code: float = 0.5
+var development_code: float = 0.5
+var brood_size: float = 0.25
+var parental_care: float = 0.2
+var burst_drive: float = 0.25
+var reach_drive: float = 0.2
+var dive_drive: float = 0.2
+var fertility_factor: float = 1.0
+
 func randomize_from(rng: RandomNumberGenerator, p_family_id: int, forced_plan: int = -1) -> void:
     seed = int(rng.randi())
     family_id = p_family_id
@@ -123,9 +151,13 @@ func randomize_from(rng: RandomNumberGenerator, p_family_id: int, forced_plan: i
     courtship_drive = rng.randf_range(0.10, 1.0)
     pack_drive = rng.randf_range(0.0, 1.0)
     dominance_drive = rng.randf_range(0.0, 1.0)
+    for gene_name in sensory_gene_names():
+        set(gene_name, rng.randf())
     for gene_name in ecological_gene_names():
         set(gene_name, rng.randf())
     for gene_name in surface_gene_names():
+        set(gene_name, rng.randf())
+    for gene_name in life_cycle_gene_names():
         set(gene_name, rng.randf())
     # Initial respiratory traits broadly match the aquatic ancestors. Mutation
     # and recombination can later separate locomotion from respiration.
@@ -133,6 +165,7 @@ func randomize_from(rng: RandomNumberGenerator, p_family_id: int, forced_plan: i
     lung_drive = clampf(terrestrial_drive * 0.8 + rng.randf_range(0.0, 0.2), 0.0, 1.0)
     wing_area *= 0.45
     _bias_plan_genes(rng)
+    seed_diploid(rng)
 
 func _continuous_gene_names() -> Array[String]:
     var names: Array[String] = [
@@ -147,70 +180,159 @@ func _continuous_gene_names() -> Array[String]:
     ]
     names.append_array(ecological_gene_names())
     names.append_array(surface_gene_names())
+    names.append_array(life_cycle_gene_names())
+    names.append_array(sensory_gene_names())
     return names
 
-func mutated(rng: RandomNumberGenerator, strength: float = 0.14, macro_rate: float = 0.14):
-    var script_resource = get_script()
-    var g = script_resource.new()
+# Each locus carries two homologous alleles. Dictionary order is the fixed map.
+var alleles: Dictionary = {}
+var expressed_baseline: Dictionary = {}
+var recessive_load: Array = []
+var sex_chromosomes: Array = []
+var mutation_events: int = 0
+var crossover_events: int = 0
+const LOCI_PER_CHROMOSOME: int = 16
+
+func ensure_diploid() -> void:
+    # Legacy/editor-created genomes become homozygous. Founders use seed variation.
+    if sex_chromosomes.is_empty():
+        sex_chromosomes = [0, int(seed) % 2]
+    for locus in _continuous_gene_names():
+        var value: float = float(get(locus))
+        if not alleles.has(locus) or absf(value - float(expressed_baseline.get(locus, value))) > 0.000001:
+            alleles[locus] = [value, value]
+            expressed_baseline[locus] = value
+    if recessive_load.is_empty():
+        for i in range(8): recessive_load.append([0.0, 0.0])
+
+func seed_diploid(rng: RandomNumberGenerator) -> void:
+    ensure_diploid()
+    for locus in _continuous_gene_names():
+        var value: float = float(get(locus))
+        var spread: float = minf(0.08, minf(value, 1.0 - value))
+        var difference: float = rng.randf_range(-spread, spread)
+        alleles[locus] = [value - difference, value + difference]
+    for i in range(8):
+        recessive_load[i] = [1.0 if rng.randf() < 0.10 else 0.0, 0.0]
+    express_diploid()
+
+func express_diploid() -> void:
+    var index: int = 0
+    for locus in _continuous_gene_names():
+        var pair: Array = alleles[locus]
+        # Additive loci plus partial dominance at every third locus. No acquired
+        # skill is written back to this germ line.
+        var value: float = (float(pair[0]) + float(pair[1])) * 0.5
+        if index % 3 == 0 and locus != "hue":
+            value += absf(float(pair[0]) - float(pair[1])) * 0.18
+        set(locus, clampf(value, 0.0, 1.0))
+        expressed_baseline[locus] = float(get(locus))
+        index += 1
+
+func meiotic_products(rng: RandomNumberGenerator, strength: float = 0.0) -> Array:
+    ensure_diploid()
+    # Four chromatids after S phase. Crossovers exchange reciprocal distal
+    # segments between nonsister chromatids; each locus conserves a 2:2 ratio
+    # in the tetrad unless a new mutation occurs.
+    var products: Array = []
+    for i in range(4): products.append({"values": {}, "load": [], "sex": 0, "mutations": 0, "switches": 0, "ploidy": 1, "divisions": 2})
+    var chromatids: Array = [0, 0, 1, 1]
+    var index: int = 0
+    for locus in _continuous_gene_names():
+        if index % LOCI_PER_CHROMOSOME == 0:
+            chromatids = [0, 0, 1, 1] if rng.randf() < 0.5 else [1, 1, 0, 0]
+        elif rng.randf() < 0.12:
+            var a: int = rng.randi_range(0, 1)
+            var b: int = rng.randi_range(2, 3)
+            var saved: int = chromatids[a]
+            chromatids[a] = chromatids[b]
+            chromatids[b] = saved
+            products[a]["switches"] += 1
+            products[b]["switches"] += 1
+        for i in range(4):
+            var value: float = float(alleles[locus][chromatids[i]])
+            if strength > 0.0 and rng.randf() < 0.015 + mutability * 0.10:
+                value = DNA.point_mutation(value, rng, strength) if rng.randf() < 0.25 else clampf(value + rng.randfn(0.0, strength), 0.0, 1.0)
+                products[i]["mutations"] += 1
+            products[i]["values"][locus] = value
+        index += 1
+    for pair in recessive_load:
+        var first: int = rng.randi_range(0, 1)
+        for i in range(4):
+            var value: float = float(pair[first if i < 2 else 1 - first])
+            if strength > 0.0 and rng.randf() < strength * 0.008:
+                value = 1.0 - value
+                products[i]["mutations"] += 1
+            products[i]["load"].append(value)
+    var first_sex: int = rng.randi_range(0, 1)
+    for i in range(4): products[i]["sex"] = sex_chromosomes[first_sex if i < 2 else 1 - first_sex]
+    return products
+
+func make_gamete(rng: RandomNumberGenerator, strength: float = 0.0) -> Dictionary:
+    var products: Array = meiotic_products(rng, strength)
+    return products[rng.randi_range(0, 3)]
+
+func mutated(rng: RandomNumberGenerator, strength: float = 0.14, macro_rate: float = 0.014):
+    ensure_diploid()
+    var g = get_script().new()
     g.seed = int(rng.randi())
     g.generation = generation + 1
     g.family_id = family_id
     g.body_plan = body_plan
-    var local_strength: float = strength * lerpf(0.65, 1.55, mutability)
-    for property_name in _continuous_gene_names():
-        var value: float = float(get(property_name)) + rng.randfn(0.0, local_strength)
-        if property_name == "hue":
-            value = fposmod(value, 1.0)
-        else:
-            value = clampf(value, 0.0, 1.0)
-        g.set(property_name, value)
-    # A macro mutation is intentionally rare but large. This prevents lineages
-    # from being trapped forever in the topology of their first ancestor.
-    if macro_rate >= 1.0 or rng.randf() < macro_rate * lerpf(0.65, 1.45, mutability):
+    g.alleles = alleles.duplicate(true)
+    g.recessive_load = recessive_load.duplicate(true)
+    g.sex_chromosomes = sex_chromosomes.duplicate()
+    for locus in _continuous_gene_names():
+        for side in range(2):
+            if strength > 0.0 and rng.randf() < 0.015 + mutability * 0.10:
+                g.alleles[locus][side] = DNA.point_mutation(g.alleles[locus][side], rng, strength) if rng.randf() < 0.25 else clampf(g.alleles[locus][side] + rng.randfn(0.0, strength), 0.0, 1.0)
+                g.mutation_events += 1
+    g.express_diploid()
+    if macro_rate >= 1.0 or rng.randf() < macro_rate:
         g.body_plan = _different_plan(g.body_plan, rng)
-        _macro_perturb(g, rng, local_strength)
+        _macro_perturb(g, rng, strength)
+        g.ensure_diploid()
+    g.fertility_factor = g.genetic_health()
     return g
 
-func crossover(other, rng: RandomNumberGenerator, strength: float = 0.12, macro_rate: float = 0.16, new_family_id: int = -1):
-    var script_resource = get_script()
-    var g = script_resource.new()
+func crossover(other, rng: RandomNumberGenerator, strength: float = 0.12, macro_rate: float = 0.014, new_family_id: int = -1):
+    var egg: Dictionary = make_gamete(rng, strength)
+    var sperm: Dictionary = other.make_gamete(rng, strength)
+    return fertilize(other, egg, sperm, rng, strength, macro_rate, new_family_id)
+
+func fertilize(other, egg: Dictionary, sperm: Dictionary, rng: RandomNumberGenerator, strength: float = 0.12, macro_rate: float = 0.014, new_family_id: int = -1):
+    var g = get_script().new()
     g.seed = int(rng.randi())
     g.generation = maxi(generation, int(other.generation)) + 1
     g.family_id = new_family_id if new_family_id >= 0 else family_id
-
-    # Topology is heritable but not immutable. Cross-plan matings occasionally
-    # produce a third topology, which is the main source of large morphological leaps.
-    if rng.randf() < 0.46:
-        g.body_plan = body_plan
-    else:
-        g.body_plan = int(other.body_plan)
-    if int(other.body_plan) != body_plan and rng.randf() < 0.28:
-        g.body_plan = rng.randi_range(0, PLAN_COUNT - 1)
-
-    var local_mutability: float = clampf((mutability + float(other.mutability)) * 0.5, 0.0, 1.0)
-    var local_strength: float = strength * lerpf(0.70, 1.60, local_mutability)
-    for property_name in _continuous_gene_names():
-        var a: float = float(get(property_name))
-        var b: float = float(other.get(property_name))
-        var value: float
-        var inheritance_roll: float = rng.randf()
-        if inheritance_roll < 0.38:
-            value = a
-        elif inheritance_roll < 0.76:
-            value = b
-        else:
-            value = lerpf(a, b, rng.randf())
-        value += rng.randfn(0.0, local_strength)
-        if property_name == "hue":
-            value = fposmod(value, 1.0)
-        else:
-            value = clampf(value, 0.0, 1.0)
-        g.set(property_name, value)
-
-    if macro_rate >= 1.0 or rng.randf() < macro_rate * lerpf(0.70, 1.50, local_mutability):
+    g.body_plan = body_plan if rng.randf() < 0.5 else int(other.body_plan)
+    g.sex_chromosomes = [egg["sex"], sperm["sex"]]
+    for locus in _continuous_gene_names():
+        g.alleles[locus] = [egg["values"][locus], sperm["values"][locus]]
+    for i in range(8):
+        g.recessive_load.append([egg["load"][i], sperm["load"][i]])
+    g.mutation_events = egg["mutations"] + sperm["mutations"]
+    g.crossover_events = egg["switches"] + sperm["switches"]
+    g.express_diploid()
+    if macro_rate >= 1.0 or rng.randf() < macro_rate:
         g.body_plan = _different_plan(g.body_plan, rng)
-        _macro_perturb(g, rng, local_strength)
+        _macro_perturb(g, rng, strength)
+        g.ensure_diploid()
+    g.fertility_factor = g.genetic_health()
     return g
+
+func genetic_health() -> float:
+    var damage: float = 0.0
+    for pair in recessive_load:
+        damage += minf(float(pair[0]), float(pair[1])) * 0.09
+    return clampf(1.0 - damage, 0.0, 1.0)
+
+func heterozygosity() -> float:
+    if alleles.is_empty(): return 0.0
+    var mixed: int = 0
+    for locus in alleles:
+        if absf(alleles[locus][0] - alleles[locus][1]) > 0.000001: mixed += 1
+    return float(mixed) / float(alleles.size())
 
 func _different_plan(current_plan: int, rng: RandomNumberGenerator) -> int:
     var shift: int = rng.randi_range(1, PLAN_COUNT - 1)
@@ -226,6 +348,7 @@ func _macro_perturb(g, rng: RandomNumberGenerator, strength: float) -> void:
     # Use the simulation RNG, including shuffle, for reproducible evolution.
     candidates.append_array(ecological_gene_names())
     candidates.append_array(surface_gene_names())
+    candidates.append_array(life_cycle_gene_names())
     for i in range(candidates.size() - 1, 0, -1):
         var j: int = rng.randi_range(0, i)
         var old: String = candidates[i]
@@ -316,7 +439,7 @@ func viability_score() -> float:
         coherence_penalty += 0.15
     if limb_length > 0.90 and limb_thickness < 0.10 and support_drive < 0.28:
         coherence_penalty += 0.20
-    return clampf(1.0 - support_penalty - energy_penalty - coherence_penalty, 0.0, 1.0)
+    return clampf(1.0 - support_penalty - energy_penalty - coherence_penalty, 0.0, 1.0) * genetic_health()
 
 func base_color() -> Color:
     return Color.from_hsv(hue, 0.66, 0.92)
@@ -326,3 +449,48 @@ func ecological_gene_names() -> Array[String]:
 
 func surface_gene_names() -> Array[String]:
     return ["skin_thickness", "scale_cover", "feather_cover", "fur_cover", "mucus_cover", "membrane_cover", "horn_drive", "beak_drive", "pattern_drive"]
+
+func life_cycle_gene_names() -> Array[String]:
+    return ["sex_system", "internal_fertilization", "live_birth", "maternal_nourishment", "egg_protection", "gestation_gene", "maturation_gene", "metamorphosis", "aquatic_larva", "asexual_drive", "reproductive_anatomy", "dimorphism", "ornament_drive", "gamete_code", "development_code", "brood_size", "parental_care", "burst_drive", "reach_drive", "dive_drive"]
+
+func aquatic_founder() -> void:
+    # Only founders/injected ancestors get these bounds, never their descendants.
+    aquatic_drive = maxf(0.80, aquatic_drive)
+    gill_drive = maxf(0.85, gill_drive)
+    lung_drive = minf(0.10, lung_drive)
+    skin_breathing = minf(0.18, skin_breathing)
+    terrestrial_drive = minf(0.10, terrestrial_drive)
+    flight_drive = minf(0.03, flight_drive)
+    wing_area = minf(0.05, wing_area)
+    burst_drive = minf(0.20, burst_drive)
+    dive_drive = minf(0.20, dive_drive)
+    root_drive = minf(0.25, root_drive)
+    internal_fertilization = minf(0.25, internal_fertilization)
+    live_birth = minf(0.20, live_birth)
+    metamorphosis = minf(0.25, metamorphosis)
+    asexual_drive = minf(0.20, asexual_drive)
+    gamete_code = 0.40 + gamete_code * 0.20
+    development_code = 0.40 + development_code * 0.20
+    ensure_diploid()
+
+func dna_chromosomes() -> Array:
+    ensure_diploid()
+    var chromosomes: Array = []
+    var names: Array = _continuous_gene_names()
+    for start in range(0, names.size(), LOCI_PER_CHROMOSOME):
+        var a: String = ""
+        var b: String = ""
+        var loci: Array = []
+        for index in range(start, mini(start + LOCI_PER_CHROMOSOME, names.size())):
+            var locus: String = names[index]
+            a += DNA.encode(float(alleles[locus][0]))
+            b += DNA.encode(float(alleles[locus][1]))
+            loci.append({"gene": locus, "offset": (index - start) * DNA.BASE_COUNT, "length": DNA.BASE_COUNT})
+        chromosomes.append({"pair": chromosomes.size() + 1, "homolog_a": a, "homolog_b": b, "complement_a": DNA.complement(a), "complement_b": DNA.complement(b), "loci": loci})
+    return chromosomes
+
+func dna_document() -> Dictionary:
+    return {"schema": "arena.dna/1", "code": "fictional base-4 regulatory allele code; not real protein codons", "ploidy": 2, "bases_per_locus": DNA.BASE_COUNT, "quantization_error_max": 0.5 / DNA.MAX_CODE, "chromosomes": dna_chromosomes(), "sex_chromosomes": sex_chromosomes.duplicate(), "recessive_load": recessive_load.duplicate(true)}
+
+func sensory_gene_names() -> Array[String]:
+    return ["eye_focus", "compound_eye_drive", "antenna_drive", "affective_plasticity"]

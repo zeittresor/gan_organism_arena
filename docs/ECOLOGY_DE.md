@@ -1,6 +1,10 @@
-# Neue Lebensweisen — 1.0.0-alpha12
+# Neue Lebensweisen — 1.0.0-alpha13
 
 Die Evolution hat kein Ziel wie „Mensch“, „intelligenter“ oder „größer“. Gene für Körperbau, Atmung, Bewegung, Ernährung und Verhalten werden gemeinsam vererbt, gekreuzt und mutiert. Kleine, sesshafte oder scheue Formen können ebenso überleben wie schnelle Jäger. Welche Linien tatsächlich entstehen, hängt vom Ausgangszustand, den Ressourcen und dem Habitat ab. Nicht jede Möglichkeit erscheint in jedem Lauf.
+
+## Küstenstart und Lebenszyklen
+
+Standard ist nun die Küste von Taste 7. Gründer starten im Wasser und können noch nicht laufen oder fliegen. Die Küste besitzt offenen Himmel für später entwickelte Flieger. [Fortpflanzung, Entwicklung und wissenschaftliche Grenzen](LIFE_CYCLE_DE.md) beschreibt die neuen Abläufe. **L** setzt eine neue zufällige Lichtrichtung; die Wasseroberfläche hat deutlichere Wellen, Reflexe und eine Uferkontur.
 
 ## Größere Welt
 
@@ -15,7 +19,7 @@ Beim Übernehmen einer alten `settings/config.json` werden die alten Weltdimensi
 | Schneller Schwimmer | Muskulatur, Flossen, Schwanz und Wasseranpassung erhöhen den Vortrieb. Große beziehungsweise aufwendige Körper kosten mehr Energie. |
 | Amphibische Lebensweise | Ausreichende Wasser- und Luftatmung sowie Bodenbewegung. Feuchtigkeit, Aufenthaltsdauer und Neugier steuern den Wechsel zwischen Wasser und Land. |
 | Land-Spezialist | Gute Lungen können schwache Kiemen nicht ersetzen. Unter Wasser sinkt der Atemvorrat; das Wesen sucht rechtzeitig Land beziehungsweise Luft. |
-| Fliegen | Genügend Flügelfläche, Stützkraft, leichte Struktur beziehungsweise geringe Körperlast, Luftatmung, Reife, Übung und Ausdauer. Nur Habitat 8/9 bietet den benötigten offenen Himmel. |
+| Fliegen | Genügend Flügelfläche, Stützkraft, leichte Struktur beziehungsweise geringe Körperlast, Luftatmung, Reife, Übung und Ausdauer. Habitate 7/8/9 bietet den benötigten offenen Himmel. |
 | Rudeljagd | Kooperations- und Rudelanlagen; nahe Mitglieder teilen ein Beuteziel, treiben oder flankieren es. Ein Teil tatsächlich erbeuteter Energie kann geteilt werden. |
 | Jagdtaktiken | Verfolgen, vorausschauendes Abfangen und Lauerpositionen. Erfolgreiche Aktionen verbessern begrenzte persönliche Fertigkeiten und Taktikbewertungen. |
 | Werkzeuggebrauch | Manipulierbare Gliedmaßen, neuronale Anlagen, Reife und Werkzeugneigung. Werkzeuge werden an den sichtbaren steinigen Nahrungsvorkommen aufgenommen; sie öffnen begrenzte Vorräte und verschleißen. |
@@ -51,7 +55,7 @@ Die Darstellung verwendet stilisierte, skalierte 3D-Zellen, keine fotorealistisc
 
 ## Beobachten
 
-- **5–9:** Habitat wechseln. 5 ist ein geschlossenes Aquarium, 6 ergänzt Inseln, 7 Küsten, 8/9 offenen Luftraum.
+- **5–9:** Habitat wechseln. 5 ist ein geschlossenes Aquarium, 6 ergänzt Inseln, 7 Küsten, 7/8/9 offenen Luftraum.
 - **Tab** oder **linke Maustaste:** Wesen auswählen. Die Anzeige zeigt Anpassungen, Tätigkeit, Sauerstoff, Ausdauer, Feuchtigkeit, Körperhülle, Umgebungstemperatur und Fertigkeiten.
 - **Rechte Maustaste:** folgen. **Mausrad:** zoomen. **Shift + Mausrad:** Beobachtergeschwindigkeit.
 - **F10:** Optionen. **F1:** Hilfe. **G:** ein neues Zufallswesen einsetzen.
