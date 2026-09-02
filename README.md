@@ -40,6 +40,7 @@ The installer downloads a **portable local copy of Godot 4.7.2** into `runtime/g
 - 1/2/3/4 — Natural / Cell / Neural / Energy views
 - 5/6/7/8/9 — Change Habitat
 - G — inject a random organism
+- L — Change Lightsource
 - F8 — export selected organism as OBJ
 - F12 — screenshot
 - Esc — release/capture mouse
