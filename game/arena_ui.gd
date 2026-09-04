@@ -103,6 +103,7 @@ func _build_settings() -> void:
     _add_slider("nutrient_count", 32, 700, 8, float(SettingsStore.get_value("nutrient_count", 180)))
     _add_slider("visual_cell_cap", 64, 420, 8, float(SettingsStore.get_value("visual_cell_cap", 180)))
     _add_slider("contact_quality", 0, 100, 5, float(SettingsStore.get_value("contact_quality", 85)))
+    _add_slider("gravity_scale", 0.2, 2.5, 0.05, float(SettingsStore.get_value("gravity_scale", 1.0)))
     _add_slider("body_rebuild_interval", 0.25, 6.0, 0.25, float(SettingsStore.get_value("body_rebuild_interval", 1.0)))
     _add_slider("mutation_strength", 0.02, 0.45, 0.01, float(SettingsStore.get_value("mutation_strength", 0.14)))
     _add_slider("macro_mutation_rate", 0.00, 0.60, 0.01, float(SettingsStore.get_value("macro_mutation_rate", 0.14)))

@@ -1,0 +1,36 @@
+Production-source world comparison (not native Godot)
+Seed 1337; coast habitat 7; six initial organisms; visual tissue cap 80;
+360 ticks at 12 Hz = 30 simulated seconds. Decision, motion, ecology and contact
+code execute together through the Python source harness.
+
+Alpha21:
+step 120 population 6 meals 9
+step 240 population 6 meals 10
+step 360 population 6 meals 15
+1 displacement 8.49 path 17.54 energy 1.218 meals 3 goal explore
+2 displacement 13.46 path 47.06 energy 1.342 meals 3 goal explore
+3 displacement 7.37 path 36.41 energy 1.131 meals 2 goal explore
+4 displacement 7.61 path 23.91 energy 0.43 meals 0 goal seek_water
+5 displacement 13.47 path 54.73 energy 1.421 meals 4 goal explore
+6 displacement 11.77 path 31.5 energy 1.273 meals 3 goal explore
+
+Alpha22:
+step 120 population 6 meals 3
+step 240 population 6 meals 8
+step 360 population 6 meals 10
+1 displacement 18.28 path 28.11 energy 0.428 meals 0 goal flee
+2 displacement 45.07 path 62.61 energy 1.416 meals 6 goal explore
+3 displacement 24.77 path 38.99 energy 0.606 meals 0 goal hunt
+4 displacement 21.08 path 50.79 energy 1.259 meals 3 goal explore
+5 displacement 31.46 path 97.66 energy 0.475 meals 0 goal hunt
+6 displacement 17.17 path 22.81 energy 0.732 meals 1 goal forage
+
+Interpretation: this seed shows more net displacement with Alpha22. Both builds
+feed; Alpha21 records 15 meals, Alpha22 10. This does not establish higher food
+intake or survival for Alpha22. Head-local capture changes the feeding criterion,
+and different choices consume RNG differently. Longer native runs and several
+seeds are needed before claims about ecological balance or birth rate.
+
+The separate bottom-food fixture is reached at the head after 3.33 seconds in
+Alpha22; Alpha21's body-origin criterion triggers at 11.67 seconds. Those are
+different capture criteria, not a propulsion-speed benchmark.

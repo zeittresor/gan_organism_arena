@@ -1,5 +1,7 @@
 extends Node3D
 
+const Cycle = preload("res://game/life_cycle.gd")
+const Navigation = preload("res://game/navigation.gd")
 const Traits = preload("res://game/ecology_traits.gd")
 var habitat = null
 
@@ -58,21 +60,22 @@ func set_habitat(model) -> void:
 
 func nearest_for(org, dt: float = 0.0) -> int:
     var best: int = -1
-    var distance: float = INF
-    var can_water: bool = Traits.water_breathing(org.genome) > 0.28
-    var can_air: bool = Traits.air_breathing(org.genome) > 0.28
+    var sensing: float = 14.0 + org.genome.sensory_drive * 28.0
+    var distance: float = sensing * sensing
+    var can_water: bool = Cycle.water_breathing(org) > 0.28
+    var can_air: bool = Navigation.land_capable(org) or org.airborne
     var position_value: Vector3 = org.global_position
     org.food_retarget_timer = maxf(0.0, org.food_retarget_timer - dt)
     var previous: int = org.food_target_index
-    if previous >= 0 and previous < points.size() and reserves[previous] >= 0.02:
+    if previous >= 0 and previous < points.size() and reserves[previous] >= 0.02 and not (previous == org.food_rejected_index and org.food_reject_timer > 0.0):
         var target: Vector3 = points[previous]
         var target_wet: bool = target.y < habitat.waterline
-        if target.distance_squared_to(org.food_target_position) < 0.01 and ((target_wet and can_water) or (not target_wet and can_air)):
+        if target.distance_squared_to(position_value) <= sensing * sensing and target.distance_squared_to(org.food_target_position) < 0.01 and ((target_wet and can_water) or (not target_wet and can_air)):
             if org.food_retarget_timer > 0.0: return previous
             best = previous
             distance = position_value.distance_squared_to(target) * 0.64
     for i in range(points.size()):
-        if reserves[i] < 0.02: continue
+        if reserves[i] < 0.02 or (i == org.food_rejected_index and org.food_reject_timer > 0.0): continue
         var p: Vector3 = points[i]
         var wet: bool = p.y < habitat.waterline
         if (wet and not can_water) or (not wet and not can_air):

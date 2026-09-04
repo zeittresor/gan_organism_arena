@@ -18,7 +18,8 @@
     "profile_read_error": "Einstellungsprofil konnte nicht gelesen werden.",
     "profile_write_error": "Einstellungsprofil konnte nicht gespeichert werden.",
     "paused": "PAUSIERT",
-    "hud_format": "%s %s | FPS %.1f | Schritte %d | Wesen %d | Formen %d | Zellen %d\nHabitat %d %s | Welt %.1f | max. Körper %.1f | max. Denken %.2f | Ansicht %s%s"
+    "hud_format": "%s %s | FPS %.1f | Schritte %d | Wesen %d | Formen %d | Zellen %d\nHabitat %d %s | Welt %.1f | max. Körper %.1f | max. Denken %.2f | Ansicht %s%s",
+    "navigation_status": "Ziel: %s | Entfernung %.1f | Tempo %.2f | Mahlzeiten %d | Neue Kurse %d"
   },
   "settings": {
     "language": "Sprache",
@@ -65,7 +66,8 @@
     "vklp_enabled": "VKLP-Zugriff erlauben",
     "vklp_write_enabled": "VKLP-Einsendungen erlauben",
     "vklp_url": "VKLP-Dienstadresse",
-    "contact_quality": "Kontaktgenauigkeit"
+    "contact_quality": "Kontaktgenauigkeit",
+    "gravity_scale": "Planetengravitation (× Erde)"
   },
   "actions": {
     "rebuild_visuals": "Organismenkörper / Shader-Ressourcen neu aufbauen",
@@ -148,7 +150,8 @@
     "dive": "Tauchen nach Beute",
     "shore_snap": "Zuschnappen am Ufer",
     "leap_snap": "Beutesprung an Land",
-    "tending_young": "Nachwuchs versorgen"
+    "tending_young": "Nachwuchs versorgen",
+    "seek_mate": "Partnersuche"
   },
   "life": {
     "reproduction": "Fortpflanzung",
@@ -257,7 +260,8 @@
     "reset_world": "Aktuelle Population und Welt durch eine neue Simulation ersetzen. Bisherige Wesen und Weltfortschritt gehen verloren.",
     "close_settings": "Dieses Fenster schließen und mit aktuellen Einstellungen zur Simulation zurückkehren.",
     "export_genome": "Gepaarte fiktive DNA-Chromosomen mit zugeordneten Genpositionen, Komplementärsträngen und Genomdaten als JSON speichern.",
-    "contact_quality": "0–100: Niedrigere Werte erlauben leichte Überschneidungen und begrenzen die Korrekturschritte zwischen Körpern. Unter 90 wird der Boden je Körperteil am Mittelpunkt geprüft; ab 90 zusätzlich an vier Randpunkten. 100 bietet die höchste Genauigkeit und braucht mehr CPU-Zeit. Standard: 85. Wirkt sofort und wird im Einstellungsprofil gespeichert. Die Zahl ist eine Qualitätsstufe, keine Trefferquote."
+    "contact_quality": "0–100: Niedrigere Werte erlauben leichte Überschneidungen und begrenzen die Korrekturschritte zwischen Körpern. Unter 90 wird der Boden je Körperteil am Mittelpunkt geprüft; ab 90 zusätzlich an vier Randpunkten. 100 bietet die höchste Genauigkeit und braucht mehr CPU-Zeit. Standard: 85. Wirkt sofort und wird im Einstellungsprofil gespeichert. Die Zahl ist eine Qualitätsstufe, keine Trefferquote.",
+    "gravity_scale": "Schwerkraft von 0,2× bis 2,5× Erdgravitation. Beeinflusst Fallen, Sprunghöhe, Auftriebskräfte und die zum Fliegen nötige Tragkraft; 1,0 ist der Standard. Wirkt sofort und wird in Einstellungsprofilen gespeichert."
   },
   "option_values": {
     "en": "Englisch",

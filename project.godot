@@ -4,7 +4,7 @@ config_version=5
 [application]
 config/name="GAN Organism Arena"
 config/description="Volumetric artificial-life aquarium with open-ended body and cognitive evolution"
-config/version="1.0.0-alpha18"
+config/version="1.0.0-alpha22"
 run/main_scene="res://scenes/Main.tscn"
 
 [autoload]

@@ -1,26 +1,43 @@
-GAN Organism Arena alpha18 build verification (2026-09-02)
+GAN Organism Arena alpha22 build verification (2026-09-04)
 
-Reported native evidence: the user's alpha17 Godot 4.7.2 log shows successful per-file parsing followed by an invalid untyped Array assignment to nutrient_field.points at locomotion_test.gd:113, exit code 29. Native self-test/smoke completion was not reached.
-Alpha18 correction: construct a local Array[Vector3] before assignment; attach the food fixture node to the test owner for cleanup.
+Native user evidence: Alpha21 installation completed all eight steps, including
+parse, self-test and smoke test. Supplied 2026-09-04 logs have no ERROR/WARNING
+entries. Runtime samples show temporary high movement/contact costs and later
+population decline. Screenshots alone cannot establish motion trajectories.
 
-Native Godot, Windows installer execution, PowerShell execution, GPU rendering and TTS were NOT performed here. Source execution substitutes engine objects and does not implement Godot's full runtime type system.
-
-Fresh source checks:
-41 GDScripts grammar-parsed; native parse registrations, references, reserved identifiers, duplicate functions and active versions checked.
-54 settings/actions retain complete labels and explanatory tooltips in English, German and French.
-Typed-array member audit: event_history, points, resource_positions, resources, stocks, voice_players.
-Regression guard rejects the original alpha17 literal assignment to points; corrected project has no such assignments. The same conservative rule is included in the Windows package verifier.
-
+Alpha22 source execution with substitute engine objects:
+NAVIGATION SELFTEST:  43  checks;  0  failures
+POSTURE SELFTEST:  868  checks;  0  failures
+SUPPORT SELFTEST:  857  checks;  0  failures
 LOCOMOTION SELFTEST:  3371  checks;  0  failures
 INTERACTION SELFTEST:  5443  checks;  0  failures
 ECOLOGY SELFTEST:  51  checks;  0  failures
 SURFACE SELFTEST:  71  checks;  0  failures
 LIFE CYCLE SELFTEST:  115  checks;  0  failures
 BIOLOGY SELFTEST:  617  checks;  0  failures
-EXPERIMENT SELFTEST:  18  checks;  0  failures
+EXPERIMENT SELFTEST:  21  checks;  0  failures
 SELFTEST OK: morphology_signatures= 7  total_cells= 1548  crossover_family= 99  viable= 0.92  unstable= 0.0  thought= Approach carefully, then take the resource.
+All 11457 named assertions and the core test passed.
 
-All 9686 named source assertions and the core self-test passed after the fix. This result is not native runtime validation.
+Navigation cases include three body plans reaching bottom food at the head,
+actual displacement, finite feeding range, persistent exploration, no-progress
+recovery, stage-aware food selection, sensing range, partner approach before
+courtship, and respiration taking priority over partner seeking.
 
-Hotfix scope check: compared with the released alpha17 archive, GDScript changes are limited to the corrected locomotion-test fixture and version strings. Simulation behavior algorithms are unchanged.
-Archive gate: package_alpha18.py verifies ZIP CRC, all payload SHA-256 entries and file counts after fresh extraction before distribution. Runtime/test logs and personal settings are excluded.
+Production coupling/gestation/birth/development integration passes, with one
+offspring and bounded energy/capacity. Production OBJ regression passes natural,
+cell, energy and natural view transitions without graphics readback. Fifteen
+Python adapter unit tests pass. The unchanged active protocol transport was not
+re-run end-to-end in this iteration; observation serialization is covered by
+the production experiment self-test.
+
+47 GDScripts grammar checked, all registered for native parsing and package
+verification. 55 settings/actions retain EN/DE/FR labels/tooltips. Navigation
+status and partner-seeking labels are also provided in all three languages.
+
+Native Alpha22 Windows/Godot execution, GPU output, TTS and FPS were NOT tested
+here. The Python source harness does not model Godot's complete type system,
+rendering server or runtime behavior. Windows installer gates remain active.
+
+Archive gate verifies fresh extraction, ZIP CRC, all payload SHA-256 entries
+and file count. Personal settings, generated logs and temporary data excluded.

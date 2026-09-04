@@ -12,6 +12,27 @@ func _finish(code: int) -> void:
     get_tree().quit(code)
 
 func _run() -> void:
+    var navigation_test = preload("res://game/navigation_test.gd").new()
+    add_child(navigation_test)
+    var navigation_ok: bool = navigation_test.run_all()
+    navigation_test.queue_free()
+    if not navigation_ok:
+        _finish(32)
+        return
+    var posture_test = preload("res://game/posture_test.gd").new()
+    add_child(posture_test)
+    var posture_ok: bool = posture_test.run_all()
+    posture_test.queue_free()
+    if not posture_ok:
+        _finish(31)
+        return
+    var support_test = preload("res://game/support_test.gd").new()
+    add_child(support_test)
+    var support_ok: bool = support_test.run_all()
+    support_test.queue_free()
+    if not support_ok:
+        _finish(30)
+        return
     var locomotion_test = preload("res://game/locomotion_test.gd").new()
     add_child(locomotion_test)
     var locomotion_ok: bool = locomotion_test.run_all()
@@ -203,7 +224,7 @@ func _run() -> void:
     var history_cap: int = int(settings_store.get_value("max_history_events", 32))
     var app_log = get_node_or_null("/root/AppLog")
     if app_log != null and app_log.has_method("info"):
-        app_log.info("self-test alpha16: plans=%d total_cells=%d coherent=%.3f unstable=%.3f history_cap=%d" % [plan_signatures.size(), total_cells, coherent.viability_score(), unstable.viability_score(), history_cap])
+        app_log.info("self-test: plans=%d total_cells=%d coherent=%.3f unstable=%.3f history_cap=%d" % [plan_signatures.size(), total_cells, coherent.viability_score(), unstable.viability_score(), history_cap])
 
     var ecology_test = preload("res://game/ecology_test.gd").new()
     add_child(ecology_test)

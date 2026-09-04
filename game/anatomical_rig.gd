@@ -18,7 +18,9 @@ static func configure(cell: Dictionary, genome, rooted: bool) -> void:
         if tissue in [0, 1] and (chain < 0 or absf(axis.z) > 0.70):
             mode = "hydrostat" if soft else "cartilage"
             limit = 0.12 if soft else 0.065
-            pivot = 0.0 if soft else 0.5
+            # Consecutive axial centers form rigid links around their proximal
+            # attachment. A half-link pivot made alternating pitch corrections.
+            pivot = 0.0
         elif chain >= 0 and tissue in [0, 1, 4, 5, 9, 10]:
             var hinge: bool = chain == 0 or (count >= 4 and chain == int(count / 2))
             if soft and tissue in [0, 1, 5]:
@@ -49,6 +51,26 @@ static func configure(cell: Dictionary, genome, rooted: bool) -> void:
     cell["joint_pivot"] = pivot
     cell["joint_angle"] = 0.0
     cell["joint_rate"] = 0.0
+    # Axial joints can also bend vertically under differential external load.
+    # The added rotation is at the same pivot, never inside a bone/shaft.
+    var axial: bool = mode != "fixed" and pivot < 1.0 and bend_axis == Vector3.UP
+    cell["vertical_limit"] = (0.50 if soft else 0.35) * (1.0 - genome.wood_drive * 0.85) * (1.0 - genome.armor_drive * 0.40) if axial else 0.0
+    cell["vertical_angle"] = 0.0
+    cell["vertical_rate"] = 0.0
+
+static func settle(cell: Dictionary, target: float, dt: float) -> float:
+    var limit: float = float(cell["vertical_limit"])
+    if limit <= 0.0: return 0.0
+    target = clampf(target, -limit, limit)
+    var angle: float = float(cell["vertical_angle"])
+    # Overdamped passive settling: a serial spine must not integrate a new
+    # parent error into every descendant with delayed angular acceleration.
+    var previous: float = angle
+    angle = move_toward(angle, lerpf(angle, target, 1.0 - exp(-dt * 4.0)), dt * 0.60)
+    var rate: float = (angle - previous) / maxf(dt, 0.0001)
+    cell["vertical_angle"] = angle
+    cell["vertical_rate"] = rate
+    return angle
 
 static func advance(cell: Dictionary, activity: float, phase: float, turn_rate: float, body_size: float, dt: float) -> float:
     var limit: float = float(cell["joint_limit"])
@@ -74,3 +96,13 @@ static func advance(cell: Dictionary, activity: float, phase: float, turn_rate: 
     cell["joint_angle"] = angle
     cell["joint_rate"] = rate
     return angle
+
+static func steering_pitch(cell: Dictionary, org, body_size: float) -> float:
+    if not org.in_water or org.rooted or org.burst_time > 0.0: return 0.0
+    var muscle: float = float(cell["joint_muscle"])
+    var limit: float = float(cell["vertical_limit"])
+    if muscle <= 0.0 or limit <= 0.0: return 0.0
+    var trailing: float = clampf((cell["p"].z + body_size * 0.5) / maxf(1.0, body_size * 1.5), 0.0, 1.0)
+    # A turn starts anteriorly; trailing vertebrae retain part of the earlier
+    # orientation. Existing rate-limited joints relax continuously afterwards.
+    return clampf(-org.turn_pitch_speed * trailing * muscle * 0.24, -limit, limit)

@@ -15,16 +15,29 @@ static func envelope(org) -> Array:
         var p: Vector3 = visual.posed_cells[index]
         var ext: Vector3 = cell["s"] * float(cell["r"])
         var radius: float = maxf(ext.x, maxf(ext.y, ext.z))
-        result.append({"p": basis_value * p, "r": radius})
+        append_sphere(result, basis_value * p, radius)
         var parent: int = int(cell.get("parent", -1))
         if parent >= 0:
             var anchor: Vector3 = visual.posed_cells[parent]
             var length: float = p.distance_to(anchor)
             if length > radius * 1.5:
-                result.append({"p": basis_value * ((p + anchor) * 0.5), "r": length * 0.5 + minf(radius, float(visual.body_cells[parent]["r"])) * 0.5})
+                append_sphere(result, basis_value * ((p + anchor) * 0.5), length * 0.5 + minf(radius, float(visual.body_cells[parent]["r"])) * 0.5)
     visual.contact_cache = {"pose": visual.pose_revision, "basis": basis_value, "shape": result}
     visual.contact_builds += 1
     return result
+
+static func append_sphere(shapes: Array, position_value: Vector3, radius: float) -> void:
+    # Contained spheres add no occupied volume. Removing them preserves the
+    # same conservative contact envelope while reducing repeated pair checks.
+    var i: int = shapes.size() - 1
+    while i >= 0:
+        var other: Dictionary = shapes[i]
+        var difference: float = float(other["r"]) - radius
+        if position_value.distance_squared_to(other["p"]) <= difference * difference:
+            if difference >= 0.0: return
+            shapes.remove_at(i)
+        i -= 1
+    shapes.append({"p": position_value, "r": radius})
 
 static func pair_geometry(a, b, shape_a: Array, shape_b: Array) -> Dictionary:
     var gap: float = INF
@@ -127,9 +140,9 @@ static func ground_detail(org, world_half: float) -> void:
     var max_y: float = -INF
     var basis_value: Basis = org.global_transform.basis
     var position_value: Vector3 = org.global_position
-    for i in range(org.visual.body_cells.size()):
+    # Soft coverings cannot act as stilts that lift the entire organism.
+    for i in org.visual.collision_cells:
         var cell: Dictionary = org.visual.body_cells[i]
-        if int(cell["t"]) in [2, 3, 20, 21]: continue # Internal tissues.
         if org.rooted and int(cell["t"]) == 8: continue # Roots may penetrate soil.
         var center: Vector3 = position_value + basis_value * org.visual.posed_cells[i]
         var e: Vector3 = cell["s"] * float(cell["r"])

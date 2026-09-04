@@ -1,7 +1,7 @@
 $ErrorActionPreference = 'Stop'
 $Root = Split-Path -Parent $PSScriptRoot
-$ExpectedVersion = '1.0.0-alpha18'
-$ExpectedDate = '2026-09-02'
+$ExpectedVersion = '1.0.0-alpha22'
+$ExpectedDate = '2026-09-04'
 
 function Require-File([string]$RelativePath) {
     $Path = Join-Path $Root $RelativePath
@@ -29,7 +29,19 @@ $Required = @(
     'game\affect_model.gd',
     'game\thought_language.gd',
     'game\body_contact.gd',
+    'game\body_support.gd',
+    'game\app_log.gd',
+    'game\localization.gd',
+    'game\nutrient_field.gd',
+    'game\obj_exporter.gd',
+    'game\settings_store.gd',
+    'game\tts_windows.gd',
+    'game\support_test_terrain.gd',
+    'game\support_test.gd',
+    'game\posture_test.gd',
     'game\locomotion.gd',
+    'game\navigation.gd',
+    'game\navigation_test.gd',
     'game\anatomical_rig.gd',
     'game\locomotion_test.gd',
     'game\interaction_test.gd',
@@ -113,7 +125,7 @@ foreach ($Gd in $GdFiles) {
     if ($Text -match 'func\s+[^\r\n(]+\([^\r\n)]*:=' ) {
         throw "Invalid GDScript default-argument ':=' syntax in $($Gd.FullName)"
     }
-    if ($Text -match '1\.0\.0-alpha(?:[1-9]|10|11|12|13|14|15|16|17)(?![0-9])') {
+    if ($Text -match '1\.0\.0-alpha(?:[1-9]|10|11|12|13|14|15|16|17|18|19)(?![0-9])') {
         throw "Stale pre-alpha18 version string in $($Gd.FullName)"
     }
 

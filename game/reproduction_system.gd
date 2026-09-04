@@ -72,6 +72,7 @@ func find_mate(world, parent):
         var distance: float = parent.global_position.distance_to(other.global_position)
         if distance > world.mating_radius(): continue
         var preference: float = distance / (0.7 + score * 0.3 + other.genome.ornament_drive * other.genome.dimorphism * 0.20)
+        if other.organism_id == parent.mate_interest_id: preference *= 0.75
         if preference < best_score:
             best = other
             best_score = preference
@@ -128,8 +129,21 @@ func step(world, dt: float, allow_new: bool) -> void:
     if not allow_new or available_slots(world) <= 0: return
     for parent in world.organisms:
         if not is_instance_valid(parent) or not parent.can_reproduce() or parent.pair_target_id >= 0: continue
+        # A receptive adult approaches a sensed compatible individual even
+        # before the probabilistic courtship event starts. Emergency goals win.
+        if parent.behavior_state in ["flee", "hide", "seek_water", "seek_land"] or parent.oxygen < 0.65: continue
+        parent.mate_search_timer -= dt
+        var partner = find_id(world, parent.mate_interest_id)
+        if partner != null and (partner.pair_target_id >= 0 or compatibility(parent, partner) <= 0.0 or parent.global_position.distance_to(partner.global_position) > world.mating_radius()):
+            partner = null
+        if parent.mate_search_timer <= 0.0:
+            partner = find_mate(world, parent)
+            parent.mate_interest_id = partner.organism_id if partner != null else -1
+            parent.mate_search_timer = 0.8 + float(parent.organism_id % 4) * 0.1
+        if partner != null:
+            parent.behavior_state = "seek_mate"
+            parent.steer_towards(partner.global_position, 1.0, 0.85)
         if world.rng.randf() > parent.reproduction_probability(dt): continue
-        var partner = find_mate(world, parent)
         if partner != null and world.rng.randf() <= world.sexual_attempt_rate():
             parent.pair_target_id = partner.organism_id
             partner.pair_target_id = parent.organism_id

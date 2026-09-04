@@ -1,7 +1,7 @@
 extends Node
 
-const VERSION = "1.0.0-alpha18"
-const RELEASE_DATE = "2026-09-02"
+const VERSION = "1.0.0-alpha22"
+const RELEASE_DATE = "2026-09-04"
 
 var defaults = {
     "language": "en",
@@ -13,6 +13,7 @@ var defaults = {
     "nutrient_count": 540,
     "visual_cell_cap": 180,
     "contact_quality": 85,
+    "gravity_scale": 1.0,
     "world_size": 144.0,
     "thought_mode": "text",
     "thought_interval": 7.0,
@@ -139,7 +140,7 @@ func read_profile(source: String) -> Dictionary:
 func validate_profile(values: Dictionary) -> Dictionary:
     var result: Dictionary = {}
     var enums: Dictionary = {"language": ["en", "de", "fr"], "speech_language": ["follow", "en", "de", "fr"], "view_mode": ["natural", "cell", "neural", "energy"], "thought_mode": ["off", "text", "tts", "both"], "renderer": ["forward_plus", "mobile", "compatibility"], "light_mode": ["auto_sun", "random", "top_left", "top_right", "bottom_left", "bottom_right", "left_middle", "right_middle", "center", "back"]}
-    var ranges: Dictionary = {"simulation_speed": [0.25, 3.0], "simulation_tick_hz": [3, 30], "evolution_rate": [0.1, 4.0], "organism_cap": [8, 80], "initial_organisms": [2, 80], "nutrient_count": [32, 1000], "visual_cell_cap": [48, 420], "contact_quality": [0, 100], "world_size": [40, 1000], "thought_interval": [2, 25], "camera_fov": [28, 105], "zoom_step": [1, 12], "light_pitch": [-90, 90], "light_yaw": [-360, 360], "move_speed": [1, 100], "mouse_sensitivity": [0.0001, 0.03], "max_history_events": [4, 96], "body_rebuild_interval": [0.25, 6], "nutrient_renewal": [0, 4], "temperature_offset": [-12, 12], "mutation_strength": [0, 0.5], "macro_mutation_rate": [0, 0.6], "crossover_rate": [0, 1], "viability_threshold": [0, 0.75], "mate_cooldown": [2, 90], "mating_radius": [3, 40], "social_spacing": [1.5, 12], "follow_distance": [2, 20], "follow_height": [0, 8], "habitat_level": [5, 9], "world_step": [0.25, 4], "courtship_strength": [0, 2], "group_strength": [0, 2], "predation_strength": [0, 2], "hierarchy_strength": [0, 2], "audio_volume": [0, 1], "organism_sound_interval": [1, 20]}
+    var ranges: Dictionary = {"gravity_scale": [0.2, 2.5], "simulation_speed": [0.25, 3.0], "simulation_tick_hz": [3, 30], "evolution_rate": [0.1, 4.0], "organism_cap": [8, 80], "initial_organisms": [2, 80], "nutrient_count": [32, 1000], "visual_cell_cap": [48, 420], "contact_quality": [0, 100], "world_size": [40, 1000], "thought_interval": [2, 25], "camera_fov": [28, 105], "zoom_step": [1, 12], "light_pitch": [-90, 90], "light_yaw": [-360, 360], "move_speed": [1, 100], "mouse_sensitivity": [0.0001, 0.03], "max_history_events": [4, 96], "body_rebuild_interval": [0.25, 6], "nutrient_renewal": [0, 4], "temperature_offset": [-12, 12], "mutation_strength": [0, 0.5], "macro_mutation_rate": [0, 0.6], "crossover_rate": [0, 1], "viability_threshold": [0, 0.75], "mate_cooldown": [2, 90], "mating_radius": [3, 40], "social_spacing": [1.5, 12], "follow_distance": [2, 20], "follow_height": [0, 8], "habitat_level": [5, 9], "world_step": [0.25, 4], "courtship_strength": [0, 2], "group_strength": [0, 2], "predation_strength": [0, 2], "hierarchy_strength": [0, 2], "audio_volume": [0, 1], "organism_sound_interval": [1, 20]}
     for key in values:
         if not defaults.has(key) or key in ["ecology_schema", "life_cycle_schema"]: continue
         var value = values[key]

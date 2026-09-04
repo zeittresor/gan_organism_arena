@@ -16,9 +16,8 @@ static func export_organism(org) -> String:
         var arrays: Array = mm.mesh.surface_get_arrays(0)
         var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
         var indices: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
-        for i in range(mm.instance_count):
-            var transform_value: Transform3D = mm.get_instance_transform(i)
-            if absf(transform_value.basis.determinant()) < 0.00000001: continue
+        var transforms: Array = org.visual.get_export_transforms(instance == org.visual.links_instance)
+        for transform_value in transforms:
             for point in vertices:
                 var p: Vector3 = transform_value * point
                 file.store_line("v %.6f %.6f %.6f" % [p.x, p.y, p.z])

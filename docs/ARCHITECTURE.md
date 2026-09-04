@@ -1,4 +1,4 @@
-# Architecture — GAN Organism Arena 1.0.0-alpha15
+# Architecture — GAN Organism Arena 1.0.0-alpha20
 
 ## Simulation
 
@@ -14,7 +14,7 @@ Visible body-cell count is capped as an LOD/performance constraint. Cells can no
 
 ## Rendering
 
-Godot `MultiMesh` is used for body cells, nutrient particles and water-dust particles. An organism's local cells are uploaded only on morphology rebuild; movement then happens by moving the parent Node3D. This avoids rebuilding hundreds of cell transforms every rendered frame.
+Godot `MultiMesh` is used for body cells, nutrient particles and water-dust particles. Articulated local poses update at a bounded cadence (20 Hz), and static colors/scales are cached. Invisible organisms skip graphics uploads while their simulation and body poses continue. The parent Node3D carries world translation and orientation.
 
 ## Cognition / communication
 
@@ -81,3 +81,30 @@ Alpha15 modules: `body_contact.gd` constrains articulated envelopes and terrain 
 `cell_cycle.gd` handles paid somatic mitoses, tissue repair and finite haploid gamete pools. `genome.gd` constructs reciprocal meiotic tetrads and reunites stored gametes. `dna_codec.gd` maps alleles to a fictional regulatory nucleotide code and provides substitutions.
 `affect_model.gd` supplies cognition-dependent affect variables used by steering. Four additional inherited sensory/affective loci choose eye focus, compound eyes, antennae and affective plasticity.
 Settings profiles are validated transactionally and applied through the same UI setting signals. `ai_gateway.gd` enforces per-protocol permissions against SettingsStore on each request; adapters also check current config before access. `arena_vklp.py` is the direct HTTP client usable with MCP disabled.
+
+
+## Alpha19 mechanical support
+
+`body_support.gd` caches structural ellipsoid immersion and terrain targets at a quality-dependent cadence. `anatomical_rig.gd` defines bounded passive axial pitch alongside muscle-driven local articulation. `organism_visual.gd` propagates independent ideal support frames to avoid serial-chain feedback, then damps the actual joint angles without changing rigid segment lengths. Terrain contact, rendering and export read the same posed cells/bases. `body_contact.gd` uses structural tissues for weight-bearing contact and removes exactly contained envelope spheres. `locomotion.gd` gradually aligns the root pitch with the support slope; gravity remains external to intent and applies to unsupported pupae as well.
+
+`gravity_scale` defaults to 1.0, is validated within [0.2, 2.5] in profiles and experiment interventions, and is read live by the same physics. The nominal acceleration is 9.8 world units/s². Density and immersion determine buoyancy; powered flight has a gravity-dependent lift threshold. Observation model `arena-biology-4` exposes support state and axial vertical limits/angles. Schematic overlapping ellipsoids approximate bulk volume; neither fluid dynamics nor tissue stress is simulated.
+
+
+## Alpha20 articulation and connector corrections
+
+Axial proximal pivots and `atan2` terrain-tangent targets replace half-lever linear correction. Support sampling accumulates mass/contact centers and suspended clearance without new terrain queries; these bias serpentine root pitch under overhangs. `anatomical_rig.gd` adds a bounded trailing pitch response to swimming turns. Existing static bones and rate-limited poses remain intact. Posed head/tail anchor accessors use their anatomical parent frames.
+
+Cranial beaks/first horns resolve a head attachment instead of inheriting a potentially distant coat-sample parent. Zero-radius links upload a zero basis, matching hidden tissue geometry and the existing OBJ determinant filter. `posture_test.gd` exercises actual link transforms as well as sharp ridge/shore poses and swimming curvature. Model identifier: `arena-biology-5`.
+
+
+## Alpha21 render buffers
+
+Hidden connectors have no MultiMesh slot. Active links use compact contiguous indices, rebuilt on view/anatomy changes. CPU body/link transform buffers are shared by upload and OBJ export; export and posture validation do not use RenderingServer transform readback.
+
+## Alpha22 navigation
+
+`navigation.gd` supplies persistent local exploration goals, energy-based foraging hysteresis, head-local food capture and a seven-second no-progress recovery. Food targets that fail are excluded for fourteen seconds; sensing is range-limited and uses larval/adult respiratory capability. Exploration targets last 8–16 seconds unless reached or stalled. Bounded local water alternatives keep exploratory swimmers away from dry goals; this is not a global path planner.
+
+`steer_towards` assigns the winning intention rather than averaging opposed destinations. `locomotion.gd` still bounds physical turns and acceleration. Social and affect steering remain bounded route influences. `reproduction_system.gd` caches a compatible partner of interest at 0.8–1.1 second intervals and approaches before probabilistic courtship, without bypassing maturity, gametes, compatibility, capacity or fertilization rules.
+
+Model identifier `arena-biology-6`, observation schema `arena.observation/1`: additive navigation fields expose goal, target, speed, food target, mate interest, meal count and replans. UI controls and optional protocol permission behavior are unchanged.

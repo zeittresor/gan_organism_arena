@@ -3,6 +3,7 @@ extends Node3D
 const Traits = preload("res://game/ecology_traits.gd")
 const Cycle = preload("res://game/life_cycle.gd")
 const Rig = preload("res://game/anatomical_rig.gd")
+const Support = preload("res://game/body_support.gd")
 enum Tissue { BODY, SKIN, SKELETON, NEURAL, SENSOR, FIN, ARMOR, LEAF, ROOT, WING, LEG, FEATHER, QUILL, SCALE, FUR, MUCUS, MEMBRANE, HORN, BEAK, BARK, GONAD, REPRO_DUCT, REPRO_OPENING, CLASPER, ORNAMENT, BROOD_SAC, COCOON, IRIS, PUPIL, FACET }
 var lowest_point: float = -0.5
 var _phenotype: String = ""
@@ -18,11 +19,17 @@ var anatomy_counts: Dictionary = {}
 var collision_cells: Array = []
 var contact_radius: float = 1.0
 var pose_revision: int = 0
+var build_revision: int = 0
 var contact_cache: Dictionary = {}
 var ground_cache: Dictionary = {}
 var render_scales: Array = []
 var render_bases: Array = []
 var link_radii: Array = []
+# CPU pose buffers are authoritative for export and headless validation.
+# Hidden links have no render slot; never submit degenerate connector meshes.
+var link_slots: Array = []
+var render_transforms: Array = []
+var link_transforms: Array = []
 var colors_dirty: bool = true
 var _color_energy: float = -INF
 var ground_cache_hits: int = 0
@@ -43,6 +50,8 @@ var _last_revision = -99999
 var rear_anchor_local = Vector3(0.0, 0.0, 2.0)
 var focus_anchor_local = Vector3(0.0, 0.0, -1.0)
 var body_size_hint = 3.0
+var rear_anchor_index: int = -1
+var focus_anchor_index: int = -1
 
 func _ready() -> void:
     multimesh_instance = MultiMeshInstance3D.new()
@@ -124,14 +133,20 @@ func rebuild(force = false) -> void:
     body_cells.clear()
     _develop_body(c)
     _build_rig()
+    build_revision += 1
     # Growing/restyling a compatible segment must not restart its joint pose.
     for i in range(mini(previous_cells.size(), body_cells.size())):
         var old: Dictionary = previous_cells[i]
         var cell: Dictionary = body_cells[i]
         if old.get("t") != cell["t"] or old.get("parent") != cell["parent"] or old.get("joint_mode") != cell["joint_mode"]: continue
-        if float(cell["joint_muscle"]) <= 0.0 or old["p"].distance_to(cell["p"]) > maxf(0.05, float(old["r"])): continue
+        if not cell["joint"] or old["p"].distance_to(cell["p"]) > maxf(0.05, float(old["r"])): continue
         cell["joint_angle"] = clampf(float(old.get("joint_angle", 0.0)), -float(cell["joint_limit"]), float(cell["joint_limit"]))
         cell["joint_rate"] = float(old.get("joint_rate", 0.0))
+        cell["vertical_angle"] = clampf(float(old.get("vertical_angle", 0.0)), -float(cell["vertical_limit"]), float(cell["vertical_limit"]))
+        cell["vertical_rate"] = float(old.get("vertical_rate", 0.0))
+        if float(cell["joint_muscle"]) <= 0.0:
+            cell["joint_angle"] = 0.0
+            cell["joint_rate"] = 0.0
     _pose_body()
     _prepare_render()
     _upload()
@@ -239,6 +254,8 @@ func _build_rig() -> void:
         if tissue in [Tissue.BODY, Tissue.SKIN, Tissue.ARMOR, Tissue.COCOON, Tissue.LEG, Tissue.ROOT, Tissue.BARK]:
             collision_cells.append(i)
     if collision_cells.is_empty() and not body_cells.is_empty(): collision_cells.append(0)
+    rear_anchor_index = _nearest_anchor(rear_anchor_local, body_cells.size())
+    focus_anchor_index = _nearest_anchor(focus_anchor_local, body_cells.size())
 
 func _nearest_anchor(p: Vector3, before: int) -> int:
     var best: int = -1
@@ -261,6 +278,8 @@ func _pose_body(delta: float = 0.0) -> void:
     posed_cells.clear()
     posed_bases.clear()
     contact_radius = 0.0
+    var support_frames: Array[Basis] = []
+    var conforming: bool = Support.conforming(owner_life)
     var active: float = gait_activity
     var phase: float = gait_phase
     for i in range(body_cells.size()):
@@ -269,24 +288,34 @@ func _pose_body(delta: float = 0.0) -> void:
         var parent: int = int(cell.get("parent", -1))
         var p: Vector3 = rest
         var frame: Basis = Basis.IDENTITY
+        var support_frame: Basis = Basis.IDENTITY
         if parent >= 0:
             var base: Dictionary = body_cells[parent]
             var offset: Vector3 = rest - base["p"]
             frame = posed_bases[parent]
+            support_frame = support_frames[parent]
             var angle: float = Rig.advance(cell, active, phase, owner_life.turn_yaw_speed, body_size_hint, delta)
+            var pivot: Vector3 = offset * float(cell["joint_pivot"])
+            p = posed_cells[parent] + frame * pivot
             if angle != 0.0:
-                var pivot: Vector3 = offset * float(cell["joint_pivot"])
-                p = posed_cells[parent] + frame * pivot
                 frame = frame * Basis(cell["joint_axis"], angle)
-                p += frame * (offset - pivot)
-            else:
-                p = posed_cells[parent] + frame * offset
+                if conforming: support_frame = support_frame * Basis(cell["joint_axis"], angle)
+            var vertical_limit: float = float(cell["vertical_limit"])
+            var vertical_target: float = 0.0
+            if vertical_limit > 0.0:
+                vertical_target = Support.vertical_target(owner_life, cell, i, support_frame, offset) if conforming else Rig.steering_pitch(cell, owner_life, body_size_hint)
+            if vertical_target != 0.0 and vertical_limit > 0.0:
+                support_frame = support_frame * Basis(Vector3.RIGHT, clampf(vertical_target, -vertical_limit, vertical_limit))
+            var vertical: float = Rig.settle(cell, vertical_target, delta) if vertical_limit > 0.0 else 0.0
+            if vertical != 0.0: frame = frame * Basis(Vector3.RIGHT, vertical)
+            p += frame * (offset - pivot)
         if bool(cell.get("eye_surface", false)) and parent >= 0:
             var eye_radius: float = float(body_cells[parent]["r"])
             var forward: Vector3 = owner_life.gaze_direction if owner_life.genome.eye_focus > 0.25 and owner_life.genome.muscle_drive > 0.0 else frame * Vector3.FORWARD
             p = posed_cells[parent] + forward * eye_radius * float(cell.get("eye_depth", 0.92))
         posed_cells.append(p)
         posed_bases.append(frame)
+        support_frames.append(support_frame)
         var extent: Vector3 = cell["s"] * float(cell["r"])
         contact_radius = maxf(contact_radius, p.length() + maxf(extent.x, maxf(extent.y, extent.z)))
 
@@ -625,8 +654,13 @@ func _add_body_coverings(g, growth: float) -> void:
                 var mouth: Vector3 = focus_anchor_local + Vector3(0, -radius * 0.12, -radius * 0.60)
                 _add_cell(mouth, Tissue.BEAK, length * 0.65, Vector3(0.65, 0.32, 1.1))
                 _add_cell(mouth + Vector3(0, -length * 0.05, -length * 0.55), Tissue.BEAK, length * 0.25, Vector3(0.45, 0.28, 1.0))
+        var attachment: int = int(sample.get("sample_index", 0))
+        if kind == Tissue.BEAK or (kind == Tissue.HORN and i < kinds.size()):
+            # Head-positioned appendages must attach to head anatomy, never to
+            # the unrelated coat sample used to choose their size/material.
+            attachment = _nearest_anchor(focus_anchor_local, start)
         for j in range(start, body_cells.size()):
-            body_cells[j]["parent"] = int(sample.get("sample_index", 0))
+            body_cells[j]["parent"] = attachment
             body_cells[j]["wing"] = int(sample["t"]) == Tissue.WING and kind in [Tissue.FEATHER, Tissue.MEMBRANE]
 
 func _surface_color(cell: Dictionary) -> Color:
@@ -735,6 +769,9 @@ func _prepare_render() -> void:
     render_scales.clear()
     render_bases.clear()
     link_radii.clear()
+    link_slots.clear()
+    link_transforms.clear()
+    render_transforms.resize(body_cells.size())
     colors_dirty = true
     for cell in body_cells:
         var shape: Vector3 = cell["s"]
@@ -753,7 +790,12 @@ func _prepare_render() -> void:
             var e: Vector3 = base["s"] * float(base["r"])
             link_radius = minf(minf(e.x, minf(e.y, e.z)), radius * minf(shape.x, minf(shape.y, shape.z))) * 0.78
             if view_mode == "cell": link_radius *= 0.45 if cell["joint"] else 0.0
-        link_radii.append(maxf(0.0001, link_radius))
+        link_radii.append(maxf(0.0, link_radius))
+        if link_radius > 0.0:
+            link_slots.append(link_transforms.size())
+            link_transforms.append(Transform3D.IDENTITY)
+        else:
+            link_slots.append(-1)
     if owner_life and multimesh_instance and multimesh_instance.multimesh:
         multimesh_instance.multimesh.mesh.material.roughness = 0.85 if owner_life.rooted else 0.78 - float(owner_life.genome.mucus_cover) * 0.54
 
@@ -767,8 +809,8 @@ func _upload() -> void:
     if mm.instance_count != body_cells.size():
         mm.instance_count = body_cells.size()
         colors_dirty = true
-    if links.instance_count != maxi(0, body_cells.size() - 1):
-        links.instance_count = maxi(0, body_cells.size() - 1)
+    if links.instance_count != link_transforms.size():
+        links.instance_count = link_transforms.size()
         colors_dirty = true
     # Explicit conservative bounds avoid automatic per-instance AABB rebuilds.
     var bounds = AABB(Vector3.ONE * -contact_radius, Vector3.ONE * (contact_radius * 2.0))
@@ -786,32 +828,51 @@ func _upload() -> void:
             var right: Vector3 = Vector3.UP.cross(forward).normalized()
             render_basis = Basis(right * scale_vec.x, forward.cross(right).normalized() * scale_vec.y, forward * scale_vec.z)
         var xf = Transform3D(render_basis, pos)
+        render_transforms[i] = xf
         mm.set_instance_transform(i, xf)
+        var link_slot: int = int(link_slots[i])
         if update_colors:
             var color: Color = _surface_color(cell)
             mm.set_instance_color(i, color)
-            if i > 0:
+            if link_slot >= 0:
                 var link_color: Color = color
                 if view_mode == "cell" and cell["joint"]:
                     link_color = Color(0.90, 0.30, 0.23) if cell["joint_mode"] == "hydrostat" else Color(0.25, 0.85, 0.90)
-                links.set_instance_color(i - 1, link_color)
-        if i > 0:
+                links.set_instance_color(link_slot, link_color)
+        if link_slot >= 0:
             var parent: int = int(cell.get("parent", 0))
             var anchor: Vector3 = posed_cells[parent] if parent >= 0 and posed_cells.size() == body_cells.size() else pos
+            var link_transform: Transform3D
             if view_mode == "cell" and cell["joint"] and parent >= 0:
                 var offset: Vector3 = cell["p"] - body_cells[parent]["p"]
                 var pivot: Vector3 = anchor + posed_bases[parent] * offset * float(cell["joint_pivot"])
-                links.set_instance_transform(i - 1, Transform3D(Basis.from_scale(Vector3.ONE * link_radii[i] / 0.30), pivot))
+                link_transform = Transform3D(Basis.from_scale(Vector3.ONE * link_radii[i] / 0.30), pivot)
             else:
-                links.set_instance_transform(i - 1, _link_transform(anchor, pos, link_radii[i]))
+                link_transform = _link_transform(anchor, pos, link_radii[i])
+            link_transforms[link_slot] = link_transform
+            links.set_instance_transform(link_slot, link_transform)
     colors_dirty = false
     _color_energy = energy_value
 
+func get_export_transforms(connectors: bool) -> Array:
+    # flush_render() is called by the exporter before reading these buffers.
+    # RenderingServer getters may return dummy values during --headless tests.
+    var source: Array = link_transforms if connectors else render_transforms
+    var visible_transforms: Array = []
+    for transform_value in source:
+        if absf(transform_value.basis.determinant()) >= 0.00000001:
+            visible_transforms.append(transform_value)
+    return visible_transforms
+
 func get_rear_anchor_local() -> Vector3:
-    return rear_anchor_local
+    return _posed_anchor(rear_anchor_local, rear_anchor_index)
 
 func get_focus_anchor_local() -> Vector3:
-    return focus_anchor_local
+    return _posed_anchor(focus_anchor_local, focus_anchor_index)
+
+func _posed_anchor(rest: Vector3, index: int) -> Vector3:
+    if index < 0 or posed_cells.size() != body_cells.size(): return rest
+    return posed_cells[index] + posed_bases[index] * (rest - body_cells[index]["p"])
 
 func get_body_size_hint() -> float:
     return body_size_hint

@@ -1,44 +1,20 @@
-# Testing — 1.0.0-alpha18 (2026-09-02)
+# Testing — 1.0.0-alpha22 (2026-09-04)
 
-## Reported Windows failure and correction
+## Native evidence supplied by the user
 
-The supplied alpha17 Windows log confirms that Godot 4.7.2 loaded and instantiated every script in the native per-file parser list. At installer step 5, `locomotion_test.gd:113` then failed while assigning an untyped Array literal to the typed `nutrient_field.points: Array[Vector3]` property. The self-test returned exit code 29; the remaining installer stages were not reached. The ObjectDB/resource warnings appeared after this aborted test.
+Alpha21 completed installation, parsing, all self-tests and smoke startup/shutdown. The supplied 2026-09-04 logs contain no ERROR/WARNING entries. They show periods of substantial movement/contact cost and population decline; screenshots do not by themselves measure travel paths. The movement report motivated the new navigation tests.
 
-Alpha18 creates an explicit local `Array[Vector3]` and assigns that value. The food fixture is also attached to the test node for owned cleanup. The production locomotion, anatomy, ecology, contact and reproduction algorithms are the Alpha17 implementation.
+## Current checks
 
-The native Godot executable and Windows GUI are not available in this build environment. The Python source-execution harness substitutes engine objects and does not reproduce Godot's full type system. This limitation allowed the original typed-array assignment to pass source checks. Successful grammar parsing also cannot detect every runtime property-assignment error.
+- **11,457 named production-source checks** plus the morphology/genome/language core test pass: navigation 43, posture 868, support 857, locomotion 3,371, interaction 5,443, ecology 51, surface 71, lifecycle 115, biology 617, experiment 21.
+- Navigation tests run real decision and movement code for three body plans approaching bottom food. They verify head-local feeding, physical travel, persistent exploration, failed-target cooldown, developmental-stage food eligibility, perception range, compatible partner approach and emergency priority.
+- Active-world coupling, gestation, birth, development, energy bounds and reserved capacity integration passes with one offspring.
+- OBJ export still passes all four view transitions with accurate vertices/faces and no graphics transform readback. Fifteen Python adapter tests pass.
+- 47 GDScripts pass grammar parsing and are registered in the native parse/package checks. All 55 existing settings/actions retain labels and tooltips in three languages. The new selection status and partner-seeking label are localized too.
+- Fresh ZIP extraction, CRC, payload SHA-256 and file count are verified before delivery.
 
-## Fresh Alpha18 checks
+## Limits
 
-- Full source self-test: 3,371 locomotion, 5,443 interaction, 51 ecology, 71 covering, 115 lifecycle, 617 biology and 18 experiment assertions, plus the core morphology/genome/language checks.
-- All 41 GDScripts grammar-parsed with gdtoolkit; reserved names, duplicate functions, preload references, native parse registration and active versions checked.
-- Every declared typed-array member was audited for direct property assignment from array literals. A new conservative source rule rejects such assignments in both the Windows verifier and the build checker. It is not a general-purpose GDScript type checker.
-- Regression check: the new rule rejects the original alpha17 `food.points = [...]` assignment and accepts the corrected project. Untyped `reserves` and `sex_chromosomes` arrays remain valid.
-- EN/DE/FR JSON, formatted HUD fields, all 54 option/action labels and tooltips, and disabled-by-default protocol permissions checked.
-- ZIP CRC, complete SHA-256 manifest and payload count verified after fresh extraction. Personal settings and runtime/test logs are excluded from the distributable.
+These checks execute production GDScript through a Python translation harness with substitute engine objects. They are not native Godot execution. Windows/GPU performance, visuals and native Alpha22 installation still need confirmation; the installer retains every native gate. The source world comparison is recorded in WORLD_NAVIGATION_CHECK.txt. It measures one seed and short runs, not a general survival or reproduction rate.
 
-Exact results are recorded in `BUILD_VERIFICATION.txt`. Alpha18 has not been installed or rendered natively here. The Windows installer retains native parser, full self-test and smoke-scene gates, including script-error scanning; no failing test has been disabled.
-
-## Earlier integration evidence
-
-Alpha17 source checks also exercised five habitats, mating/gestation/birth, resource and population bounds, deterministic experiment reset/stepping, 42 rotated terrain-contact comparisons, cache invalidation, visibility and offscreen biology. Fifteen Python adapter tests and the real MCP stdio/TCP path into a substitute-engine execution of the production game API passed. These are earlier results, not fresh native Alpha18 execution. The user reported fluent Alpha16 gameplay.
-
-Normal installation and gameplay do not need Python. Optional adapter tests:
-
-```text
-py -3 -m unittest discover -s tests -v
-```
-
-For a native MCP integration check in a separate test project folder, enable MCP in F10 and run:
-
-```text
-py -3 tests/live_arena_check.py --headless
-```
-
-That integration scenario deliberately resets its test world.
-
-## Movement model and visual checks
-
-The [Alpha17 movement notes](ALPHA17_DE.md) describe limited turning, rigid skeletal segments, muscle-driven joints and soft-body articulation. The model uses schematic inherited mechanical parameters rather than measured tissue properties. Individual tendon forces, self-collision and full foot inverse kinematics are not implemented.
-
-Windows checks still include the visible movement through turns, limb attachment, courtship contact, slopes, directed eyes, all view modes and localized system speech. Alpha18 corrects the reported installer blocker; native appearance and FPS require a successful Windows run.
+Navigation uses local sensing and finite retries, not globally complete pathfinding. Anatomy, maturity, respiration, energy and existing flight requirements still constrain movement. Evolutionary outcomes are not guaranteed or forced.

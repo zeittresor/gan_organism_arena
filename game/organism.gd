@@ -3,6 +3,7 @@ extends Node3D
 const Affect = preload("res://game/affect_model.gd")
 const ThoughtLanguage = preload("res://game/thought_language.gd")
 const Contact = preload("res://game/body_contact.gd")
+const Navigation = preload("res://game/navigation.gd")
 const Locomotion = preload("res://game/locomotion.gd")
 var contact_quality: int = 100
 var heading_yaw: float = 0.0
@@ -13,6 +14,18 @@ var body_roll: float = 0.0
 var food_target_index: int = -1
 var food_target_position: Vector3 = Vector3.ZERO
 var food_retarget_timer: float = 0.0
+var food_rejected_index: int = -1
+var food_reject_timer: float = 0.0
+var navigation_base_goal: String = "explore"
+var mate_interest_id: int = -1
+var mate_search_timer: float = 0.0
+var navigation_goal: String = "explore"
+var navigation_target: Vector3 = Vector3.ZERO
+var navigation_timer: float = 0.0
+var navigation_recovery: float = 0.0
+var navigation_progress_timer: float = 0.0
+var navigation_best_distance: float = INF
+var navigation_replans: int = 0
 const Traits = preload("res://game/ecology_traits.gd")
 const Physiology = preload("res://game/physiology.gd")
 const Cycle = preload("res://game/life_cycle.gd")
@@ -31,6 +44,17 @@ var children = 0
 var velocity = Vector3.ZERO
 var desired_velocity = Vector3.ZERO
 var cruise_altitude: float = 0.0
+const Support = preload("res://game/body_support.gd")
+var support_timer: float = 0.0
+var support_habitat = null
+var support_revision: int = -1
+var support_build: int = -1
+var support_position: Vector3 = Vector3.ZERO
+var support_heights: Dictionary = {}
+var support_near_ground: bool = false
+var support_pitch: float = 0.0
+var submerged_fraction: float = 1.0
+var support_samples: int = 0
 var hunger = 0.0
 var fear = 0.0
 var curiosity_state = 0.5
@@ -177,32 +201,9 @@ func think_step(dt: float, nutrient_pos: Vector3, social_vector: Vector3, threat
     else:
         behavior_state = "explore"
 
-    # Persistent wander avoids the rapid left-right steering noise of alpha6.
-    wander_timer -= dt
-    if wander_timer <= 0.0:
-        wander_timer = rng.randf_range(1.4, 4.6)
-        var candidate = Vector3(rng.randf_range(-1.0, 1.0), rng.randf_range(-0.65, 0.65), rng.randf_range(-1.0, 1.0))
-        if candidate.length_squared() > 0.001:
-            wander_direction = candidate.normalized()
-
-    var food_delta: Vector3 = nutrient_pos - global_position
-    var food_dir: Vector3 = food_delta.normalized() if food_delta.length_squared() > 0.001 else Vector3.ZERO
-    eye_target = nutrient_pos
-    var world = get_parent()
-    if world != null and world.has_method("population_cap"):
-        var target_id: int = prey_id if prey_id >= 0 else pair_target_id
-        if target_id >= 0:
-            var target = world.reproduction.find_id(world, target_id)
-            if target != null: eye_target = target.global_position
     Affect.advance(self, dt, social_vector, threat_vector)
-    var steer = food_dir * (0.30 + hunger * 1.35)
-    steer += social_vector * genome.cooperation * 0.42
-    steer += Affect.steering(self, social_vector, threat_vector)
-    steer -= threat_vector * (0.28 + genome.aggression * 0.34)
-    steer += wander_direction * (0.14 + genome.curiosity * 0.24)
-    steer.y += (genome.buoyancy - 0.5) * 0.18
-    if steer.length_squared() < 0.001:
-        steer = -global_transform.basis.z
+    var steer: Vector3 = Navigation.choose(self, dt, nutrient_pos, social_vector, threat_vector, rng)
+    if steer.length_squared() < 0.001: steer = -global_transform.basis.z
 
     var morphology_drag: float = 0.82 + float(genome.flattening) * 0.12 + float(genome.armor_drive) * 0.10
     var target_speed: float = Traits.swim_speed(genome) if in_water else (0.6 + Traits.walking(genome) * 3.0)
@@ -212,8 +213,9 @@ func think_step(dt: float, nutrient_pos: Vector3, social_vector: Vector3, threat
     if rooted or Cycle.stage(self) == "pupa":
         target_speed = 0.0
     desired_velocity = steer.normalized() * target_speed
-    if prey_id < 0 and pair_target_id < 0 and threat_vector.length_squared() < 0.64:
-        desired_velocity *= clampf(food_delta.length() / 3.0, 0.20, 1.0)
+    if navigation_goal == "forage":
+        var food_distance: float = Navigation.mouth_position(self).distance_to(nutrient_pos)
+        desired_velocity *= clampf((food_distance - Navigation.mouth_radius(self) * 0.65) / 3.0, 0.12, 1.0)
 
     var morphology_cost: float = 0.00020 * (float(genome.armor_drive) + float(genome.shell_drive))
     morphology_cost += genome.ornament_drive * genome.dimorphism * Cycle.development_fraction(self) * 0.0005
@@ -244,20 +246,18 @@ func think_step(dt: float, nutrient_pos: Vector3, social_vector: Vector3, threat
 func motion_step(delta: float, world_half_extent: float) -> void:
     if not alive:
         return
+    Support.update(self, delta)
     Locomotion.step(self, delta, world_half_extent)
     burst_cooldown = maxf(0.0, burst_cooldown - delta)
     strike_timer = maxf(0.0, strike_timer - delta)
     if burst_time > 0.0:
         burst_time = maxf(0.0, burst_time - delta)
-        if not in_water:
-            velocity.y -= delta * 4.5
         if burst_time <= 0.0:
             returning_medium = "water" if burst_kind == "breach" else ("air" if burst_kind == "dive" else "")
             burst_kind = ""
-    if rooted or Cycle.stage(self) == "pupa":
+    if rooted:
         velocity = Vector3.ZERO
-    if not in_water and not airborne and not rooted and burst_time <= 0.0:
-        velocity.y = minf(0.0, velocity.y) - delta * 9.8
+    Support.gravity(self, delta)
     if tissue_damage > 0.0: velocity *= maxf(0.0, 1.0 - delta * tissue_damage * 0.6)
     var previous: Vector3 = global_position
     global_position += velocity * delta
@@ -315,6 +315,7 @@ func apply_environment(dt: float, model) -> void:
     var floor_y: float = model.floor_at(global_position)
     # Full-body contact is also established when a test/spawn changes position.
     Contact.ground(self, model.half_extent)
+    Support.update(self, 0.0)
     medium_timer += dt
     if last_medium != in_water:
         medium_changes += 1
@@ -323,7 +324,7 @@ func apply_environment(dt: float, model) -> void:
     if Traits.sessile(genome) and age_seconds > 12.0 and grounded:
         rooted = true
     stand_upright = not in_water and not rooted and Traits.upright(genome) and Cycle.locomotor_maturity(self)
-    can_fly = not rooted and model.has_sky() and Traits.flight_body(genome) and Cycle.locomotor_maturity(self) and Cycle.development_fraction(self) >= 0.82
+    can_fly = not rooted and model.has_sky() and Traits.flight_body(genome) and Traits.lift(genome) > 0.24 * Support.gravity_scale(self) and Cycle.locomotor_maturity(self) and Cycle.development_fraction(self) >= 0.82
     if can_fly and not in_water and energy > 0.35:
         flight_skill = minf(1.0, flight_skill + dt * 0.020 * (0.4 + genome.neural_drive))
     airborne = can_fly and flight_skill > 0.22 and not in_water and stamina > 0.18 and energy > 0.25
@@ -377,7 +378,13 @@ func steer_towards(target: Vector3, weight: float = 1.0, speed_multiplier: float
         speed = 2.0 + Traits.lift(genome) * 5.0
     var steering: Vector3 = direction.normalized() * speed * speed_multiplier * (0.4 + stamina * 0.6)
     steering *= clampf(direction.length() / 2.5, 0.0, 1.0)
-    desired_velocity = desired_velocity.lerp(steering, clampf(weight, 0.0, 1.0))
+    # The winning ecological/reproductive action owns the intention. Physical
+    # turn and acceleration limits already provide smoothing in Locomotion.
+    if weight <= 0.0: return
+    desired_velocity = steering
+    navigation_goal = behavior_state
+    navigation_target = target
+    eye_target = target
 
 func ecology_labels() -> Array[String]:
     var labels: Array[String] = []

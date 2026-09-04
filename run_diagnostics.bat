@@ -2,7 +2,7 @@
 setlocal EnableExtensions
 cd /d "%~dp0"
 echo ============================================================
-echo   GAN Organism Arena 1.0.0-alpha18 Diagnostics
+echo   GAN Organism Arena 1.0.0-alpha22 Diagnostics
 echo ============================================================
 echo.
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%CD%\tools\verify_package.ps1"

@@ -14,7 +14,7 @@ if exist "settings\config.json" (
 if /I "%RENDER%"=="compatibility" set "METHOD=gl_compatibility"
 if /I "%RENDER%"=="mobile" set "METHOD=mobile"
 if not defined METHOD set "METHOD=forward_plus"
-echo Starting GAN Organism Arena 1.0.0-alpha18 in console mode.
+echo Starting GAN Organism Arena 1.0.0-alpha22 in console mode.
 echo Renderer: %RENDER% ^(%METHOD%^)
 echo Runtime log: logs\latest_runtime.log
 echo.

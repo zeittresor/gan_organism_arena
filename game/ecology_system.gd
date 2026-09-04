@@ -383,7 +383,7 @@ func strike_mode(org, p: Vector3) -> String:
     var power: float = org.genome.muscle_drive * org.genome.burst_drive
     var reach: float = 0.8 + org.genome.reach_drive * 1.8 + org.visual.get_body_size_hint() * 0.18
     if org.in_water and not wet and habitat.floor_at(p) < habitat.waterline and power > 0.32:
-        var jump_height: float = pow(3.5 + power * 3.0, 2.0) / 9.0
+        var jump_height: float = pow(3.5 + power * 3.0, 2.0) / (19.6 * org.Support.gravity_scale(org))
         if p.y - habitat.waterline <= jump_height + reach and horizontal < 8.0:
             return "breach"
     if org.airborne and wet and org.genome.dive_drive > 0.45:
@@ -393,7 +393,7 @@ func strike_mode(org, p: Vector3) -> String:
         var delta_y: float = p.y - org.global_position.y
         if wet and org.global_position.distance_to(p) < reach + 1.0 and absf(delta_y) < reach:
             return "shore_snap"
-        if not wet and delta_y > reach and delta_y < pow(3.5 + power * 3.0, 2.0) / 9.0 + reach and horizontal < 5.0 and power > 0.32 and Traits.walking(org.genome) > 0.30:
+        if not wet and delta_y > reach and delta_y < pow(3.5 + power * 3.0, 2.0) / (19.6 * org.Support.gravity_scale(org)) + reach and horizontal < 5.0 and power > 0.32 and Traits.walking(org.genome) > 0.30:
             return "leap_snap"
     return ""
 

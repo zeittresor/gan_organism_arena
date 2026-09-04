@@ -18,7 +18,8 @@
     "profile_read_error": "Could not read settings profile.",
     "profile_write_error": "Could not save settings profile.",
     "paused": "PAUSED",
-    "hud_format": "%s %s | FPS %.1f | steps %d | organisms %d | forms %d | cells %d\nhabitat %d %s | world %.1f | max body %.1f | max mind %.2f | view %s%s"
+    "hud_format": "%s %s | FPS %.1f | steps %d | organisms %d | forms %d | cells %d\nhabitat %d %s | world %.1f | max body %.1f | max mind %.2f | view %s%s",
+    "navigation_status": "Goal: %s | Distance %.1f | Speed %.2f | Meals %d | New routes %d"
   },
   "settings": {
     "language": "Language",
@@ -65,7 +66,8 @@
     "vklp_enabled": "Allow VKLP access",
     "vklp_write_enabled": "Allow VKLP submissions",
     "vklp_url": "VKLP service URL",
-    "contact_quality": "Contact accuracy"
+    "contact_quality": "Contact accuracy",
+    "gravity_scale": "Planetary gravity (× Earth)"
   },
   "actions": {
     "rebuild_visuals": "Rebuild organism bodies / shader resources",
@@ -148,7 +150,8 @@
     "dive": "diving for prey",
     "shore_snap": "snapping at the shoreline",
     "leap_snap": "jumping for prey",
-    "tending_young": "feeding young"
+    "tending_young": "feeding young",
+    "seek_mate": "Seeking a mate"
   },
   "life": {
     "reproduction": "Reproduction",
@@ -257,7 +260,8 @@
     "reset_world": "Replace the current population and world with a new simulation. Existing organisms and world progress are lost.",
     "close_settings": "Close this panel and return to the simulation with the current settings.",
     "export_genome": "Save paired fictional DNA chromosomes with mapped gene locations, complementary strands and genome metadata as JSON.",
-    "contact_quality": "0–100: Lower values allow slight overlap and limit body contact correction passes. Below 90, ground support uses the centre of each body part; from 90, four footprint edges are also tested. 100 gives the highest accuracy at greater CPU cost. Default: 85. Applies immediately and is saved in settings profiles. The number is a quality level, not an accuracy percentage."
+    "contact_quality": "0–100: Lower values allow slight overlap and limit body contact correction passes. Below 90, ground support uses the centre of each body part; from 90, four footprint edges are also tested. 100 gives the highest accuracy at greater CPU cost. Default: 85. Applies immediately and is saved in settings profiles. The number is a quality level, not an accuracy percentage.",
+    "gravity_scale": "Sets gravitational acceleration from 0.2× to 2.5× Earth gravity. Changes falling, ballistic jump height, buoyancy forces and the lift needed for flight; 1.0 is the default. Applies immediately and is saved in settings profiles."
   },
   "option_values": {
     "en": "English",

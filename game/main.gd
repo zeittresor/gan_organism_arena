@@ -12,8 +12,8 @@ const AudioEcosystemScript = preload("res://game/audio_ecosystem.gd")
 const Cycle = preload("res://game/life_cycle.gd")
 
 const APP_NAME = "GAN Organism Arena"
-const VERSION = "1.0.0-alpha18"
-const RELEASE_DATE = "2026-09-02"
+const VERSION = "1.0.0-alpha22"
+const RELEASE_DATE = "2026-09-04"
 
 var ai_gateway = null
 var sim_world = null
@@ -241,6 +241,7 @@ func _process(delta: float) -> void:
         var m: Dictionary = sim_world.metrics()
         AppLog.info("perf fps=%.1f organisms=%d steps=%d visual_cells=%d forms=%d cross_births=%d mutation_births=%d failed_dev=%d max_complexity=%.2f max_intelligence=%.3f renderer=%s" % [Performance.get_monitor(Performance.TIME_FPS), int(m["organisms"]), int(m["steps"]), int(m["visual_cells"]), int(m["body_plan_count"]), int(m["crossover_births"]), int(m["mutation_births"]), int(m["failed_developments"]), float(m["max_complexity"]), float(m["max_intelligence"]), str(SettingsStore.get_value("renderer", "forward_plus"))])
         var p: Dictionary = sim_world.take_performance()
+        AppLog.info("navigation moving=%d motile=%d mean_speed=%.3f feeding_events=%d replans=%d goals=%s" % [p["moving"], p["motile"], p["mean_speed"], p["feeding_events"], p["replans"], str(p["goals"])])
         AppLog.info("perf_detail motion_ms=%.3f biology_ms=%.3f contacts_ms=%.3f peak_world_ms=%.3f frame_ms=%.3f draw_calls=%d primitives=%d ground_detail=%d ground_fast=%d ground_cached=%d envelopes=%d uploads=%d skipped_uploads=%d contact_quality=%d" % [p["motion_ms"], p["biology_ms"], p["contacts_ms"], p["peak_world_ms"], Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0, int(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)), int(Performance.get_monitor(Performance.RENDER_TOTAL_PRIMITIVES_IN_FRAME)), p["ground_detail"], p["ground_fast"], p["ground_cached"], p["envelopes"], p["render_uploads"], p["skipped_uploads"], p["quality"]])
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -421,6 +422,8 @@ func _refresh_selection_text() -> void:
     text += "\nDNA: " + dna + "… | " + L10n.text("biology.dna_export")
     var anatomy: Dictionary = org.visual.anatomy_counts
     text += "\n" + L10n.text("biology.anatomy") % [anatomy["cartilage"], anatomy["membrane"], anatomy["hydrostat"], anatomy["active"]]
+    var goal_label: String = L10n.text("behavior." + org.navigation_goal, org.navigation_goal.replace("_", " "))
+    text += "\n" + L10n.text("ui.navigation_status") % [goal_label, org.global_position.distance_to(org.navigation_target), org.velocity.length(), org.feeding_events, org.navigation_replans]
     ui.set_selection(text)
 
 func _on_panels_changed(open: bool) -> void:

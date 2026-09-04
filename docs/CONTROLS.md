@@ -42,3 +42,6 @@ New founders start underwater. The former default habitat 5 migrates to 7 once; 
 
 
 Alpha15 F10 additions: MCP and VKLP on/off; VKLP submissions on/off; VKLP URL; spoken language and matching installed voice; test speech; save/load named JSON settings profiles; export selected DNA. Every option/action has an EN/DE/FR tooltip. Profiles save settings, not the population/world state. OBJ export includes the current articulated tissue geometry and its connections.
+
+
+Alpha19 F10 addition: **Planetary gravity (× Earth)**, 0.20–2.50, default 1.00. Applies on resuming from the menu, persists in normal settings and named profiles, and affects gravity, buoyancy forces, ballistic reach and flight support. `simulation_speed` remains independent.

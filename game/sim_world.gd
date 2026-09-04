@@ -104,6 +104,12 @@ func set_habitat(level: int, world_size: float, p_waterline: float, p_ground_y: 
             org.habitat = habitat
             org.rooted = false
             org.decision_timer = 0.0
+            org.navigation_timer = 0.0
+            org.navigation_progress_timer = 0.0
+            org.navigation_recovery = 0.0
+            org.food_target_index = -1
+            org.food_retarget_timer = 0.0
+            org.food_reject_timer = 0.0
 
 func _process(delta: float) -> void:
     if experiment_mode: return
@@ -150,8 +156,6 @@ func _simulation_tick(dt: float, contacts_ready: bool = false) -> void:
         var nutrient_pos: Vector3 = org.global_position
         if nutrient_idx >= 0:
             nutrient_pos = nutrient_field.points[nutrient_idx]
-            if org.grounded and not org.in_water:
-                nutrient_pos.y = habitat.floor_at(nutrient_pos) + org.body_clearance()
 
         # Cohesion has a preferred distance instead of pulling two bodies into the
         # exact same point. Separation acts on every neighbour and eliminates the
@@ -190,7 +194,7 @@ func _simulation_tick(dt: float, contacts_ready: bool = false) -> void:
 
         org.think_step(dt, nutrient_pos, social, threat, rng, evolution_rate)
         ecology.act(org, dt, rng)
-        if nutrient_idx >= 0 and Cycle.stage(org) != "pupa" and org.global_position.distance_squared_to(nutrient_pos) < 1.65:
+        if nutrient_idx >= 0 and Cycle.stage(org) != "pupa" and org.Navigation.can_feed(org, nutrient_pos):
             org.absorb_nutrient(nutrient_field.consume(nutrient_idx) * (0.75 if org.rooted else 1.0))
 
     # Live frames already resolved motion. Decisions change velocities; they
@@ -423,16 +427,31 @@ func _resolve_contacts() -> void:
 func set_contact_quality(value: int) -> void:
     contact_quality = clampi(value, 0, 100)
     for org in organisms:
-        if is_instance_valid(org): org.contact_quality = contact_quality
+        if is_instance_valid(org):
+            org.contact_quality = contact_quality
+            org.support_timer = 0.0
 
 func take_performance() -> Dictionary:
     var frames: float = float(maxi(1, perf_frames))
     var report: Dictionary = {"motion_ms": perf_motion_usec / frames / 1000.0, "biology_ms": perf_biology_usec / frames / 1000.0, "contacts_ms": perf_contact_usec / frames / 1000.0, "peak_world_ms": perf_peak_usec / 1000.0, "ground_detail": 0, "ground_fast": 0, "ground_cached": 0, "envelopes": 0, "quality": contact_quality}
     report["render_uploads"] = 0
     report["skipped_uploads"] = 0
+    report["moving"] = 0
+    report["motile"] = 0
+    report["mean_speed"] = 0.0
+    report["feeding_events"] = 0
+    report["replans"] = 0
+    report["goals"] = {}
     for org in organisms:
         if not is_instance_valid(org) or not is_instance_valid(org.visual): continue
         var visual = org.visual
+        if not org.rooted and Cycle.stage(org) != "pupa":
+            report["motile"] += 1
+            report["mean_speed"] += org.velocity.length()
+            if org.velocity.length() > 0.25: report["moving"] += 1
+        report["feeding_events"] += org.feeding_events
+        report["replans"] += org.navigation_replans
+        report["goals"][org.navigation_goal] = int(report["goals"].get(org.navigation_goal, 0)) + 1
         report["ground_detail"] += visual.ground_detail_checks
         report["ground_fast"] += visual.ground_fast_checks
         report["ground_cached"] += visual.ground_cache_hits
@@ -445,6 +464,7 @@ func take_performance() -> Dictionary:
         visual.contact_builds = 0
         visual.render_uploads = 0
         visual.skipped_uploads = 0
+    report["mean_speed"] /= maxf(1.0, report["motile"])
     perf_frames = 0
     perf_motion_usec = 0
     perf_biology_usec = 0

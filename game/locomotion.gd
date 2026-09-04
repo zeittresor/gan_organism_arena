@@ -63,6 +63,8 @@ static func step(org, dt: float, half_extent: float) -> void:
         if spatial:
             var pitch_limit: float = 1.25 if ballistic else (0.90 if org.airborne else 1.10)
             target_pitch = clampf(atan2(intent.y, horizontal), -pitch_limit, pitch_limit)
+    if org.support_near_ground and not org.rooted and not org.airborne and not ballistic:
+        target_pitch = lerpf(target_pitch, org.support_pitch, 1.0 - org.submerged_fraction * 0.75)
     var limit: float = turn_limit(org) if org.genome.muscle_drive > 0.0 and not fixed_body else 0.0
     var yaw_error: float = wrapf(target_yaw - org.heading_yaw, -PI, PI)
     # Commit to a U-turn side even when a target wobbles around exactly behind.
@@ -72,12 +74,13 @@ static func step(org, dt: float, half_extent: float) -> void:
         yaw_error = absf(yaw_error) * (1.0 if org.organism_id % 2 == 0 else -1.0)
     var yaw_goal: float = clampf(yaw_error * 2.5, -limit, limit)
     var pitch_error: float = target_pitch - org.heading_pitch
-    var pitch_goal: float = clampf(pitch_error * 2.5, -limit * 0.65, limit * 0.65)
+    var pitch_limit_rate: float = maxf(limit * 0.65, 0.55 if org.support_near_ground and not fixed_body else 0.0)
+    var pitch_goal: float = clampf(pitch_error * 2.5, -pitch_limit_rate, pitch_limit_rate)
     org.turn_yaw_speed = move_toward(org.turn_yaw_speed, yaw_goal, limit * 3.5 * dt)
-    org.turn_pitch_speed = move_toward(org.turn_pitch_speed, pitch_goal, limit * 2.5 * dt)
+    org.turn_pitch_speed = move_toward(org.turn_pitch_speed, pitch_goal, pitch_limit_rate * 3.0 * dt)
     if limit <= 0.0:
         org.turn_yaw_speed = 0.0
-        org.turn_pitch_speed = 0.0
+    if pitch_limit_rate <= 0.0: org.turn_pitch_speed = 0.0
     var yaw_step: float = org.turn_yaw_speed * dt
     var pitch_step: float = org.turn_pitch_speed * dt
     if yaw_step * yaw_error > 0.0 and absf(yaw_step) > absf(yaw_error):
@@ -97,7 +100,8 @@ static func step(org, dt: float, half_extent: float) -> void:
     org.body_roll = move_toward(org.body_roll, roll_goal, 0.7 * dt)
     org.global_rotation = Vector3(org.heading_pitch, org.heading_yaw, org.body_roll)
     if fixed_body:
-        org.velocity = Vector3.ZERO
+        if org.rooted: org.velocity = Vector3.ZERO
+        # A pupa cannot propel itself, but retains externally caused momentum.
         return
     # Jumps/dives retain momentum. Gravity and contacts remain physical forces.
     if ballistic: return

@@ -19,7 +19,7 @@ import urllib.request
 import uuid
 
 ROOT = Path(__file__).resolve().parents[1]
-VERSION = "1.0.0-alpha18"
+VERSION = "1.0.0-alpha22"
 PROTOCOLS = ("2025-11-25", "2025-06-18", "2025-03-26", "2024-11-05")
 MAX_MESSAGE = 16 * 1024 * 1024
 
@@ -225,7 +225,7 @@ STRING = {"type": "string", "minLength": 1, "maxLength": 2000}
 PROVENANCE = obj({"source": STRING, "reference": STRING, "status": STRING})
 PARAMETERS = obj({
     "mutation_strength": NUM(0, .5), "macro_mutation_rate": NUM(0, .2), "nutrient_renewal": NUM(0, 4),
-    "temperature_offset": NUM(-12, 12), "predation_strength": NUM(0, 1), "group_strength": NUM(0, 1),
+    "gravity_scale": NUM(.2, 2.5), "temperature_offset": NUM(-12, 12), "predation_strength": NUM(0, 1), "group_strength": NUM(0, 1),
     "initial_organisms": INT(2, 60), "organism_cap": INT(2, 80), "nutrient_count": INT(16, 1000),
     "auto_reproduce": {"type": "boolean"}, "auto_reseed": {"type": "boolean"}})
 

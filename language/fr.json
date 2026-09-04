@@ -18,7 +18,8 @@
     "profile_read_error": "Lecture du profil impossible.",
     "profile_write_error": "Enregistrement du profil impossible.",
     "paused": "EN PAUSE",
-    "hud_format": "%s %s | FPS %.1f | étapes %d | organismes %d | formes %d | cellules %d\nhabitat %d %s | monde %.1f | corps max. %.1f | cognition max. %.2f | vue %s%s"
+    "hud_format": "%s %s | FPS %.1f | étapes %d | organismes %d | formes %d | cellules %d\nhabitat %d %s | monde %.1f | corps max. %.1f | cognition max. %.2f | vue %s%s",
+    "navigation_status": "But : %s | Distance %.1f | Vitesse %.2f | Repas %d | Nouveaux trajets %d"
   },
   "settings": {
     "language": "Langue",
@@ -65,7 +66,8 @@
     "vklp_enabled": "Autoriser VKLP",
     "vklp_write_enabled": "Autoriser les propositions VKLP",
     "vklp_url": "Adresse du service VKLP",
-    "contact_quality": "Précision des contacts"
+    "contact_quality": "Précision des contacts",
+    "gravity_scale": "Gravité planétaire (× Terre)"
   },
   "actions": {
     "rebuild_visuals": "Reconstruire les corps / ressources shader",
@@ -148,7 +150,8 @@
     "dive": "plongeon de chasse",
     "shore_snap": "capture au rivage",
     "leap_snap": "saut de chasse",
-    "tending_young": "soins aux jeunes"
+    "tending_young": "soins aux jeunes",
+    "seek_mate": "Recherche de partenaire"
   },
   "life": {
     "reproduction": "Reproduction",
@@ -257,7 +260,8 @@
     "reset_world": "Remplacer la population et le monde par une nouvelle simulation. Les organismes et la progression actuels sont perdus.",
     "close_settings": "Fermer ce panneau et revenir à la simulation avec les réglages actuels.",
     "export_genome": "Enregistrer les chromosomes d’ADN fictifs appariés, positions des gènes, brins complémentaires et métadonnées en JSON.",
-    "contact_quality": "0–100 : les valeurs basses tolèrent un léger chevauchement et limitent les corrections entre corps. Sous 90, le sol est testé au centre de chaque partie ; dès 90, quatre points de bord sont ajoutés. 100 offre la précision maximale et utilise davantage le processeur. Valeur initiale : 85. Application immédiate, enregistrée dans les profils. Ce niveau ne représente pas un pourcentage de réussite."
+    "contact_quality": "0–100 : les valeurs basses tolèrent un léger chevauchement et limitent les corrections entre corps. Sous 90, le sol est testé au centre de chaque partie ; dès 90, quatre points de bord sont ajoutés. 100 offre la précision maximale et utilise davantage le processeur. Valeur initiale : 85. Application immédiate, enregistrée dans les profils. Ce niveau ne représente pas un pourcentage de réussite.",
+    "gravity_scale": "Règle la gravité de 0,2× à 2,5× celle de la Terre. Modifie les chutes, la hauteur des sauts, la poussée dans l’eau et la portance nécessaire au vol. Valeur initiale : 1,0. Effet immédiat ; enregistrée dans les profils."
   },
   "option_values": {
     "en": "Anglais",
