@@ -1,6 +1,6 @@
 # GAN Organism Arena
 
-**Engine target:** Godot 4.7.2 stable  
+**Program version:** GAN Organism Arena v1.0.0-alpha22
 **License:** MIT
 
 ## Short description
@@ -18,8 +18,6 @@ On Windows, run:
 ```text
 install_windows.bat
 ```
-
-The installer prepares a **portable local copy of Godot 4.7.2** in `runtime/godot/`, parses every core GDScript deterministically, runs an advanced morphology/genome/language/appendage self-test plus 51 ecology, 71 covering and 115 life-cycle assertions plus a clean project-context runtime smoke test, and starts it after a 10-second cancelable delay. Nothing is installed system-wide. Before downloading, alpha9 searches the current runtime folder, nearby/sibling project trees and the Windows Downloads folder for an existing `Godot_v4.7.2-stable_win64.exe.zip`; only the official SHA-256-valid archive is reused. Internet is therefore only required when no valid local copy exists.
 
 ## Controls
 
