@@ -209,3 +209,4 @@ The default world is now **144 × 86.4 × 144 units**, twice each previous dimen
 
 The inspector shows adaptations, current behavior, oxygen, stamina, moisture and learned skills. Evolution remains constrained by the implemented gene/body grammar; no particular Earth species or advanced form is guaranteed. Population rescue is now optional and off by default; there is no forced culling based on complexity/intelligence.
 
+**Source:** https://github.com/zeittresor/gan_organism_arena
