@@ -97,10 +97,6 @@ GAN Organism Arena/
 
 The project name is retained from its original concept. The current core is better described as **developmental artificial life**: genomes, local developmental rules, selection, mutation, morphology, behavior and cognition. A future GAN/critic or learned morphology evaluator can be added as an optional evolutionary pressure rather than pretending a GAN is the correct tool for every part of the simulation.
 
-## Status
-
-This is an architectural alpha. It is designed to be directly runnable and extensible, but it is not yet a biological simulator or a claim of real consciousness. The important change is that the world, motion and body development are now genuinely three-dimensional and the code is structured so more sophisticated neural cellular automata, compute-shader tissue simulation, SDF surfaces and GDExtension/C++ acceleration can be added without returning to a 2D simulation core.
-
 ## Languages
 
 EN / DE / FR
