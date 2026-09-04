@@ -1,6 +1,113 @@
 # GAN Organism Arena
 
-**Version 1.0.0-alpha22 — 2026-09-04**
+**Engine target:** Godot 4.7.2 stable  
+**License:** MIT
+
+## Short description
+
+GAN Organism Arena is now a real **3D artificial-life aquarium** (inspired by Conway's Game of Life) instead of a 2D cellular simulation with a 3D visualization layer. Organisms exist and move in X/Y/Z, consume resources in a volume, reproduce through mutation and two-parent genetic crossover, build three-dimensional bodies, accumulate bounded experience, and develop increasingly expressive communication.
+
+<img width="1920" height="1080" alt="arena_00001393" src="https://github.com/user-attachments/assets/bb9b0e14-66b8-4403-ab44-4ba09e8e1f62" />
+
+<img width="1920" height="1080" alt="arena_00007194" src="https://github.com/user-attachments/assets/6f9bca8e-0d98-496f-8665-d37b66d887b2" />
+
+<img width="1920" height="1080" alt="arena_00001877" src="https://github.com/user-attachments/assets/c91da578-978a-4d93-91b4-570ef8703176" />
+
+On Windows, run:
+
+```text
+install_windows.bat
+```
+
+The installer prepares a **portable local copy of Godot 4.7.2** in `runtime/godot/`, parses every core GDScript deterministically, runs an advanced morphology/genome/language/appendage self-test plus 51 ecology, 71 covering and 115 life-cycle assertions plus a clean project-context runtime smoke test, and starts it after a 10-second cancelable delay. Nothing is installed system-wide. Before downloading, alpha9 searches the current runtime folder, nearby/sibling project trees and the Windows Downloads folder for an existing `Godot_v4.7.2-stable_win64.exe.zip`; only the official SHA-256-valid archive is reused. Internet is therefore only required when no valid local copy exists.
+
+## Controls
+
+- Mouse — free look
+- W/S — swim forward/back
+- A/D — strafe
+- Q/E — descend/ascend
+- Shift — boost
+- Mouse wheel — optical zoom; Shift + wheel — observer speed
+- L — new random light direction; persists until changed
+- LMB — select organism under crosshair
+- RMB — follow/unfollow selected organism
+- Tab — next organism
+- Space — pause/resume
+- F10 — settings
+- F1 — detailed in-app help
+- 1/2/3/4 — Natural / Cell / Neural / Energy views
+- 5/6/7/8/9 — Change habitat
+- G — inject a random organism
+- F8 — export selected organism as OBJ
+- F10 — Settings
+- F12 — screenshot
+- Esc — release/capture mouse
+
+## Rendering backends
+
+The Settings menu supports:
+
+- `forward_plus` — Vulkan, recommended for modern GPUs;
+- `mobile` — lighter Vulkan renderer;
+- `compatibility` — OpenGL fallback.
+
+For debugging, `run_console.bat` starts the console build and leaves engine errors visible. `run_mobile.bat` forces the lighter Vulkan Mobile renderer.
+
+Renderer changes require a restart because Godot selects the graphics backend before loading the project. `run_compatibility.bat` is provided as a diagnostic fallback.
+
+## Performance model
+
+The project deliberately decouples simulation from rendering. Organism decision/evolution ticks default to 12 Hz while the camera can render at the display frame rate. Each organism uses two MultiMeshes for body tissues and their connections. Articulated poses update at up to 20 Hz. Only visible organisms need animation uploads; biology and physical poses continue outside the camera view. Morphology is rebuilt only when development visibly changes. Per-organism event memory is bounded.
+
+The most useful performance controls are:
+
+- **Contact accuracy** (default 85; 100 for detailed footprint support)
+- **3D simulation ticks per second**
+- **Maximum living organisms**
+- **Maximum visible body cells per organism**
+- **Body morphology refresh interval**
+- **3D nutrient particle count**
+
+## Directory layout
+
+```text
+GAN Organism Arena/
+├─ project.godot
+├─ scenes/
+├─ game/
+├─ language/          editable EN/DE/FR JSON
+├─ settings/          persistent config.json
+├─ logs/
+│  └─ install/
+├─ exports/
+│  └─ obj/
+├─ screenshots/
+├─ runtime/
+│  └─ godot/          portable Godot runtime after installation
+├─ docs/
+├─ changelogs/
+├─ install_windows.bat
+├─ run_windows.bat
+├─ run_compatibility.bat
+├─ run_parse_test.bat
+├─ run_selftest.bat
+└─ run_editor.bat
+```
+
+## Notes on the term “GAN”
+
+The project name is retained from its original concept. The current core is better described as **developmental artificial life**: genomes, local developmental rules, selection, mutation, morphology, behavior and cognition. A future GAN/critic or learned morphology evaluator can be added as an optional evolutionary pressure rather than pretending a GAN is the correct tool for every part of the simulation.
+
+## Status
+
+This is an architectural alpha. It is designed to be directly runnable and extensible, but it is not yet a biological simulator or a claim of real consciousness. The important change is that the world, motion and body development are now genuinely three-dimensional and the code is structured so more sophisticated neural cellular automata, compute-shader tissue simulation, SDF surfaces and GDExtension/C++ acceleration can be added without returning to a 2D simulation core.
+
+## Languages
+
+EN / DE / FR
+
+**Changelog**
 
 ### Alpha22: purposeful exploration, feeding and partner seeking
 
@@ -104,126 +211,3 @@ The default world is now **144 × 86.4 × 144 units**, twice each previous dimen
 
 The inspector shows adaptations, current behavior, oxygen, stamina, moisture and learned skills. Evolution remains constrained by the implemented gene/body grammar; no particular Earth species or advanced form is guaranteed. Population rescue is now optional and off by default; there is no forced culling based on complexity/intelligence.
 
-**Deutsch:** [Neue Lebensweisen und Bedienung](docs/ECOLOGY_DE.md). **Validation:** [Testing and limitations](docs/TESTING.md).
-
-**Controls:** 5–9 habitat stages; 7/8/9 provide usable sky; NumPad + / - changes world size.
-
-**Engine target:** Godot 4.7.2 stable  
-**License:** MIT
-
-## TL;DR
-
-GAN Organism Arena is now a real **3D artificial-life aquarium** instead of a 2D cellular simulation with a 3D visualization layer. Organisms exist and move in X/Y/Z, consume resources in a volume, reproduce through mutation and two-parent genetic crossover, build three-dimensional bodies, accumulate bounded experience, and develop increasingly expressive communication.
-
-On Windows, run:
-
-```text
-install_windows.bat
-```
-
-The installer prepares a **portable local copy of Godot 4.7.2** in `runtime/godot/`, parses every core GDScript deterministically, runs an advanced morphology/genome/language/appendage self-test plus 51 ecology, 71 covering and 115 life-cycle assertions plus a clean project-context runtime smoke test, and starts it after a 10-second cancelable delay. Nothing is installed system-wide. Before downloading, alpha9 searches the current runtime folder, nearby/sibling project trees and the Windows Downloads folder for an existing `Godot_v4.7.2-stable_win64.exe.zip`; only the official SHA-256-valid archive is reused. Internet is therefore only required when no valid local copy exists.
-
-## Controls
-
-- Mouse — free look
-- W/S — swim forward/back
-- A/D — strafe
-- Q/E — descend/ascend
-- Shift — boost
-- Mouse wheel — optical zoom; Shift + wheel — observer speed
-- L — new random light direction; persists until changed
-- LMB — select organism under crosshair
-- RMB — follow/unfollow selected organism
-- Tab — next organism
-- Space — pause/resume
-- F10 — settings
-- F1 — detailed in-app help
-- 1/2/3/4 — Natural / Cell / Neural / Energy views
-- G — inject a random organism
-- F8 — export selected organism as OBJ
-- F12 — screenshot
-- Esc — release/capture mouse
-
-## What changed from the classic build?
-
-The old Panda3D/Python implementation is not merely being rendered differently. This branch replaces the simulation architecture:
-
-- true 3D organism positions and movement;
-- developmental genomes instead of a fixed body-stage ladder;
-- seven distinct starting body topologies with continuously mutable proportions;
-- two-parent crossover, ordinary mutation and rare macro-mutation into new body plans;
-- developmental viability selection so incoherent genomes can fail instead of reproducing;
-- heritable longevity/senescence so saturated populations continue to turn over across generations;
-- GPU-instanced 3D body cells using Godot `MultiMesh`;
-- bounded event memory instead of retaining every evolution step;
-- separate simulation tick rate and rendering frame rate;
-- real three-dimensional paired appendages, head/sensor growth, axial support, neural chains, fins, armor and branching structures;
-- open-ended numerical complexity/cognition with only the *visible LOD budget* bounded;
-- progressive communication from elemental calls to symbolic and compositional translated thoughts;
-- free-swimming observer camera plus anatomical tail/rear follow mode;
-- scientific Cell, Neural and Energy views;
-- OBJ export for the selected current organism.
-
-## Rendering backends
-
-The Settings menu supports:
-
-- `forward_plus` — Vulkan, recommended for modern GPUs;
-- `mobile` — lighter Vulkan renderer;
-- `compatibility` — OpenGL fallback.
-
-For debugging, `run_console.bat` starts the console build and leaves engine errors visible. `run_mobile.bat` forces the lighter Vulkan Mobile renderer.
-
-Renderer changes require a restart because Godot selects the graphics backend before loading the project. `run_compatibility.bat` is provided as a diagnostic fallback.
-
-## Performance model
-
-The project deliberately decouples simulation from rendering. Organism decision/evolution ticks default to 12 Hz while the camera can render at the display frame rate. Each organism uses two MultiMeshes for body tissues and their connections. Articulated poses update at up to 20 Hz. Only visible organisms need animation uploads; biology and physical poses continue outside the camera view. Morphology is rebuilt only when development visibly changes. Per-organism event memory is bounded.
-
-The most useful performance controls are:
-
-- **Contact accuracy** (default 85; 100 for detailed footprint support)
-- **3D simulation ticks per second**
-- **Maximum living organisms**
-- **Maximum visible body cells per organism**
-- **Body morphology refresh interval**
-- **3D nutrient particle count**
-
-## Directory layout
-
-```text
-GAN Organism Arena/
-├─ project.godot
-├─ scenes/
-├─ game/
-├─ language/          editable EN/DE/FR JSON
-├─ settings/          persistent config.json
-├─ logs/
-│  └─ install/
-├─ exports/
-│  └─ obj/
-├─ screenshots/
-├─ runtime/
-│  └─ godot/          portable Godot runtime after installation
-├─ docs/
-├─ changelogs/
-├─ install_windows.bat
-├─ run_windows.bat
-├─ run_compatibility.bat
-├─ run_parse_test.bat
-├─ run_selftest.bat
-└─ run_editor.bat
-```
-
-## Notes on the term “GAN”
-
-The project name is retained from its original concept. The current core is better described as **developmental artificial life**: genomes, local developmental rules, selection, mutation, morphology, behavior and cognition. A future GAN/critic or learned morphology evaluator can be added as an optional evolutionary pressure rather than pretending a GAN is the correct tool for every part of the simulation.
-
-## Status
-
-This is an architectural alpha. It is designed to be directly runnable and extensible, but it is not yet a biological simulator or a claim of real consciousness. The important change is that the world, motion and body development are now genuinely three-dimensional and the code is structured so more sophisticated neural cellular automata, compute-shader tissue simulation, SDF surfaces and GDExtension/C++ acceleration can be added without returning to a 2D simulation core.
-
-
-## Alpha9 installer/cache and camera update
-
-The mouse wheel now changes optical camera FOV in both free-swim and organism-follow modes. Hold Shift while using the wheel to change observer movement speed. The Windows installer now searches nearby/sibling project directories and the user Downloads folder for `Godot_v4.7.2-stable_win64.exe.zip`, verifies the official SHA-256, and reuses it before attempting a network download. Smoke testing runs through a dedicated scene that frees the main simulation before exiting.
