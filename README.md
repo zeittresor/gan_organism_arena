@@ -45,7 +45,7 @@ install_windows.bat
 - F8 — export selected organism as OBJ
 - F10 — Settings
 - F12 — screenshot
-- Esc — Exit/save/options
+- Esc — Exit / save / options
 
 ## Rendering backends
 
