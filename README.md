@@ -1,11 +1,16 @@
 # GAN Organism Arena
 
-**Program version:** GAN Organism Arena v1.0.0-alpha22
+**Program version:** GAN Organism Arena v1.0.0-alpha29
+
 **License:** MIT
 
 ## Short description
 
 GAN Organism Arena is now a real **3D artificial-life aquarium** (inspired by Conway's Game of Life) instead of a 2D cellular simulation with a 3D visualization layer. Organisms exist and move in X/Y/Z, consume resources in a volume, reproduce through mutation and two-parent genetic crossover, build three-dimensional bodies, accumulate bounded experience, and develop increasingly expressive communication.
+
+<img width="1920" height="1080" alt="arena_00016396" src="https://github.com/user-attachments/assets/d911d339-64ae-4c53-91b3-40f50154e580" />
+
+<img width="1920" height="1080" alt="arena_00004683" src="https://github.com/user-attachments/assets/cd0b7163-48f2-4555-a4fb-e169a1b69580" />
 
 <img width="1920" height="1080" alt="arena_00001393" src="https://github.com/user-attachments/assets/bb9b0e14-66b8-4403-ab44-4ba09e8e1f62" />
 
