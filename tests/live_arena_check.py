@@ -19,7 +19,7 @@ with ArenaClient(*sys.argv[1:]) as client:
     assert first['organisms'] == second['organisms'], 'seeded reset was not reproducible'
     assert first['broods'] == second['broods']
     detail = client.call('arena_organism', id=1)
-    assert len(detail['genome']['alleles']) == 88
+    assert len(detail['genome']['alleles']) == 91
     assert detail['dna']['ploidy'] == 2
     assert detail['cell_cycle']['gamete_ploidy'] == 1
     client.call('arena_parameters', parameters={'nutrient_renewal': 0.0})

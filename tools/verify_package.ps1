@@ -1,7 +1,7 @@
 $ErrorActionPreference = 'Stop'
 $Root = Split-Path -Parent $PSScriptRoot
-$ExpectedVersion = '1.0.0-alpha22'
-$ExpectedDate = '2026-09-04'
+$ExpectedVersion = '1.0.0-alpha29'
+$ExpectedDate = '2026-09-05'
 
 function Require-File([string]$RelativePath) {
     $Path = Join-Path $Root $RelativePath
@@ -24,6 +24,28 @@ $Required = @(
     'game\organism.gd',
     'game\organism_visual.gd',
     'game\genome.gd',
+    'game\evolution_history.gd',
+    'game\evolution_test.gd',
+    'game\pause_test.gd',
+    'game\texture_assets.gd',
+    'game\skin_pattern.gd',
+    'game\texture_test.gd',
+    'game\organism_surface.gdshader',
+    'game\terrain_surface.gdshader',
+    'textures\terrain\ground.png',
+    'textures\organisms\skin.png',
+    'textures\organisms\scales.png',
+    'textures\organisms\fur.png',
+    'textures\organisms\membrane.png',
+    'textures\organisms\plates.png',
+    'textures\organisms\mottle.png',
+    'textures\terrain\silt.png',
+    'textures\terrain\rock.png',
+    'textures\terrain\organic_ground.png',
+    'textures\terrain\seabed.png',
+    'textures\terrain\shore.png',
+    'textures\terrain\sand.png',
+    'textures\terrain\grass.png',
     'game\dna_codec.gd',
     'game\cell_cycle.gd',
     'game\affect_model.gd',
@@ -42,6 +64,8 @@ $Required = @(
     'game\locomotion.gd',
     'game\navigation.gd',
     'game\navigation_test.gd',
+    'game\follow_camera_solver.gd',
+    'game\follow_camera_test.gd',
     'game\anatomical_rig.gd',
     'game\locomotion_test.gd',
     'game\interaction_test.gd',
@@ -79,6 +103,18 @@ $Required = @(
     'language\fr.json'
 )
 foreach ($File in $Required) { Require-File $File }
+
+# Every optional source declared by the texture registry must ship with the
+# package, including tissue/material fallbacks that are not preloaded scripts.
+$TextureRegistry = Get-Content -Raw -LiteralPath (Join-Path $Root 'game\texture_assets.gd')
+$TextureMatches = [regex]::Matches($TextureRegistry, '"res://(?<path>textures/[^"\r\n]+\.png)"')
+if ($TextureMatches.Count -ne 33) { throw "Expected 33 registered PNG textures, found $($TextureMatches.Count)" }
+foreach ($TextureMatch in $TextureMatches) {
+    $RelativeTexture = $TextureMatch.Groups['path'].Value -replace '/', '\'
+    Require-File $RelativeTexture
+    $TextureFile = Get-Item -LiteralPath (Join-Path $Root $RelativeTexture)
+    if ($TextureFile.Length -gt 1MB) { throw "Optional texture exceeds 1 MiB: $RelativeTexture" }
+}
 
 $VersionText = Get-Content -Raw -LiteralPath (Join-Path $Root 'VERSION.txt')
 if ($VersionText -notmatch [regex]::Escape($ExpectedVersion)) { throw "VERSION.txt does not contain $ExpectedVersion" }
@@ -125,8 +161,8 @@ foreach ($Gd in $GdFiles) {
     if ($Text -match 'func\s+[^\r\n(]+\([^\r\n)]*:=' ) {
         throw "Invalid GDScript default-argument ':=' syntax in $($Gd.FullName)"
     }
-    if ($Text -match '1\.0\.0-alpha(?:[1-9]|10|11|12|13|14|15|16|17|18|19)(?![0-9])') {
-        throw "Stale pre-alpha18 version string in $($Gd.FullName)"
+    if ($Text -match '1\.0\.0-alpha(?:[1-9]|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24)(?![0-9])') {
+        throw "Stale pre-alpha25 version string in $($Gd.FullName)"
     }
 
     if ($Text -match '(?:ecology|eco)\.configure\([^\r\n]*,\s*\[' -or $Text -match '\.set_habitat\([^\r\n]*,\s*\[') {
