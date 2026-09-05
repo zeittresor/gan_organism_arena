@@ -16,7 +16,7 @@ func run_all() -> bool:
     world.initialize(42)
     var api = API.new()
     api.configure(world)
-    var parameters: Dictionary = {"initial_organisms": 2, "organism_cap": 12, "nutrient_count": 32}
+    var parameters: Dictionary = {"initial_organisms": 2, "organism_cap": 12, "nutrient_count": 32, "auto_reseed": false}
     check(not world.experiment_mode, "default AI observation preserves live mode")
     api.execute("mode", {"mode": "stepped"})
     var first: Dictionary = api.execute("reset", {"seed": 42, "parameters": parameters})

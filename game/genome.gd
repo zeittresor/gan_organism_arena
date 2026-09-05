@@ -1,5 +1,8 @@
 extends RefCounted
 
+const SkinPattern = preload("res://game/skin_pattern.gd")
+var skin_pattern = SkinPattern.new()
+
 const DNA = preload("res://game/dna_codec.gd")
 
 # Morphology plans deliberately describe topology, not a fixed animal species.
@@ -18,8 +21,11 @@ var seed: int = 1
 var generation: int = 0
 var family_id: int = 0
 var body_plan: int = PLAN_SERPENTINE
+var body_plan_code: float = 0.0714285714
 
 var hue: float = 0.45
+var pigment_saturation: float = 0.66
+var pigment_value: float = 0.92
 var symmetry: float = 0.75
 var elongation: float = 0.55
 var body_width: float = 0.50
@@ -117,7 +123,10 @@ func randomize_from(rng: RandomNumberGenerator, p_family_id: int, forced_plan: i
     family_id = p_family_id
     generation = 0
     body_plan = forced_plan % PLAN_COUNT if forced_plan >= 0 else rng.randi_range(0, PLAN_COUNT - 1)
+    body_plan_code = _code_for_plan(body_plan)
     hue = rng.randf()
+    pigment_saturation = rng.randf_range(0.38, 0.90)
+    pigment_value = rng.randf_range(0.55, 0.96)
     symmetry = rng.randf_range(0.18, 1.0)
     elongation = rng.randf_range(0.05, 0.98)
     body_width = rng.randf_range(0.08, 0.98)
@@ -166,6 +175,8 @@ func randomize_from(rng: RandomNumberGenerator, p_family_id: int, forced_plan: i
     wing_area *= 0.45
     _bias_plan_genes(rng)
     seed_diploid(rng)
+    skin_pattern = SkinPattern.new()
+    skin_pattern.configure_founder(seed, scale_cover, fur_cover, membrane_cover, maxf(shell_drive, armor_drive), pattern_drive)
 
 func _continuous_gene_names() -> Array[String]:
     var names: Array[String] = [
@@ -182,6 +193,8 @@ func _continuous_gene_names() -> Array[String]:
     names.append_array(surface_gene_names())
     names.append_array(life_cycle_gene_names())
     names.append_array(sensory_gene_names())
+    # Append new loci: inserting them shifts existing linkage and dominance.
+    names.append_array(["body_plan_code", "pigment_saturation", "pigment_value"])
     return names
 
 # Each locus carries two homologous alleles. Dictionary order is the fixed map.
@@ -190,8 +203,15 @@ var expressed_baseline: Dictionary = {}
 var recessive_load: Array = []
 var sex_chromosomes: Array = []
 var mutation_events: int = 0
+var macro_mutation_events: int = 0
+var mutation_log: Array = []
 var crossover_events: int = 0
 const LOCI_PER_CHROMOSOME: int = 16
+# Founder ecology is deliberately kept out of the heritable locus table. It
+# records how many generations a lineage has had to evolve away from its
+# aquatic ancestor, so a random founder cannot immediately use a land niche.
+var aquatic_ancestry: bool = false
+var aquatic_steps: int = 0
 
 func ensure_diploid() -> void:
     # Legacy/editor-created genomes become homozygous. Founders use seed variation.
@@ -202,6 +222,10 @@ func ensure_diploid() -> void:
         if not alleles.has(locus) or absf(value - float(expressed_baseline.get(locus, value))) > 0.000001:
             alleles[locus] = [value, value]
             expressed_baseline[locus] = value
+    # Editor/tests may assign the readable topology directly. Synchronise that
+    # assignment back into its real diploid DNA locus before making gametes.
+    if body_plan != _plan_from_code(body_plan_code):
+        _set_body_plan_genotype(body_plan)
     if recessive_load.is_empty():
         for i in range(8): recessive_load.append([0.0, 0.0])
 
@@ -222,12 +246,19 @@ func express_diploid() -> void:
         var pair: Array = alleles[locus]
         # Additive loci plus partial dominance at every third locus. No acquired
         # skill is written back to this germ line.
-        var value: float = (float(pair[0]) + float(pair[1])) * 0.5
-        if index % 3 == 0 and locus != "hue":
+        var value: float = 0.0
+        if locus == "hue":
+            # Pigment hue is circular: red near 0.0 and red near 1.0 must make
+            # red offspring, not the cyan produced by a linear midpoint.
+            value = blend_hue(float(pair[0]), float(pair[1]))
+        else:
+            value = (float(pair[0]) + float(pair[1])) * 0.5
+        if index % 3 == 0 and locus not in ["hue", "body_plan_code", "root_drive", "pigment_saturation", "pigment_value"]:
             value += absf(float(pair[0]) - float(pair[1])) * 0.18
         set(locus, clampf(value, 0.0, 1.0))
         expressed_baseline[locus] = float(get(locus))
         index += 1
+    body_plan = _plan_from_code(body_plan_code)
 
 func meiotic_products(rng: RandomNumberGenerator, strength: float = 0.0) -> Array:
     ensure_diploid()
@@ -235,7 +266,7 @@ func meiotic_products(rng: RandomNumberGenerator, strength: float = 0.0) -> Arra
     # segments between nonsister chromatids; each locus conserves a 2:2 ratio
     # in the tetrad unless a new mutation occurs.
     var products: Array = []
-    for i in range(4): products.append({"values": {}, "load": [], "sex": 0, "mutations": 0, "switches": 0, "ploidy": 1, "divisions": 2})
+    for i in range(4): products.append({"values": {}, "load": [], "sex": 0, "mutations": 0, "changes": [], "switches": 0, "ploidy": 1, "divisions": 2})
     var chromatids: Array = [0, 0, 1, 1]
     var index: int = 0
     for locus in _continuous_gene_names():
@@ -252,17 +283,23 @@ func meiotic_products(rng: RandomNumberGenerator, strength: float = 0.0) -> Arra
         for i in range(4):
             var value: float = float(alleles[locus][chromatids[i]])
             if strength > 0.0 and rng.randf() < 0.015 + mutability * 0.10:
-                value = DNA.point_mutation(value, rng, strength) if rng.randf() < 0.25 else clampf(value + rng.randfn(0.0, strength), 0.0, 1.0)
-                products[i]["mutations"] += 1
+                var previous: float = value
+                value = _mutate_value(locus, value, rng, strength)
+                if value != previous:
+                    products[i]["mutations"] += 1
+                    products[i]["changes"].append({"gene": locus, "before": previous, "after": value, "kind": "small"})
             products[i]["values"][locus] = value
         index += 1
-    for pair in recessive_load:
+    for load_index in range(recessive_load.size()):
+        var pair: Array = recessive_load[load_index]
         var first: int = rng.randi_range(0, 1)
         for i in range(4):
             var value: float = float(pair[first if i < 2 else 1 - first])
             if strength > 0.0 and rng.randf() < strength * 0.008:
+                var previous: float = value
                 value = 1.0 - value
                 products[i]["mutations"] += 1
+                products[i]["changes"].append({"gene": "recessive_load_" + str(load_index), "before": previous, "after": value, "kind": "small"})
             products[i]["load"].append(value)
     var first_sex: int = rng.randi_range(0, 1)
     for i in range(4): products[i]["sex"] = sex_chromosomes[first_sex if i < 2 else 1 - first_sex]
@@ -282,16 +319,23 @@ func mutated(rng: RandomNumberGenerator, strength: float = 0.14, macro_rate: flo
     g.alleles = alleles.duplicate(true)
     g.recessive_load = recessive_load.duplicate(true)
     g.sex_chromosomes = sex_chromosomes.duplicate()
+    g.aquatic_ancestry = aquatic_ancestry
+    g.aquatic_steps = aquatic_steps + (1 if aquatic_ancestry else 0)
+    g.skin_pattern = skin_pattern.offspring()
     for locus in _continuous_gene_names():
         for side in range(2):
             if strength > 0.0 and rng.randf() < 0.015 + mutability * 0.10:
-                g.alleles[locus][side] = DNA.point_mutation(g.alleles[locus][side], rng, strength) if rng.randf() < 0.25 else clampf(g.alleles[locus][side] + rng.randfn(0.0, strength), 0.0, 1.0)
+                g._change_allele(locus, side, _mutate_value(locus, float(g.alleles[locus][side]), rng, strength), "small")
+    for load_index in range(g.recessive_load.size()):
+        for side in range(2):
+            if strength > 0.0 and rng.randf() < strength * 0.008:
+                var previous: float = float(g.recessive_load[load_index][side])
+                g.recessive_load[load_index][side] = 1.0 - previous
                 g.mutation_events += 1
+                g.mutation_log.append({"gene": "recessive_load_" + str(load_index), "copy": side, "before": previous, "after": 1.0 - previous, "kind": "small"})
     g.express_diploid()
     if macro_rate >= 1.0 or rng.randf() < macro_rate:
-        g.body_plan = _different_plan(g.body_plan, rng)
-        _macro_perturb(g, rng, strength)
-        g.ensure_diploid()
+        g._macro_perturb(rng, strength)
     g.fertility_factor = g.genetic_health()
     return g
 
@@ -305,19 +349,25 @@ func fertilize(other, egg: Dictionary, sperm: Dictionary, rng: RandomNumberGener
     g.seed = int(rng.randi())
     g.generation = maxi(generation, int(other.generation)) + 1
     g.family_id = new_family_id if new_family_id >= 0 else family_id
-    g.body_plan = body_plan if rng.randf() < 0.5 else int(other.body_plan)
     g.sex_chromosomes = [egg["sex"], sperm["sex"]]
+    g.aquatic_ancestry = aquatic_ancestry or bool(other.aquatic_ancestry)
+    g.aquatic_steps = maxi(aquatic_steps if aquatic_ancestry else 0, int(other.aquatic_steps) if bool(other.aquatic_ancestry) else 0) + (1 if g.aquatic_ancestry else 0)
+    g.skin_pattern = skin_pattern.offspring(other.skin_pattern)
     for locus in _continuous_gene_names():
         g.alleles[locus] = [egg["values"][locus], sperm["values"][locus]]
     for i in range(8):
         g.recessive_load.append([egg["load"][i], sperm["load"][i]])
     g.mutation_events = egg["mutations"] + sperm["mutations"]
+    for side in range(2):
+        var gamete: Dictionary = egg if side == 0 else sperm
+        for change in gamete.get("changes", []):
+            var inherited_change: Dictionary = change.duplicate(true)
+            inherited_change["copy"] = side
+            g.mutation_log.append(inherited_change)
     g.crossover_events = egg["switches"] + sperm["switches"]
     g.express_diploid()
     if macro_rate >= 1.0 or rng.randf() < macro_rate:
-        g.body_plan = _different_plan(g.body_plan, rng)
-        _macro_perturb(g, rng, strength)
-        g.ensure_diploid()
+        g._macro_perturb(rng, strength)
     g.fertility_factor = g.genetic_health()
     return g
 
@@ -338,7 +388,45 @@ func _different_plan(current_plan: int, rng: RandomNumberGenerator) -> int:
     var shift: int = rng.randi_range(1, PLAN_COUNT - 1)
     return (current_plan + shift) % PLAN_COUNT
 
-func _macro_perturb(g, rng: RandomNumberGenerator, strength: float) -> void:
+static func _code_for_plan(plan: int) -> float:
+    return (float(clampi(plan, 0, PLAN_COUNT - 1)) + 0.5) / float(PLAN_COUNT)
+
+static func _plan_from_code(code: float) -> int:
+    return clampi(floori(clampf(code, 0.0, 1.0) * float(PLAN_COUNT)), 0, PLAN_COUNT - 1)
+
+func _set_body_plan_genotype(plan: int) -> void:
+    body_plan = clampi(plan, 0, PLAN_COUNT - 1)
+    body_plan_code = _code_for_plan(body_plan)
+    alleles["body_plan_code"] = [body_plan_code, body_plan_code]
+    expressed_baseline["body_plan_code"] = body_plan_code
+
+static func blend_hue(a: float, b: float) -> float:
+    # Sorted endpoints give the same answer even for exactly opposite hues.
+    var low: float = minf(fposmod(a, 1.0), fposmod(b, 1.0))
+    var high: float = maxf(fposmod(a, 1.0), fposmod(b, 1.0))
+    var middle: float = (low + high) * 0.5
+    return fposmod(middle + (0.5 if high - low > 0.5 else 0.0), 1.0)
+
+static func _mutate_value(locus: String, value: float, rng: RandomNumberGenerator, strength: float) -> float:
+    if rng.randf() < 0.25: return DNA.point_mutation(value, rng, strength)
+    var changed: float = value + rng.randfn(0.0, strength)
+    return fposmod(changed, 1.0) if locus == "hue" else clampf(changed, 0.0, 1.0)
+
+func _change_allele(locus: String, side: int, value: float, kind: String) -> void:
+    var previous: float = float(alleles[locus][side])
+    var changed: float = clampf(value, 0.0, 1.0)
+    if changed == previous: return
+    alleles[locus][side] = changed
+    mutation_events += 1
+    if kind == "macro": macro_mutation_events += 1
+    mutation_log.append({"gene": locus, "copy": side, "before": previous, "after": changed, "kind": kind})
+
+func _macro_perturb(rng: RandomNumberGenerator, strength: float) -> void:
+    # A regulatory mutation changes one homolog. Its counterpart survives, so
+    # novelty may be expressed now or carried into a later generation.
+    var side: int = rng.randi_range(0, 1)
+    var current_plan: int = _plan_from_code(float(alleles["body_plan_code"][side]))
+    _change_allele("body_plan_code", side, _code_for_plan(_different_plan(current_plan, rng)), "macro")
     var candidates: Array[String] = [
         "elongation", "body_width", "flattening", "head_drive", "tail_drive",
         "limb_drive", "limb_length", "limb_thickness", "branch_drive",
@@ -357,9 +445,11 @@ func _macro_perturb(g, rng: RandomNumberGenerator, strength: float) -> void:
     var count: int = rng.randi_range(3, 6)
     for i in range(mini(count, candidates.size())):
         var property_name: String = candidates[i]
-        var current: float = float(g.get(property_name))
+        var copy_index: int = rng.randi_range(0, 1)
+        var current: float = float(alleles[property_name][copy_index])
         var jump: float = rng.randf_range(-0.48, 0.48) + rng.randfn(0.0, strength * 1.8)
-        g.set(property_name, clampf(current + jump, 0.0, 1.0))
+        _change_allele(property_name, copy_index, current + jump, "macro")
+    express_diploid()
 
 func _bias_plan_genes(rng: RandomNumberGenerator) -> void:
     # Initial organisms start far apart in morphology-space rather than being
@@ -442,7 +532,7 @@ func viability_score() -> float:
     return clampf(1.0 - support_penalty - energy_penalty - coherence_penalty, 0.0, 1.0) * genetic_health()
 
 func base_color() -> Color:
-    return Color.from_hsv(hue, 0.66, 0.92)
+    return Color.from_hsv(hue, pigment_saturation, pigment_value)
 
 func ecological_gene_names() -> Array[String]:
     return ["gill_drive", "lung_drive", "skin_breathing", "breath_storage", "muscle_drive", "size_gene", "wing_area", "light_skeleton", "balance_drive", "manipulation", "tool_drive", "shyness", "camouflage", "cleaning_drive", "parasite_drive", "root_drive", "photosynthesis", "wood_drive", "moisture_need", "grazer_drive", "ambush_drive"]
@@ -455,6 +545,9 @@ func life_cycle_gene_names() -> Array[String]:
 
 func aquatic_founder() -> void:
     # Only founders/injected ancestors get these bounds, never their descendants.
+    aquatic_ancestry = true
+    aquatic_steps = 0
+    var inherited_root_pair: Array = alleles.get("root_drive", []).duplicate()
     aquatic_drive = maxf(0.80, aquatic_drive)
     gill_drive = maxf(0.85, gill_drive)
     lung_drive = minf(0.10, lung_drive)
@@ -464,7 +557,12 @@ func aquatic_founder() -> void:
     wing_area = minf(0.05, wing_area)
     burst_drive = minf(0.20, burst_drive)
     dive_drive = minf(0.20, dive_drive)
-    root_drive = minf(0.25, root_drive)
+    # Ancestral injections occupy a middle size band. Tiny and giant bodies
+    # remain reachable through inherited variation and DNA mutation.
+    size_gene = clampf(size_gene, 0.32, 0.68)
+    # Preserve standing variation close enough that recombination or mutation
+    # can later unlock substrate attachment, without spawning rooted founders.
+    root_drive = minf(0.38, root_drive)
     internal_fertilization = minf(0.25, internal_fertilization)
     live_birth = minf(0.20, live_birth)
     metamorphosis = minf(0.25, metamorphosis)
@@ -472,6 +570,16 @@ func aquatic_founder() -> void:
     gamete_code = 0.40 + gamete_code * 0.20
     development_code = 0.40 + development_code * 0.20
     ensure_diploid()
+    # Keep a high anchoring allele cryptic in a balanced heterozygous pair. The
+    # expressed founder stays motile at/below 0.38, while meiosis can reunite two
+    # high copies in a descendant. This preserves real standing variation rather
+    # than waiting for the same large de-novo mutation in both homologs.
+    if inherited_root_pair.size() == 2 and maxf(float(inherited_root_pair[0]), float(inherited_root_pair[1])) > root_drive:
+        var latent_root: float = clampf(maxf(float(inherited_root_pair[0]), float(inherited_root_pair[1])), root_drive, minf(0.72, root_drive * 2.0))
+        var balancing_root: float = clampf(root_drive * 2.0 - latent_root, 0.0, root_drive)
+        alleles["root_drive"] = [balancing_root, latent_root]
+        root_drive = (balancing_root + latent_root) * 0.5
+        expressed_baseline["root_drive"] = root_drive
 
 func dna_chromosomes() -> Array:
     ensure_diploid()
@@ -490,7 +598,7 @@ func dna_chromosomes() -> Array:
     return chromosomes
 
 func dna_document() -> Dictionary:
-    return {"schema": "arena.dna/1", "code": "fictional base-4 regulatory allele code; not real protein codons", "ploidy": 2, "bases_per_locus": DNA.BASE_COUNT, "quantization_error_max": 0.5 / DNA.MAX_CODE, "chromosomes": dna_chromosomes(), "sex_chromosomes": sex_chromosomes.duplicate(), "recessive_load": recessive_load.duplicate(true)}
+    return {"schema": "arena.dna/1", "gene_map": "arena.loci/3", "code": "fictional base-4 regulatory allele code; not real protein codons", "ploidy": 2, "bases_per_locus": DNA.BASE_COUNT, "quantization_error_max": 0.5 / DNA.MAX_CODE, "chromosomes": dna_chromosomes(), "sex_chromosomes": sex_chromosomes.duplicate(), "recessive_load": recessive_load.duplicate(true), "mutations": mutation_events, "macro_mutations": macro_mutation_events, "mutation_log": mutation_log.duplicate(true)}
 
 func sensory_gene_names() -> Array[String]:
     return ["eye_focus", "compound_eye_drive", "antenna_drive", "affective_plasticity"]

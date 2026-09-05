@@ -44,7 +44,63 @@ func compatibility(a, b) -> float:
 
 func contact(a, b) -> bool:
     if Cycle.mode(a) == "propagule": return a.global_position.distance_to(b.global_position) <= 10.0
-    return Contact.touching(a, b, 0.22)
+    if not Contact.touching(a, b, 0.28): return false
+    if not Cycle.is_internal(a): return true
+    # Internal coupling is local to the reproductive regions, rather than
+    # accepting an accidental head-to-head touch anywhere on two long bodies.
+    var anchor_a: Vector3 = _reproductive_anchor_world(a)
+    var anchor_b: Vector3 = _reproductive_anchor_world(b)
+    var center_gap: float = a.global_position.distance_to(b.global_position)
+    var anatomical_reach: float = (a.body_clearance() + b.body_clearance()) * 0.85 + (a.genome.reproductive_anatomy + b.genome.reproductive_anatomy) * 0.45
+    # Side-by-side bodies may have distant origins (especially serpentine
+    # plans), while their ventral/mid-body regions are still correctly paired.
+    # A head-to-head touch normally leaves the reproductive anchors much
+    # farther apart than this center-relative envelope.
+    var body_length: float = a.visual.get_body_size_hint() + b.visual.get_body_size_hint() if is_instance_valid(a.visual) and is_instance_valid(b.visual) else 6.0
+    var reach: float = clampf(maxf(anatomical_reach, center_gap * 1.45 + 0.35), 0.75, maxf(4.5, body_length * 2.0))
+    return anchor_a.distance_to(anchor_b) <= reach
+
+func _reproductive_anchor_world(org) -> Vector3:
+    if is_instance_valid(org.visual) and org.visual.has_method("reproductive_anchor"):
+        return org.global_position + org.global_transform.basis * org.visual.reproductive_anchor()
+    return org.global_position
+
+func _prepare_docking(pair: Dictionary, a, b, model) -> void:
+    if pair.has("axis") and pair.has("site") and pair.has("facing") and pair.has("spacing"): return
+    var axis: Vector3 = b.global_position - a.global_position
+    axis.y = 0.0
+    if axis.length_squared() < 0.01:
+        var angle: float = float(posmod(a.organism_id * 37 + b.organism_id * 17, 360)) * PI / 180.0
+        axis = Vector3(cos(angle), 0.0, sin(angle))
+    axis = axis.normalized()
+    var facing: Vector3 = Vector3.UP.cross(axis).normalized()
+    if posmod(a.organism_id + b.organism_id, 2) == 1: facing = -facing
+    pair["axis"] = axis
+    pair["facing"] = facing
+    pair["site"] = shared_site(a, b, model)
+    var body_length: float = a.visual.get_body_size_hint() + b.visual.get_body_size_hint() if is_instance_valid(a.visual) and is_instance_valid(b.visual) else 4.0
+    pair["spacing"] = clampf(body_length * 0.62, 0.75, 8.0)
+
+func _dock_pair(pair: Dictionary, a, b, dt: float, strength: float) -> void:
+    var axis: Vector3 = pair["axis"]
+    var site: Vector3 = pair["site"]
+    var spacing: float = pair["spacing"]
+    var target_a: Vector3 = site - axis * spacing * 0.5
+    var target_b: Vector3 = site + axis * spacing * 0.5
+    var distance_a: float = a.global_position.distance_to(target_a)
+    var distance_b: float = b.global_position.distance_to(target_b)
+    a.courtship_facing = pair["facing"]
+    b.courtship_facing = pair["facing"]
+    a.courtship_alignment = maxf(0.55, clampf((2.0 - distance_a) / 1.8, 0.0, 1.0))
+    b.courtship_alignment = maxf(0.55, clampf((2.0 - distance_b) / 1.8, 0.0, 1.0))
+    if distance_a > 0.20:
+        a.steer_towards(target_a, minf(1.0, dt * 6.0 * strength), 0.78)
+    else:
+        a.desired_velocity = Vector3.ZERO
+    if distance_b > 0.20:
+        b.steer_towards(target_b, minf(1.0, dt * 6.0 * strength), 0.78)
+    else:
+        b.desired_velocity = Vector3.ZERO
 
 func shared_site(a, b, model) -> Vector3:
     var midpoint: Vector3 = (a.global_position + b.global_position) * 0.5
@@ -89,8 +145,9 @@ func step(world, dt: float, allow_new: bool) -> void:
             _release_pair(a, b)
             pairs.remove_at(i)
             continue
+        _prepare_docking(pair, a, b, world.habitat)
         pair["elapsed"] += dt
-        if compatibility(a, b) <= 0.0 or minf(a.oxygen, b.oxygen) < 0.45 or maxf(a.fear, b.fear) > 0.80 or pair["elapsed"] > 30.0:
+        if compatibility(a, b) <= 0.0 or minf(a.oxygen, b.oxygen) < 0.45 or maxf(a.fear, b.fear) > 0.80 or pair["elapsed"] > 45.0:
             _release_pair(a, b)
             pairs.remove_at(i)
             continue
@@ -101,6 +158,10 @@ func step(world, dt: float, allow_new: bool) -> void:
             pair["contact"] += dt
             a.desired_velocity = Vector3.ZERO
             b.desired_velocity = Vector3.ZERO
+            a.courtship_facing = pair["facing"]
+            b.courtship_facing = pair["facing"]
+            a.courtship_alignment = 1.0
+            b.courtship_alignment = 1.0
             a.velocity *= 0.65
             b.velocity *= 0.65
             var action: String = "pollinating" if Cycle.mode(a) == "propagule" else ("spawning" if external else "copulating")
@@ -109,17 +170,17 @@ func step(world, dt: float, allow_new: bool) -> void:
             a.behavior_state = action
             b.behavior_state = action
         else:
-            pair["contact"] = 0.0
-            var site: Vector3 = shared_site(a, b, world.habitat)
-            var target_a: Vector3 = b.global_position if a.in_water == b.in_water else site
-            var target_b: Vector3 = a.global_position if a.in_water == b.in_water else site
-            a.steer_towards(target_a, minf(1.0, dt * 6.0 * world.courtship_strength()))
-            b.steer_towards(target_b, minf(1.0, dt * 6.0 * world.courtship_strength()))
+            # Contact solvers may open a tiny gap for a frame. Preserve most of
+            # the achieved coupling instead of forcing the pair to repeat the
+            # entire sequence and circle each other indefinitely.
+            pair["contact"] = maxf(0.0, float(pair["contact"]) - dt * 0.05)
+            _dock_pair(pair, a, b, dt, world.courtship_strength())
             a.reproduction_state = "courtship"
             b.reproduction_state = "courtship"
             a.behavior_state = "courtship"
             b.behavior_state = "courtship"
-        var duration: float = 2.0 + (a.genome.reproductive_anatomy + b.genome.reproductive_anatomy) * 2.0
+        var anatomy_sum: float = a.genome.reproductive_anatomy + b.genome.reproductive_anatomy
+        var duration: float = 1.6 + (2.0 - anatomy_sum) * 1.1
         a.reproduction_progress = clampf(pair["contact"] / duration, 0.0, 1.0)
         b.reproduction_progress = a.reproduction_progress
         if pair["contact"] >= duration:
@@ -156,6 +217,8 @@ func _release_pair(a, b) -> void:
     for org in [a, b]:
         if org == null: continue
         org.pair_target_id = -1
+        org.courtship_facing = Vector3.ZERO
+        org.courtship_alignment = 0.0
         org.reproduction_progress = 0.0
         if org.carrying_count == 0: org.reproduction_state = "idle"
 
@@ -331,7 +394,7 @@ func _develop_broods(world, dt: float) -> void:
             child.intelligence = 0.02
             child.parent_a = brood["a"]
             child.parent_b = brood["b"]
-            world.record_event("birth", {"id": child.organism_id, "mother": child.parent_a, "father": child.parent_b, "mutations": child_genome.mutation_events, "crossovers": child_genome.crossover_events, "genetic_health": child_genome.genetic_health()})
+            world.record_event("birth", {"id": child.organism_id, "mother": child.parent_a, "father": child.parent_b, "mutations": child_genome.mutation_events, "macro_mutations": child_genome.macro_mutation_events, "crossovers": child_genome.crossover_events, "genetic_health": child_genome.genetic_health(), "lineage": child.lineage_summary()})
             child.in_water = world.habitat.is_water(child.global_position)
             child.last_medium = child.in_water
             child.visual.rebuild(true)

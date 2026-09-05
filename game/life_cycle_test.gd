@@ -3,6 +3,7 @@ const World = preload("res://game/reproduction_test_world.gd")
 const Genome = preload("res://game/genome.gd")
 const Cycle = preload("res://game/life_cycle.gd")
 const Traits = preload("res://game/ecology_traits.gd")
+const Navigation = preload("res://game/navigation.gd")
 const Visual = preload("res://game/organism_visual.gd")
 var checks: int = 0
 var failed: int = 0
@@ -62,7 +63,7 @@ func run_all() -> bool:
     for plan in range(7):
         var founder = w.spawn_random(plan)
         check(w.habitat.is_water(founder.global_position) and founder.global_position.y > w.habitat.floor_at(founder.global_position), "founder in accessible water: %d" % plan)
-        check(Traits.water_breathing(founder.genome) >= 0.85 and Traits.walking(founder.genome) < 0.18 and not Traits.flight_body(founder.genome), "aquatic founder cannot already walk/fly: %d" % plan)
+        check(Traits.water_breathing(founder.genome) >= 0.85 and Traits.air_breathing(founder.genome) < 0.28 and Traits.walking(founder.genome) < 0.18 and not Traits.flight_body(founder.genome) and Navigation.land_capable(founder) == false, "aquatic founder cannot already breathe/walk/fly on land: %d" % plan)
     w.habitat.configure(7, 146.0)
     var empty_resources: Array[Vector3] = []
     w.set_habitat(7, 146.0, w.habitat.waterline, w.habitat.ground_y, w.habitat, empty_resources)
@@ -183,7 +184,9 @@ func run_all() -> bool:
     check(a.reproduction_state == "copulating" and w.reproduction.conceptions == 0, "internal mating has a timed contact phase")
     b.global_position += Vector3(10, 0, 0)
     w.reproduction.step(w, 0.5, true)
-    check(w.reproduction.pairs[0]["contact"] == 0.0, "separation resets coupling progress")
+    check(w.reproduction.pairs[0]["contact"] > 0.0 and w.reproduction.pairs[0]["contact"] < 0.5, "brief separation decays rather than erases coupling progress")
+    check(w.reproduction.pairs[0].has("axis") and w.reproduction.pairs[0].has("site") and a.courtship_facing == b.courtship_facing and a.courtship_facing.length_squared() > 0.9, "courtship establishes one stable side-by-side docking orientation")
+    check(a.navigation_target != b.global_position and b.navigation_target != a.global_position, "pair approaches fixed anatomical docking points instead of chasing heads")
     b.global_position = a.global_position
     for i in range(12): w.reproduction.step(w, 0.5, true)
     check(w.reproduction.conceptions == 1 and a.carrying_count == 1 and w.organisms.size() == 2, "sustained coupling proceeds to gestation")
@@ -291,6 +294,31 @@ func run_all() -> bool:
     a = make_parent(w, 2)
     a.genome.asexual_drive = 1.0
     check(w.reproduction._conceive(w, a, null) and w.reproduction.reserved_count() == 1, "clonal reproduction requires its own inherited capability")
+    w.queue_free()
+
+    # Population rescue is evaluated even if no new death was observed. It
+    # fills the complete deficit with unrelated aquatic hatchlings and remains
+    # fully disableable for extinction experiments.
+    w = make_world()
+    w.test_cap = 12
+    w.experiment_settings = {"auto_reseed": true, "minimum_population": 5}
+    check(w.organisms.is_empty() and w._maintain_population_floor() == 5, "empty world is restored to the configured population floor")
+    var rescued_young: bool = true
+    var ancestral_plans: bool = true
+    for rescued in w.organisms:
+        rescued_young = rescued_young and rescued.age_seconds == 0.0 and Cycle.stage(rescued) == "hatchling" and rescued.parent_a == -1 and rescued.parent_b == -1
+        ancestral_plans = ancestral_plans and int(rescued.genome.body_plan) in [0, 1, 2, 3, 4, 5, 6]
+    check(rescued_young, "population rescue creates young unrelated founders")
+    check(ancestral_plans, "population rescue uses only the seven canonical founder topology classes")
+    for rescued in w.organisms:
+        rescued.alive = false
+    w._cleanup_dead()
+    check(w.organisms.size() == 5, "one cleanup fills the entire living-population deficit")
+    w.experiment_settings["auto_reseed"] = false
+    for rescued in w.organisms:
+        rescued.alive = false
+    w._cleanup_dead()
+    check(w.organisms.is_empty(), "disabling automatic reseed preserves extinction")
     w.queue_free()
 
     var original = Genome.new()

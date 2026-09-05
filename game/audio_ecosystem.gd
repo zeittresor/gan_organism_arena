@@ -4,6 +4,7 @@ var ambient_player: AudioStreamPlayer
 var voice_players: Array[AudioStreamPlayer3D] = []
 var rng = RandomNumberGenerator.new()
 var enabled: bool = true
+var paused: bool = false
 var habitat_level: int = 5
 
 func _ready() -> void:
@@ -22,6 +23,13 @@ func apply_settings() -> void:
             ambient_player.play()
     else:
         ambient_player.stop()
+    ambient_player.stream_paused = paused
+
+func set_paused(value: bool) -> void:
+    paused = value
+    if is_instance_valid(ambient_player): ambient_player.stream_paused = paused
+    for player in voice_players:
+        if is_instance_valid(player): player.stream_paused = paused
 
 func set_habitat_level(level: int) -> void:
     habitat_level = clampi(level, 5, 9)
@@ -32,12 +40,10 @@ func _refresh_ambient() -> void:
     call_deferred("apply_settings_deferred")
 
 func apply_settings_deferred() -> void:
-    enabled = bool(SettingsStore.get_value("audio_enabled", true))
-    if enabled and bool(SettingsStore.get_value("ambient_audio", true)) and not ambient_player.playing:
-        ambient_player.play()
+    apply_settings()
 
 func play_organism_call(org) -> void:
-    if not enabled or not bool(SettingsStore.get_value("organism_audio", true)) or not is_instance_valid(org):
+    if paused or not enabled or not bool(SettingsStore.get_value("organism_audio", true)) or not is_instance_valid(org):
         return
     var player = AudioStreamPlayer3D.new()
     player.position = org.global_position

@@ -3,7 +3,12 @@ extends RefCounted
 # Capability scores are shared by movement, decisions, physiology and visuals.
 # They are toy ecological mechanics, not taxonomic stages or a fitness ladder.
 static func body_scale(g) -> float:
-    return lerpf(0.28, 1.55, float(g.size_gene))
+    # Preserve the familiar middle scale while giving evolved endpoint alleles
+    # room for visually minute and genuinely massive morphologies.
+    var size_value: float = clampf(float(g.size_gene), 0.0, 1.0)
+    if size_value <= 0.5:
+        return lerpf(0.18, 0.92, size_value * 2.0)
+    return lerpf(0.92, 2.30, (size_value - 0.5) * 2.0)
 
 static func walking(g) -> float:
     return float(g.terrestrial_drive) * sqrt(float(g.limb_drive) * float(g.support_drive))
@@ -32,8 +37,19 @@ static func upright(g) -> bool:
 static func tools(g) -> bool:
     return float(g.manipulation) * float(g.neural_drive) * float(g.limb_drive) > 0.24 and float(g.tool_drive) > 0.40
 
-static func sessile(g) -> bool:
-    return float(g.root_drive) > 0.72 and (float(g.photosynthesis) > 0.50 or float(g.cleaning_drive) > 0.60)
+static func sessile(g, evolution_bias: float = 0.0) -> bool:
+    # A sessile transition needs both substrate anchoring and an energy strategy
+    # that still works without pursuit. The lower, paired thresholds make the
+    # transition reachable through inherited founder variation plus mutation;
+    # founders themselves remain below the anchoring threshold.
+    var stationary_food: float = maxf(float(g.photosynthesis), float(g.cleaning_drive) * 0.76)
+    var bias: float = clampf(evolution_bias, 0.0, 1.0)
+    # Anchoring and stationary metabolism are costly transitions. A modest
+    # bias makes the plant niche discoverable in ordinary runs without making
+    # aquatic founders rooted on spawn or bypassing their founder safeguards.
+    var root_threshold: float = 0.44 - bias * 0.10
+    var food_threshold: float = 0.38 - bias * 0.08
+    return float(g.root_drive) > root_threshold and stationary_food > food_threshold
 
 static func swim_speed(g) -> float:
     var propulsion: float = 0.30 + float(g.fin_drive) * 0.45 + float(g.tail_drive) * 0.25

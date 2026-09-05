@@ -13,7 +13,7 @@ static func stage(org) -> String:
     var g = org.genome
     if org.senescence > 0.15: return "senescent"
     if progress >= 1.0: return "adult"
-    if Traits.sessile(g) and g.photosynthesis > 0.50:
+    if Traits.sessile(g) and g.photosynthesis > 0.38:
         return "seedling" if progress < 0.35 else "juvenile"
     if g.metamorphosis > 0.65 and g.armor_drive > 0.35 and g.size_gene < 0.45:
         if progress < 0.55: return "larva"
@@ -41,7 +41,7 @@ static func produces_sperm(org) -> bool:
 
 static func mode(org) -> String:
     var g = org.genome
-    if Traits.sessile(g) and g.photosynthesis > 0.50: return "propagule"
+    if Traits.sessile(g) and g.photosynthesis > 0.38: return "propagule"
     if g.internal_fertilization < 0.50: return "spawn"
     if g.live_birth < 0.55: return "egg"
     return "live_birth" if g.maternal_nourishment > 0.50 else "retained_egg"

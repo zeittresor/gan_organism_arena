@@ -31,11 +31,12 @@ func creature(g, p: Vector3 = Vector3.ZERO):
 
 func run_all() -> bool:
     var model = Habitat.new()
-    model.configure(5, 144.0)
-    check(is_equal_approx(model.half_extent * 2.0, 144.0) and is_equal_approx(model.half_extent * 1.2, 86.4), "doubled world dimensions")
+    model.configure(5, 288.0)
+    check(is_equal_approx(model.half_extent * 2.0, 288.0), "horizontal world dimensions doubled again")
+    check(is_equal_approx(model.bottom_y, -43.2) and is_equal_approx(model.ceiling_y, 64.8), "vertical relief is preserved and upper airspace grows by fifty percent")
     check(not model.has_sky(), "aquarium has no usable sky")
     check(is_equal_approx(model.floor_at(Vector3.ZERO), model.ground_y), "aquarium floor agrees with model")
-    model.configure(9, 144.0)
+    model.configure(9, 288.0)
     var land: Vector3 = model.nearest_medium(Vector3(40, 0, 0), false)
     var water: Vector3 = model.nearest_medium(Vector3(-40, -15, 0), true)
     check(model.floor_at(land) > model.waterline and model.is_water(water), "land and submerged niches coexist")
@@ -83,7 +84,7 @@ func run_all() -> bool:
     flyer.apply_environment(0.1, model)
     check(flyer.airborne, "practised flyer flies in sky habitat")
     var aquarium = Habitat.new()
-    aquarium.configure(5, 144.0)
+    aquarium.configure(5, 288.0)
     flyer.apply_environment(0.1, aquarium)
     check(not flyer.can_fly and not flyer.airborne, "flight forbidden without sky even with learned skill")
     flyer_genome.support_drive = 0.1
@@ -128,6 +129,79 @@ func run_all() -> bool:
     tree.motion_step(0.1, model.half_extent)
     check(absf(tree.global_position.x - start.x) < 0.001 and absf(tree.global_position.z - start.z) < 0.001, "roots prevent drifting")
     check(tree.visual.body_cells.size() <= 180, "sessile morphology respects render budget")
+
+    var water_plant_g = Genome.new()
+    water_plant_g.root_drive = 0.48
+    water_plant_g.photosynthesis = 0.46
+    water_plant_g.cleaning_drive = 0.20
+    water_plant_g.gill_drive = 1.0
+    water_plant_g.wood_drive = 0.10
+    var water_patch: Vector3 = water
+    water_patch.y = model.floor_at(water_patch)
+    var water_plant = creature(water_plant_g, water_patch)
+    water_plant.apply_environment(0.1, model)
+    water_plant.visual.rebuild(true)
+    var water_tissues: Array = []
+    for cell in water_plant.visual.body_cells: water_tissues.append(int(cell["t"]))
+    check(water_plant.rooted and water_plant.in_water and water_plant.ecology_labels().has("aquatic_plant"), "reachable aquatic genotype settles as an underwater plant")
+    check(water_tissues.has(8) and water_tissues.has(7), "underwater plant develops connected roots and photosynthetic leaves")
+
+    var land_plant_g = Genome.new()
+    land_plant_g.root_drive = 0.48
+    land_plant_g.photosynthesis = 0.46
+    land_plant_g.lung_drive = 1.0
+    land_plant_g.wood_drive = 0.20
+    var land_plant = creature(land_plant_g, patch)
+    land_plant.apply_environment(0.1, model)
+    land_plant.visual.rebuild(true)
+    check(land_plant.rooted and land_plant.ecology_labels().has("plant") and not land_plant.ecology_labels().has("tree"), "non-woody land plant is distinct from a tree")
+
+    var founder_g = Genome.new()
+    founder_g.randomize_from(RandomNumberGenerator.new(), 991)
+    founder_g.aquatic_founder()
+    check(founder_g.root_drive <= 0.38001 and not Traits.sessile(founder_g), "aquatic founders start motile below the rooting threshold")
+
+    var carrier_a = Genome.new()
+    carrier_a.root_drive = 0.75
+    carrier_a.photosynthesis = 0.46
+    carrier_a.ensure_diploid()
+    carrier_a.aquatic_founder()
+    var carrier_b = Genome.new()
+    carrier_b.root_drive = 0.75
+    carrier_b.photosynthesis = 0.46
+    carrier_b.ensure_diploid()
+    carrier_b.aquatic_founder()
+    check(not Traits.sessile(carrier_a) and maxf(carrier_a.alleles["root_drive"][0], carrier_a.alleles["root_drive"][1]) > 0.44, "motile founder can carry a cryptic high-root allele")
+    var high_egg: Dictionary = {}
+    var high_sperm: Dictionary = {}
+    var segregation_rng = RandomNumberGenerator.new()
+    segregation_rng.seed = 77301
+    for attempt in range(20):
+        var egg_product: Dictionary = carrier_a.make_gamete(segregation_rng, 0.0)
+        if float(egg_product["values"]["root_drive"]) > 0.44:
+            high_egg = egg_product
+            break
+    for attempt in range(20):
+        var sperm_product: Dictionary = carrier_b.make_gamete(segregation_rng, 0.0)
+        if float(sperm_product["values"]["root_drive"]) > 0.44:
+            high_sperm = sperm_product
+            break
+    check(not high_egg.is_empty() and not high_sperm.is_empty(), "meiosis exposes cryptic anchoring alleles")
+    var recombined_plant = carrier_a.fertilize(carrier_b, high_egg, high_sperm, segregation_rng, 0.0, 0.0)
+    check(Traits.sessile(recombined_plant), "sexual segregation can combine high-root alleles into a plant-capable descendant")
+    founder_g.root_drive = 0.38
+    founder_g.photosynthesis = 0.46
+    founder_g.mutability = 1.0
+    founder_g.ensure_diploid()
+    var plant_emerged: bool = false
+    var evolution_rng = RandomNumberGenerator.new()
+    evolution_rng.seed = 230923
+    for generation in range(180):
+        founder_g = founder_g.mutated(evolution_rng, 0.14, 0.014)
+        if Traits.sessile(founder_g):
+            plant_emerged = true
+            break
+    check(plant_emerged, "ordinary inherited variation can cross the sessile plant threshold")
     var upright_g = Genome.new()
     upright_g.terrestrial_drive = 1.0
     upright_g.support_drive = 1.0

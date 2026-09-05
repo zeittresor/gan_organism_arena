@@ -58,7 +58,7 @@ from integrations.arena_client import ArenaClient
 with ArenaClient() as arena:
     arena.call("arena_mode", mode="stepped")
     arena.call("arena_reset", seed=1337,
-               parameters={"initial_organisms": 16, "nutrient_renewal": 0.5})
+               parameters={"initial_organisms": 10, "nutrient_renewal": 0.5})
     arena.call("arena_step", steps=120)
     state = arena.call("arena_observe")
     genome = arena.call("arena_organism", id=state["organisms"][0]["id"])
@@ -66,7 +66,7 @@ with ArenaClient() as arena:
     arena.call("arena_mode", mode="live")
 ```
 
-Freie Population und Anfangsnahrung können beim Reset gesetzt werden. Während eines Laufs sind unter anderem Nachschub, Temperaturversatz, Mutationsstärke, große Mutationen, Prädations- und Gruppenstärke veränderbar. Grenzen stehen in `arena://model`. Änderungen von Individuen-/Partikelzahlen über die KI verlangen einen ausdrücklichen Reset; die bisherigen Menüsteuerungen bleiben separat verfügbar.
+Freie Population und Anfangsnahrung können beim Reset gesetzt werden. `auto_reseed` und `minimum_population` steuern ausdrücklich, ob und bis zu welchem lebenden Bestand die Welt junge zufällige Wassergründer ergänzt; für kontrolliertes Aussterben muss `auto_reseed=false` gewählt werden. Während eines Laufs sind unter anderem Nachschub, Temperaturversatz, Mutationsstärke, große Mutationen, Prädations- und Gruppenstärke veränderbar. Grenzen stehen in `arena://model`. Änderungen von Individuen-/Partikelzahlen über die KI verlangen einen ausdrücklichen Reset; die bisherigen Menüsteuerungen bleiben separat verfügbar.
 
 ## VKLP in beide Richtungen
 
@@ -121,3 +121,12 @@ py -3 integrations/arena_vklp.py claim "Die beobachtete Population umfasst acht 
 `claim` erstellt standardmäßig nur einen lokalen Entwurf. `--submit` sendet ihn ausdrücklich an VKLP und benötigt zusätzlich die Einsendefreigabe. `apply CLAIM_ID --parameters '{"nutrient_renewal":0.5}'` ist eine bewusst angeforderte Parameteränderung anhand einer nachgeschlagenen Aussage; das JSON unter Windows passend zur verwendeten Shell quoten. Nicht akzeptierte Aussagen benötigen zusätzlich `--as-hypothesis`.
 
 Ausschalten wirkt auf folgende Anfragen auch bereits laufender Adapter. Falls das gesperrte Protokoll den Schrittbetrieb angefordert hatte, kehrt die Welt zum normalen Lauf zurück. Die Menüs bleiben in jeder Kombination bedienbar. Es werden beim bloßen Einschalten weder Claims abgerufen noch Daten gesendet. Einstellungen und ihre Profile enthalten keine Sitzungstoken oder VKLP-API-Schlüssel.
+
+
+## Alpha25: Erbvariation und Evolutionsverlauf
+
+Modell `arena-biology-8`, DNA-Karte `arena.loci/3` mit 91 Genorten. Beobachtungen enthalten `evolution_totals`; vollständige Aufnahmen und `arena_export` ergänzen `evolution` mit Schema `arena.evolution/1`, getrennten Zählern, ersten Körpergrundformen und bis zu 2.048 Abstammungseinträgen. Der Export weist verworfene Einträge aus und ist kein ladbarer Weltspielstand. Neue Topologien sind keine wissenschaftliche Artbestimmung.
+
+Genomdaten und DNA-Export enthalten `macro_mutations` sowie `mutation_log` mit Genort, Genkopie, Vorher-/Nachher-Wert und Änderungsart. `mutations` zählt tatsächlich geänderte Allele dieses Nachkommens; die größere Untermenge steckt in `macro_mutations`. Die ursprünglichen Allele des jeweils anderen Homologs bleiben bei regulatorischen Makromutationen erhalten. Hue, Sättigung und Helligkeit sind vererbbar.
+
+Ein ausdrücklicher `arena_parameters`-Aufruf für `auto_reseed` oder `minimum_population` wendet die Nachbesetzung sofort an, ohne im gesteuerten Modus einen Zeitschritt zu erzwingen. Eine bloße Verbindung oder Beobachtung bleibt ohne diese Wirkung. Alle bisherigen Protokollfreigaben bleiben unverändert.

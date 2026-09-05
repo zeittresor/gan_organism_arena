@@ -1,6 +1,6 @@
 {
   "ui": {
-    "hint": "F10 Réglages | F1 Aide | L lumière aléatoire | WASD + souris | Q/E bas/haut | LMB sélectionner | RMB suivre | Tab suivant | 1-4 vues | 5-9 habitats | Pavé +/- monde | G injecter | F8 OBJ | F12 capture",
+    "hint": "P / Espace Pause | F10 Options + aide | F1 Manuel | WASD + souris | Q/E bas/haut | Molette zoom | Clic gauche sélection | Clic droit suivi | Tab suivant | L lumière",
     "settings_title": "GAN Organism Arena - Réglages",
     "help_title": "GAN Organism Arena - Guide du projet / Touches",
     "no_selection": "Aucun organisme sélectionné. Visez-en un et cliquez à gauche, ou appuyez sur Tab.",
@@ -19,7 +19,18 @@
     "profile_write_error": "Enregistrement du profil impossible.",
     "paused": "EN PAUSE",
     "hud_format": "%s %s | FPS %.1f | étapes %d | organismes %d | formes %d | cellules %d\nhabitat %d %s | monde %.1f | corps max. %.1f | cognition max. %.2f | vue %s%s",
-    "navigation_status": "But : %s | Distance %.1f | Vitesse %.2f | Repas %d | Nouveaux trajets %d"
+    "navigation_status": "But : %s | Distance %.1f | Vitesse %.2f | Repas %d | Nouveaux trajets %d",
+    "pause_manual": "PAUSE · P / Espace : reprendre",
+    "pause_menu": "PAUSE · Menu ouvert",
+    "pause_both": "PAUSE · Après les menus, P / Espace pour reprendre",
+    "textures_disabled": "Les textures PNG facultatives sont désactivées. Activez-les dans les options.",
+    "textures_reloaded": "Modèles PNG rechargés. Les motifs déjà hérités sont conservés.",
+    "texture_exported": "Texture corporelle héritée exportée",
+    "texture_warning": "%d fichier(s) de texture n’ont pas pu être chargés ; un matériau neutre est utilisé.",
+    "exit_title": "Quitter GAN Organism Arena ?",
+    "exit_body": "Choisissez la suite. La simulation reste en pause pendant ce dialogue.",
+    "world_saved": "Instantané du monde enregistré",
+    "world_save_failed": "L’instantané du monde n’a pas pu être enregistré ; l’application reste ouverte."
   },
   "settings": {
     "language": "Langue",
@@ -31,6 +42,8 @@
     "simulation_tick_hz": "Ticks de simulation 3D par seconde",
     "evolution_rate": "Vitesse d'évolution",
     "organism_cap": "Nombre maximal d'organismes vivants",
+    "minimum_population": "Cible du réensemencement automatique",
+    "plant_evolution_bias": "Découvrabilité de la niche végétale",
     "nutrient_count": "Nombre de particules nutritives 3D",
     "visual_cell_cap": "Cellules corporelles visibles max. par organisme",
     "body_rebuild_interval": "Intervalle de reconstruction corporelle (secondes)",
@@ -46,6 +59,10 @@
     "social_spacing": "Distance sociale preferee entre les corps",
     "follow_distance": "Distance de camera derriere la queue/arriere",
     "follow_height": "Hauteur de camera au-dessus de l organisme",
+    "camera_noclip": "Autoriser le noclip de la caméra dans le terrain",
+    "observer_presence": "Permettre aux organismes de percevoir l’observateur humain",
+    "show_hud": "Afficher le texte d’interface pendant l’observation",
+    "show_crosshair": "Afficher le viseur central",
     "habitat_level": "Niveau d habitat (5-9)",
     "world_step": "Croissance du monde par habitat / pavé +/-",
     "courtship_strength": "Parade / attraction partenaire",
@@ -67,7 +84,9 @@
     "vklp_write_enabled": "Autoriser les propositions VKLP",
     "vklp_url": "Adresse du service VKLP",
     "contact_quality": "Précision des contacts",
-    "gravity_scale": "Gravité planétaire (× Terre)"
+    "gravity_scale": "Gravité planétaire (× Terre)",
+    "auto_reproduce": "Autoriser de nouvelles reproductions",
+    "textures_enabled": "Utiliser les textures PNG facultatives"
   },
   "actions": {
     "rebuild_visuals": "Reconstruire les corps / ressources shader",
@@ -79,10 +98,24 @@
     "save_settings": "Enregistrer les réglages…",
     "load_settings": "Charger les réglages…",
     "test_speech": "Tester la parole",
-    "export_genome": "Exporter l’ADN sélectionné"
+    "export_genome": "Exporter l’ADN sélectionné",
+    "evolution_overview": "Vue de l’évolution",
+    "export_evolution": "Exporter l’historique évolutif",
+    "show_help": "Ouvrir l’aide / le manuel",
+    "back_settings": "Retour aux options",
+    "reload_textures": "Recharger les textures PNG",
+    "export_texture": "Exporter la texture corporelle",
+    "exit_open_settings": "Ouvrir les options",
+    "exit_save_quit": "Enregistrer l’instantané et quitter",
+    "exit_quit": "Quitter sans enregistrer",
+    "exit_cancel": "Annuler"
   },
   "help": {
-    "content": "[b]Alpha15 : options et anatomie[/b]\nF10 : autorisations MCP/VKLP, infobulles, langue parlée et voix système, test vocal, profils de réglages, export ADN. Les corps connectés articulent leurs membres ; iris et pupilles suivent les cibles, avec des yeux composés possibles. 88 loci appariés codent un ADN fictif ; mitoses et réparation consomment de l’énergie, la méiose produit les gamètes haploïdes. Reproduction mixte et états affectifs liés à la cognition sont possibles. Les profils enregistrent les réglages, pas le monde.\n\n[b]Alpha14 : biologie[/b]\nLa transmission utilise des paires d’allèles, la liaison, la recombinaison et une charge récessive. Le développement consomme des réserves; les adultes produisent des réserves finies de gamètes. Les phases embryonnaires dépendent de l’énergie, de l’oxygène et de la température. Les particules alimentaires se reconstituent progressivement.\n\n[b]Interfaces IA facultatives[/b]\nMCP/VKLP ne suppriment aucune commande. La connexion conserve le fonctionnement normal; le mode pas à pas est choisi explicitement. Les connaissances externes peuvent guider des interventions tracées, et les observations peuvent devenir des claims VKLP accompagnés de preuves. Voir docs/AI_INTERFACES_DE.md.\n\n[font_size=26][b]GAN Organism Arena — alpha14[/b][/font_size]\n\n[b]Monde initial[/b]\nLe démarrage par défaut utilise la côte 7 avec eau, terre et ciel. Les fondateurs naissent dans une eau accessible, adaptés à la respiration aquatique, avec de faibles capacités terrestres et aériennes. Les descendants peuvent dépasser ces limites par mutation et héritage. L’ancien réglage initial 5 passe à 7 une seule fois; les autres habitats enregistrés et les choix ultérieurs restent conservés.\n\n[b]Commandes[/b]\nSouris: regarder. W/S: avancer/reculer; A/D: déplacement latéral; Q/E: descendre/monter; Shift: accélérer. Molette: zoom; Shift+molette: vitesse. L: nouvelle direction lumineuse aléatoire à chaque pression, conservée ensuite. Choisir auto_sun réactive le mouvement du soleil. Clic gauche: sélectionner; clic droit: suivre; Tab: suivant; Esc: libérer/capturer la souris.\nF10: options; F1: aide, avec pause. Espace: pause. 1–4: vues Naturelle, Cellules, Neurale, Énergie. 5: aquarium fermé; 6: eau/îles; 7: côte et ciel; 8: terre/eau peu profonde/air; 9: monde mixte. Pavé +/-: taille du monde. G: ancêtre aquatique. F8: export OBJ; F12: capture.\nL’eau présente vagues, reflets lumineux, opacité accrue à angle rasant, face inférieure visible et contour du rivage. Les vagues sont décoratives autour du niveau moyen simulé.\n\n[b]Développement[/b]\nUn individu grandit, mûrit, apprend et vieillit; l’évolution génétique se déroule entre générations. Nouveau-né, juvénile, subadulte et adulte changent de taille et de proportions. Certaines combinaisons permettent larve aquatique, ou larve puis pupe sans alimentation et métamorphose pour les petites formes cuirassées. La malnutrition retarde la maturité. Les aptitudes apprises par les parents ne sont pas héritées.\nPeau, écailles, plumes avec axes, fourrure/soies, mucus, membranes, cornes, becs et motifs se combinent avec des effets sur isolation, respiration, dessèchement, traînée, protection et coût énergétique. Les plumes seules ne permettent pas le vol. Les corps restent des cellules 3D stylisées. La vue Cellules expose les tissus reproducteurs internes schématiques au cours de la maturation.\n\n[b]Reproduction[/b]\nDes adultes compatibles font une parade puis maintiennent le contact pour une phase de fécondation. Producteurs d’ovules, producteurs de spermatozoïdes et hermaphrodites existent. Reconnaissance génétique, développement, rôles gamétiques et anatomie limitent les croisements. Un nom de famille ou une silhouette différente ne constitue pas automatiquement une barrière; tous les croisements ne produisent pas des descendants viables et fertiles.\nLes routes comprennent ponte avec fécondation externe, fécondation interne et ponte, rétention d’œufs nourris par vitellus, et naissance vivante avec apport maternel. Les formes photosynthétiques enracinées utilisent des propagules et un transfert simplifié de gamètes/pollen. La reproduction clonale exige une capacité héréditaire distincte. L’absence de partenaire ne crée pas cette capacité. Organes primaires et traits de parade secondaires mûrissent avec le corps; ils ne suivent pas tous une anatomie mammalienne.\nŒufs et embryons demandent du temps et de l’énergie. Les œufs externes peuvent sécher ou être mangés; une portée interne dépend de la survie du porteur. Les embryons réservent des places dans la population. Désactiver les nouvelles reproductions ne bloque pas les embryons existants. La naissance compte les descendants et conserve les deux parents; des soins parentaux peuvent transférer de l’énergie réelle aux jeunes proches. Anatomie, durées et fertilité restent des règles simplifiées, pas une simulation biologique validée.\n\n[b]Survie[/b]\nRespiration, humidité, soutien et endurance contraignent les passages eau/terre/air. Le vol nécessite anatomie adaptée, maturité, pratique et ciel (7–9). Des nageurs puissants peuvent sauter vers une proie basse; des chasseurs terrestres attraper des nageurs de surface ou sauter; des prédateurs aériens plonger en eau peu profonde. Ces actions utilisent énergie, endurance, récupération et réserves respiratoires. Une morsure exige une portée réelle et prélève l’énergie de la proie.\nVie amphibie, chasse en meute, embuscade, cachettes, nettoyage, parasitisme, outils limités, marche verticale, formes insectoïdes, filtres enracinés, photosynthèse et arbres terrestres restent possibles, sans espèce ni destination garantie. L’extinction est possible; le réensemencement automatique est désactivé par défaut.\n\n[b]Interface et fichiers[/b]\nL’inspecteur montre physiologie, revêtements, comportement, aptitudes, stade, route et progression reproductive, embryons, fertilité et parents. Les compteurs globaux incluent embryons et pertes. Options: rendu, vitesse, fréquence, mutations, budgets, sons et pensées texte/TTS Windows. Cellules visibles et souvenirs sont limités pour les performances. Le cœur suit des règles de vie artificielle, sans GAN ou LLM entraîné par organisme.\nL’installation portable réutilise une archive Godot locale à somme officielle valide et reste dans le projet. Aucun Internet après installation. settings/config.json: options; language/*.json: traductions; logs/: diagnostic; exports/obj/ et screenshots/: sorties. Licence MIT dans LICENSE.txt."
+    "content": "[b]GAN Organism Arena — manuel[/b]\nLe monde commence avec de jeunes organismes aquatiques sur une côte. Chacun possède son hérédité, ses réserves, ses sens et ses capacités de mouvement. Observez quels descendants apparaissent et survivent. Aucun parcours évolutif ni espèce future n’est garanti.\n\n[b]Se déplacer, sélectionner et suivre[/b]\nWASD et souris déplacent la caméra ; Q/E descendent ou montent. Shift accélère. La molette zoome ; Shift avec la molette règle la vitesse de déplacement. Clic gauche sélectionne la cible, Tab l’organisme suivant, clic droit active ou désactive le suivi. La caméra tient compte du terrain. Escape libère la souris ou ferme d’abord un menu ouvert.\n\n[b]Pause et menus[/b]\nP, Espace ou la touche Pause arrête le monde ; appuyer de nouveau reprend. Mouvement, vieillissement, énergie, croissance, embryons, renouvellement de nourriture, vagues, éclairage automatique et pensées/sons s’arrêtent. Hors menus, la caméra reste utilisable pour observer. Une indication jaune signale la pause. Le temps passé en pause n’est pas rattrapé ensuite.\nF10 ouvre les options, F1 le manuel ; ces menus pausent aussi. Une pause manuelle reste active après leur fermeture. L’aide ouverte depuis les options y revient. Les changements volontaires de réglages et les exports restent disponibles. Les interfaces peuvent observer, mais ne peuvent contourner une pause locale. Le mode expérimental par pas reste conservé.\n\n[b]Habitat, eau, terre et lumière[/b]\nLes touches 5–9 changent d’habitat, dont les noms figurent dans l’option correspondante. La côte offre eau, terre et ciel. Le pavé +/− change les dimensions. L choisit une nouvelle direction lumineuse à chaque pression ; l’option lumière offre aussi des directions fixes et un soleil automatique.\nLes ancêtres commencent dans l’eau. L’hérédité peut faire évoluer respiration, membres et tissus porteurs. La terre exige une physiologie adaptée ; le vol demande structure, portance, énergie, développement et ciel. Une tendance génétique seule n’accorde pas une capacité prête à l’emploi.\n\n[b]Nourriture et survie[/b]\nLes organismes cherchent une nourriture accessible, explorent et réagissent aux menaces ou partenaires. Ils conservent une cible puis replannifient si le progrès manque. La nourriture se capture à portée de tête. Force, taille, enveloppe et forme influencent mouvement et coûts. Oxygène, humidité, température et énergie peuvent limiter le comportement. L’adaptation peut favoriser la descendance ; une mutation peut aussi nuire.\nChasse, meutes, cachettes, filtration, parasitisme et outils exigent des traits et conditions adaptés. Alimentation stationnaire et ancrage peuvent produire des formes enracinées dans l’eau ou sur terre. Les arbres nécessitent également un support. Les fondateurs ne sont pas introduits comme plantes ou animaux volants déjà prêts.\n\n[b]ADN et nouvelles formes[/b]\nLe génome comporte deux copies pour chacun de ses 91 loci régulateurs : proportions, support, muscles, respiration, enveloppes et comportement. La descendance sexuée reçoit une copie de chaque gamète ; la méiose échange des segments chromosomiques. Le clonage conserve les deux homologues.\nLes petites et grandes mutations régulatrices changent des copies individuelles. Certaines restent latentes et se combinent dans des générations suivantes. Teinte, saturation et luminosité sont héréditaires. Les souvenirs appris ne sont pas inscrits dans la lignée germinale. L’export ADN indique loci et nouveaux changements d’allèles. Ce code fictif ne simule pas la synthèse de protéines réelles.\nSept topologies corporelles et des variations continues permettent des descendants très différents. Une topologie n’est pas une définition scientifique d’espèce et cette grammaire reste finie.\n\n[b]Divisions, reproduction et croissance[/b]\nLa mitose soutient croissance, réparation et reproduction clonale de certaines lignées. La méiose produit des gamètes haploïdes ; des stratégies combinées sont possibles. Même adulte, un organisme a besoin de rôles compatibles, d’anatomie fonctionnelle et de réserves suffisantes.\nLes traits permettent ponte externe, œufs pondus ou retenus, naissance vivante et propagation clonale. Parade et contact précèdent une fécondation possible. Les embryons nécessitent temps et ressources, peuvent échouer et réservent des places. Les jeunes traversent plusieurs stades ; larves ou pupes sont possibles. Faim et manque d’oxygène ralentissent le développement. Interdire de nouvelles reproductions ne bloque pas les embryons existants.\n\n[b]Population et remplacements[/b]\nLe remplacement automatique vise par défaut cinq organismes vivants, y compris après extinction, avec de jeunes aquatiques non apparentés aux gènes aléatoires. Limite de population et réservations embryonnaires contraignent le remplissage ; la vue évolutive indique un déficit. Désactiver permet l’extinction. La reproduction possède son propre interrupteur. G introduit manuellement un fondateur si une place est disponible.\n\n[b]Vues et observations[/b]\n1–4 montrent corps naturels, cellules/tissus, structures nerveuses et énergie. La sélection détaille stade, parents, énergie, oxygène, reproduction, anatomie et navigation. Les scores de corps et d’esprit sont des indicateurs internes, pas des centimètres ou un QI. Les pensées décrivent des états modélisés. Langue d’affichage et langue parlée peuvent différer ; la parole nécessite une voix système adaptée.\nLa vue évolutive distingue naissances sexuées/clonales et introductions automatiques/manuelles. Elle présente générations, décès, organismes enracinés, premières topologies et parentés récentes. Une topologie déjà injectée n’est pas une découverte évolutive ultérieure.\n\n[b]Performances et contacts[/b]\nSi l’image est lente, réduisez d’abord précision des contacts, cellules visibles ou population. Une précision moindre économise du calcul mais autorise davantage de petits chevauchements. Une fréquence de simulation élevée affine les décisions et coûte du temps CPU. Détail visuel et intervalle de reconstruction ont aussi un coût. Hors écran, le rendu est réduit mais la biologie continue. Changer de moteur graphique exige un redémarrage ; le lanceur Compatibility peut aider.\n\n[b]Profils, exports et nouveau monde[/b]\nLes profils enregistrent des réglages, pas un monde rechargeable. L’export ADN sauvegarde le génome sélectionné ; F8 exporte sa géométrie OBJ ; F12 prend une image. L’historique exporte les observations et jusqu’à 2 048 fiches généalogiques en JSON, avec mention des fiches supprimées ; les totaux persistent. Ce n’est pas non plus une sauvegarde rechargeable. Réinitialiser commence une nouvelle simulation et un nouvel historique.\n\n[b]Interfaces IA facultatives[/b]\nMCP et VKLP sont indépendants et désactivés par défaut. Une connexion IA n’est pas nécessaire. Les systèmes connectés peuvent observer et exécuter des expériences explicites ; des informations reçues peuvent motiver des interventions enregistrées. Se connecter ne réinitialise pas le monde. Une permission VKLP distincte contrôle les envois. Les pauses locales ont priorité. Les exports décrivent les hypothèses pour attribuer les résultats au bon modèle fictif.\n\nLa référence suivante explique chaque option et chaque bouton.\n\n[b]Référence complète des touches[/b]\nW/S ou Haut/Bas avancent/reculent ; A/D ou Gauche/Droite déplacent latéralement ; Q/E descendent/montent ; la souris dirige le regard. Maj accélère. La molette zoome ; Maj+molette règle la vitesse. Clic gauche sélectionne, Tab passe au suivant, clic droit suit. P/Espace/Pause met en pause. 1–4 choisissent les vues naturelle/cellulaire/neuronale/énergie. 5–9 choisissent les habitats. Pavé +/− redimensionne le monde. G introduit un fondateur. L change la lumière. F1 ouvre l’aide, F2 masque/affiche le HUD, F8 exporte OBJ, F9 recharge les PNG activés, F10 ouvre les options, F12 enregistre une capture. Échap ferme une fenêtre ou libère/capture la souris.",
+    "escape_title": "Échap / invite de sortie",
+    "escape": "Échap ouvre quatre choix : ouvrir les options, enregistrer un instantané complet puis quitter, quitter sans enregistrer ou annuler.",
+    "settings_reference": "Toutes les options expliquées",
+    "actions_reference": "Boutons et exports"
   },
   "ecology": {
     "traits": "Adaptations",
@@ -93,6 +126,8 @@
     "medium_changes": "Passages eau/terre",
     "prey": "Proie",
     "tree": "arborescent",
+    "plant": "plante terrestre",
+    "aquatic_plant": "plante aquatique",
     "sessile": "enraciné / sessile",
     "amphibious": "amphibie",
     "fast_swimmer": "nage rapide",
@@ -151,7 +186,10 @@
     "shore_snap": "capture au rivage",
     "leap_snap": "saut de chasse",
     "tending_young": "soins aux jeunes",
-    "seek_mate": "Recherche de partenaire"
+    "seek_mate": "Recherche de partenaire",
+    "avoid_observer": "évite l’observateur humain",
+    "inspect_observer": "inspecte l’observateur humain",
+    "observe_observer": "observe le visiteur humain"
   },
   "life": {
     "reproduction": "Reproduction",
@@ -204,7 +242,9 @@
     "dna_export": "ADN complet : F10 → Exporter ADN",
     "emotion": "État affectif",
     "sense": "Yeux",
-    "anatomy": "Anatomie : articulations cartilagineuses %d | articulations souples de carapace %d | segments musculaires mous %d | actifs %d"
+    "observer": "Perception de l’observateur humain %d%% à %.1f unités",
+    "anatomy": "Anatomie : articulations cartilagineuses %d | articulations souples de carapace %d | segments musculaires mous %d | actifs %d",
+    "mutation_counts": "Changements génétiques %d (majeurs %d)"
   },
   "tooltips": {
     "language": "Langue des menus, états et pensées des organismes. Effet immédiat.",
@@ -215,7 +255,8 @@
     "vklp_write_enabled": "Autoriser en plus les propositions explicitement demandées vers le registre VKLP configuré. La lecture ne nécessite pas cette permission.",
     "vklp_url": "Adresse de base du service VKLP, par exemple http://127.0.0.1:8000. HTTPS est requis à distance. Conserver la clé dans la variable VKLP_API_KEY.",
     "renderer": "Moteur graphique utilisé au prochain démarrage. Compatibilité peut aider les cartes graphiques anciennes.",
-    "auto_reseed": "Introduire des fondateurs si le monde devient vide. Désactivé, conserve l’extinction comme résultat.",
+    "auto_reseed": "Rétablit continuellement une population en déclin ou déjà vide jusqu’à la cible avec de jeunes fondateurs aquatiques aux gènes aléatoires. Désactiver permet l’extinction.",
+    "minimum_population": "Nombre d’organismes vivants maintenu pendant le réensemencement automatique (5 par défaut). La cible effective ne dépasse pas la limite de population ; les embryons ne comptent pas comme vivants.",
     "fullscreen": "Basculer entre plein écran et fenêtre sans relancer la simulation.",
     "view_mode": "Afficher les tissus naturels, cellules, nerfs ou couleurs d’énergie. La biologie et les contacts utilisent le même corps dans chaque vue.",
     "light_mode": "Direction de la lumière. Automatique suit le soleil ; aléatoire choisit une direction. La touche L change directement la direction.",
@@ -228,8 +269,8 @@
     "nutrient_count": "Nombre de particules alimentaires finies. Modifier reconstruit le champ nutritif et change la nourriture disponible.",
     "visual_cell_cap": "Cellules de tissu maximales par organisme, plus au plus un segment de liaison par cellule. Plus de cellules détaille l’anatomie et coûte plus de rendu.",
     "body_rebuild_interval": "Secondes entre vérifications de croissance ou changement anatomique. Les articulations restent animées entre les reconstructions.",
-    "mutation_strength": "Amplitude habituelle des changements héréditaires à la reproduction. Les changements peuvent améliorer ou réduire la viabilité.",
-    "macro_mutation_rate": "Probabilité de changements importants du plan corporel des petits. Des changements fréquents peuvent produire des formes mal adaptées.",
+    "mutation_strength": "Amplitude des petites mutations héréditaires. Zéro les désactive ; mettre aussi à zéro la probabilité des mutations majeures pour désactiver tout nouveau changement.",
+    "macro_mutation_rate": "Probabilité d’une mutation régulatrice majeure par descendant. Une seule copie de chaque gène touché change. Elle peut rester latente sans changer immédiatement le corps visible.",
     "crossover_rate": "Fréquence des tentatives de croisement sexué, selon maturité, compatibilité et gamètes disponibles.",
     "viability_threshold": "Stabilité développementale minimale pour la reproduction. Une faible stabilité réduit aussi la survie précoce.",
     "mate_cooldown": "Temps de récupération en secondes simulées après reproduction avant une nouvelle tentative.",
@@ -239,9 +280,13 @@
     "group_strength": "Force de cohésion et de coordination chez les organismes dotés de traits sociaux.",
     "predation_strength": "Intensité de la chasse et prédation, limitée par anatomie, énergie et proies disponibles.",
     "hierarchy_strength": "Influence du rang social sur les déplacements près des autres organismes.",
-    "follow_distance": "Distance de la caméra derrière l’organisme suivi.",
-    "follow_height": "Hauteur de la caméra de suivi au-dessus de sa cible.",
-    "camera_fov": "Champ de vision de la caméra en degrés. Une petite valeur rapproche, une grande montre davantage.",
+  "follow_distance": "Distance de la caméra derrière l’organisme suivi.",
+  "follow_height": "Hauteur de la caméra de suivi au-dessus de sa cible.",
+  "camera_noclip": "Permet à la caméra de traverser le terrain et les montagnes. Les limites du monde restent actives ; désactivez cette option pour un déplacement et un suivi respectant le relief.",
+  "observer_presence": "Ajoute le signal d’un observateur adulte humanoïde. Les organismes sensibles peuvent le regarder, s’en approcher ou l’éviter ; il n’est jamais une proie ni un partenaire.",
+  "show_hud": "Affiche ou masque les textes d’état, de sélection et de pensée pendant l’observation normale. Les options et l’aide restent accessibles avec F10 et F1.",
+  "show_crosshair": "Affiche ou masque le repère central utilisé pour sélectionner par clic gauche. La sélection et la navigation Tab restent actives.",
+  "camera_fov": "Champ de vision de la caméra en degrés. Une petite valeur rapproche, une grande montre davantage.",
     "zoom_step": "Modification du champ de vision par cran de molette pendant l’exploration.",
     "audio_enabled": "Interrupteur général des sons du milieu et organismes. Les pensées parlées ont leur propre mode.",
     "ambient_audio": "Activer les sons ambiants de l’habitat lorsque le son est activé.",
@@ -261,7 +306,19 @@
     "close_settings": "Fermer ce panneau et revenir à la simulation avec les réglages actuels.",
     "export_genome": "Enregistrer les chromosomes d’ADN fictifs appariés, positions des gènes, brins complémentaires et métadonnées en JSON.",
     "contact_quality": "0–100 : les valeurs basses tolèrent un léger chevauchement et limitent les corrections entre corps. Sous 90, le sol est testé au centre de chaque partie ; dès 90, quatre points de bord sont ajoutés. 100 offre la précision maximale et utilise davantage le processeur. Valeur initiale : 85. Application immédiate, enregistrée dans les profils. Ce niveau ne représente pas un pourcentage de réussite.",
-    "gravity_scale": "Règle la gravité de 0,2× à 2,5× celle de la Terre. Modifie les chutes, la hauteur des sauts, la poussée dans l’eau et la portance nécessaire au vol. Valeur initiale : 1,0. Effet immédiat ; enregistrée dans les profils."
+    "gravity_scale": "Règle la gravité de 0,2× à 2,5× celle de la Terre. Modifie les chutes, la hauteur des sauts, la poussée dans l’eau et la portance nécessaire au vol. Valeur initiale : 1,0. Effet immédiat ; enregistrée dans les profils.",
+    "auto_reproduce": "Autorise de nouvelles parades, fécondations et reproductions clonales. Les embryons existants continuent leur développement si désactivé. Indépendant du remplacement automatique.",
+    "evolution_overview": "Affiche naissances naturelles et clonales, fondateurs introduits, générations, organismes enracinés, parenté récente et premières apparitions de topologies dans cette simulation.",
+    "export_evolution": "Enregistre les compteurs évolutifs et jusqu’à 2 048 fiches de naissance/décès en JSON dans exports/evolution. Indique les fiches supprimées ; ce n’est pas une sauvegarde rechargeable.",
+    "show_help": "Ouvre le manuel complet des commandes, du monde vivant, de l’hérédité, des stades de développement, de toutes les options et des exports. Fermer revient aux options en conservant la pause.",
+    "textures_enabled": "Charge les PNG remplaçables du terrain et des corps. Désactivé par défaut. Chaque descendant reçoit une nouvelle image mélangée à partir des textures réellement utilisées par ses parents.",
+    "reload_textures": "Recharge les modèles PNG des sous-dossiers de textures. Les motifs déjà hérités restent inchangés ; le terrain et les nouveaux fondateurs utilisent les remplacements.",
+    "export_texture": "Enregistre dans exports/textures le motif corporel hérité de l’organisme sélectionné. Les textures facultatives doivent être activées.",
+    "plant_evolution_bias": "Rend la niche végétale enracinée plus ou moins facile à découvrir. Abaisse les seuils héréditaires d’ancrage et d’alimentation stationnaire, sans jamais enraciner les fondateurs aquatiques au démarrage.",
+    "exit_open_settings": "Ferme cette invite et ouvre les options complètes ; la simulation reste en pause.",
+    "exit_save_quit": "Écrit un instantané JSON complet avec organismes, ADN, nutriments, restes et caméra, puis quitte.",
+    "exit_quit": "Quitte immédiatement sans écrire d’instantané du monde.",
+    "exit_cancel": "Ferme cette invite et revient à la vue précédente sans modifier le monde."
   },
   "option_values": {
     "en": "Anglais",
@@ -319,5 +376,32 @@
     "crustacean": "Segmenté avec pattes",
     "cephalopod": "Manteau et bras",
     "unknown": "Inconnu"
+  },
+  "evolution": {
+    "run": "Graine %d | Temps simulé %.1f s",
+    "population": "Vivants %d | Embryons en développement %d | Organismes enracinés %d",
+    "generations": "Génération maximale : vivante %d / atteinte %d",
+    "births": "Descendants naturels %d | Sexués %d | Clonaux %d",
+    "mutated": "Descendants avec nouvelles mutations %d | Avec mutations majeures %d",
+    "founders": "Fondateurs initiaux %d | Remplacements automatiques %d | Injections manuelles %d",
+    "deaths": "Décès %d",
+    "floor": "Population minimale automatique : %d organismes vivants",
+    "floor_off": "Population minimale automatique : désactivée",
+    "capacity_wait": "Il manque %d : les embryons existants peuvent réserver les places restantes.",
+    "discoveries": "Topologies apparues pour la première fois par reproduction : %d",
+    "discovery": "%s — organisme #%d, génération %d, à %.1f s",
+    "discovery_note": "Compte la première apparition d’une topologie dans cette simulation, pas une nouvelle espèce. Une forme injectée manuellement est déjà connue. Des variations héréditaires restent possibles dans chaque topologie.",
+    "recent": "Derniers organismes nés ou introduits (parent -1 = aucun parent simulé) :",
+    "record": "#%d | G%d | %s | %s | Parents %d / %d | %s",
+    "origin_initial": "fondateur initial",
+    "origin_population_rescue": "remplacement automatique",
+    "origin_manual": "injection manuelle",
+    "origin_sexual": "naissance sexuée",
+    "origin_clonal": "naissance clonale",
+    "alive": "vivant",
+    "dead": "décédé",
+    "close": "Fermer",
+    "exported": "Historique évolutif enregistré",
+    "retention": "Naissances conservées : %d. Anciens enregistrements supprimés : %d. Totaux et premières découvertes restent conservés. L’export contient la généalogie retenue ; ce sont des observations, pas une sauvegarde du monde."
   }
 }

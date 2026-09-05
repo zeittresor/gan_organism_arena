@@ -34,7 +34,7 @@ static func boundary_intent(org, intent: Vector3, half_extent: float) -> Vector3
     if absf(p.z) > safe_edge:
         avoidance.z = -signf(p.z) * clampf((absf(p.z) - safe_edge) / maxf(1.0, margin - radius), 0.0, 1.0)
     if org.in_water or org.airborne:
-        var top: float = half_extent * 0.60 - margin
+        var top: float = (float(org.habitat.ceiling_y) if org.habitat != null else half_extent * 0.60) - margin
         if p.y > top: avoidance.y = -clampf((p.y - top) / maxf(1.0, margin), 0.0, 1.0)
         if org.in_water and org.grounded: intent.y = maxf(0.0, intent.y)
     if avoidance.length_squared() > 0.0001:
@@ -63,6 +63,25 @@ static func step(org, dt: float, half_extent: float) -> void:
         if spatial:
             var pitch_limit: float = 1.25 if ballistic else (0.90 if org.airborne else 1.10)
             target_pitch = clampf(atan2(intent.y, horizontal), -pitch_limit, pitch_limit)
+    elif org.pair_target_id >= 0 and org.courtship_alignment > 0.0 and org.courtship_facing.length_squared() > 0.01:
+        # Once a pair reaches its fixed docking points it may align in place.
+        # Farther away it still turns into its direction of travel and never
+        # swims sideways or orbits a moving partner target.
+        var courtship_direction: Vector3 = org.courtship_facing.normalized()
+        var courtship_horizontal: float = Vector2(courtship_direction.x, courtship_direction.z).length()
+        if courtship_horizontal > 0.05:
+            target_yaw = atan2(-courtship_direction.x, -courtship_direction.z)
+        if spatial:
+            target_pitch = clampf(atan2(courtship_direction.y, courtship_horizontal), -0.75, 0.75)
+    if org.pair_target_id >= 0 and org.courtship_alignment > 0.0 and org.courtship_facing.length_squared() > 0.01:
+        var docking_direction: Vector3 = org.courtship_facing.normalized()
+        var docking_horizontal: float = Vector2(docking_direction.x, docking_direction.z).length()
+        if docking_horizontal > 0.05:
+            var docking_yaw: float = atan2(-docking_direction.x, -docking_direction.z)
+            target_yaw = wrapf(target_yaw + wrapf(docking_yaw - target_yaw, -PI, PI) * org.courtship_alignment, -PI, PI)
+        if spatial:
+            var docking_pitch: float = clampf(atan2(docking_direction.y, docking_horizontal), -0.75, 0.75)
+            target_pitch = lerpf(target_pitch, docking_pitch, org.courtship_alignment)
     if org.support_near_ground and not org.rooted and not org.airborne and not ballistic:
         target_pitch = lerpf(target_pitch, org.support_pitch, 1.0 - org.submerged_fraction * 0.75)
     var limit: float = turn_limit(org) if org.genome.muscle_drive > 0.0 and not fixed_body else 0.0
@@ -111,7 +130,12 @@ static func step(org, dt: float, half_extent: float) -> void:
         heading = heading.normalized()
     var alignment: float = maxf(0.0, heading.dot(intent.normalized())) if speed > 0.08 else 1.0
     var cruise: float = 0.55 if org.airborne else (0.30 if org.in_water else 0.15)
-    var goal: Vector3 = heading * speed * lerpf(cruise, 1.0, alignment)
+    var propulsion_heading: Vector3 = heading
+    if org.pair_target_id >= 0 and org.courtship_alignment > 0.0 and speed > 0.08:
+        # Fine docking may use fins/limbs for limited lateral translation while
+        # the body holds its common mating orientation.
+        propulsion_heading = (heading * (1.0 - org.courtship_alignment) + intent.normalized() * org.courtship_alignment).normalized()
+    var goal: Vector3 = propulsion_heading * speed * lerpf(cruise, 1.0, alignment)
     var acceleration: float = acceleration_limit(org)
     if not spatial:
         goal.y = org.velocity.y

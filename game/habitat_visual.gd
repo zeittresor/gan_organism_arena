@@ -1,14 +1,46 @@
 extends Node3D
 
+var water_material: ShaderMaterial
+var world_time: float = 0.0
+
+func set_world_time(seconds: float) -> void:
+    world_time = seconds
+    if is_instance_valid(water_material):
+        water_material.set_shader_parameter("world_time", world_time)
+
 const HabitatModelScript = preload("res://game/habitat_model.gd")
 var model = HabitatModelScript.new()
 var resource_positions: Array[Vector3] = []
 
 var habitat_level: int = 5
-var world_size: float = 72.0
+var world_size: float = 288.0
 var waterline: float = 21.0
 var ground_y: float = -21.0
 var geometry_root: Node3D
+var terrain_materials: Array = []
+var reef_instance: MultiMeshInstance3D
+var reef_transforms: Array[Transform3D] = []
+const REEF_CAPACITY: int = 192
+
+func apply_textures() -> void:
+    var terrain_texture = TextureAssets.terrain_texture_for(habitat_level) if TextureAssets.enabled else null
+    var terrain_maps: Array = []
+    for key in ["seabed", "shore", "sand", "grass"]:
+        terrain_maps.append(TextureAssets.terrain_texture_named(key) if TextureAssets.enabled else null)
+    var textures_ready: bool = TextureAssets.enabled and terrain_texture != null
+    for map in terrain_maps:
+        textures_ready = textures_ready and map != null
+    for material in terrain_materials:
+        if material is ShaderMaterial:
+            material.set_shader_parameter("use_texture", textures_ready)
+            if textures_ready:
+                material.set_shader_parameter("terrain_map", terrain_texture)
+                material.set_shader_parameter("seabed_map", terrain_maps[0])
+                material.set_shader_parameter("shore_map", terrain_maps[1])
+                material.set_shader_parameter("sand_map", terrain_maps[2])
+                material.set_shader_parameter("grass_map", terrain_maps[3])
+        elif material is StandardMaterial3D:
+            material.albedo_texture = terrain_texture
 
 func _ready() -> void:
     geometry_root = Node3D.new()
@@ -28,6 +60,7 @@ func _clear_geometry() -> void:
 
 func _rebuild() -> void:
     _clear_geometry()
+    terrain_materials.clear()
     model.configure(habitat_level, world_size)
     var half: float = model.half_extent
     ground_y = model.ground_y
@@ -35,19 +68,22 @@ func _rebuild() -> void:
     _build_bounds(half)
     _build_terrain()
     _build_resources()
+    _build_reef_features()
     _build_water_surface(half)
     _build_shoreline()
     if model.has_sky():
         _build_air_markers(half)
+    apply_textures()
 
 func _build_bounds(half: float) -> void:
-    var yhalf: float = half * 0.60
+    var bottom: float = model.bottom_y
+    var top: float = model.ceiling_y
     var mesh = ImmediateMesh.new()
     mesh.surface_begin(Mesh.PRIMITIVE_LINES)
     mesh.surface_set_color(Color(0.10, 0.48, 0.62, 0.22))
     var corners = [
-        Vector3(-half,-yhalf,-half), Vector3(half,-yhalf,-half), Vector3(half,-yhalf,half), Vector3(-half,-yhalf,half),
-        Vector3(-half,yhalf,-half), Vector3(half,yhalf,-half), Vector3(half,yhalf,half), Vector3(-half,yhalf,half)
+        Vector3(-half,bottom,-half), Vector3(half,bottom,-half), Vector3(half,bottom,half), Vector3(-half,bottom,half),
+        Vector3(-half,top,-half), Vector3(half,top,-half), Vector3(half,top,half), Vector3(-half,top,half)
     ]
     var edges = [[0,1],[1,2],[2,3],[3,0],[4,5],[5,6],[6,7],[7,4],[0,4],[1,5],[2,6],[3,7]]
     for e in edges:
@@ -87,13 +123,18 @@ func _build_terrain() -> void:
                 var dz: float = (model.floor_at(p + Vector3(0, 0, 0.1)) - model.floor_at(p - Vector3(0, 0, 0.1))) / 0.2
                 surface.set_normal(Vector3(-dx, 1.0, -dz).normalized())
                 surface.set_color(color)
+                surface.set_uv(Vector2(p.x, p.z) * 0.25)
                 surface.add_vertex(p)
     var mesh = MeshInstance3D.new()
     mesh.mesh = surface.commit()
-    var mat = StandardMaterial3D.new()
-    mat.vertex_color_use_as_albedo = true
-    mat.roughness = 0.95
-    mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+    var mat = ShaderMaterial.new()
+    mat.shader = preload("res://game/terrain_surface.gdshader")
+    mat.set_shader_parameter("use_texture", false)
+    mat.set_shader_parameter("waterline", waterline)
+    mat.set_shader_parameter("transition_width", maxf(1.5, world_size * 0.012))
+    var grass_mix: float = 0.12 if habitat_level <= 6 else (0.82 if habitat_level in [7, 8] else 0.48)
+    mat.set_shader_parameter("grass_mix", grass_mix)
+    terrain_materials.append(mat)
     mesh.material_override = mat
     geometry_root.add_child(mesh)
 
@@ -114,10 +155,85 @@ func _build_resources() -> void:
         var mat = StandardMaterial3D.new()
         mat.albedo_color = Color(0.34, 0.32, 0.25) if i % 3 == 0 else Color(0.58, 0.35, 0.14)
         mat.roughness = 0.95
+        terrain_materials.append(mat)
         stone.material = mat
         instance.mesh = stone
         instance.position = p + Vector3.UP * stone.radius * 0.4
         geometry_root.add_child(instance)
+
+func _build_reef_features() -> void:
+    # Coral and mineral outcrops appear only in habitats with a persistent
+    # submerged floor. Their deterministic anchors keep a new world stable,
+    # while dead-organism remains are added to the same mesh over time.
+    reef_transforms.clear()
+    reef_instance = null
+    if habitat_level < 7:
+        return
+    var rng = RandomNumberGenerator.new()
+    rng.seed = 99831 + habitat_level * 17
+    var mesh = CylinderMesh.new()
+    mesh.top_radius = 0.07
+    mesh.bottom_radius = 0.22
+    mesh.height = 1.0
+    mesh.radial_segments = 6
+    mesh.rings = 2
+    var material = StandardMaterial3D.new()
+    material.albedo_color = Color(0.78, 0.34, 0.38)
+    material.roughness = 0.90
+    mesh.material = material
+    for i in range(56):
+        var p = Vector3(rng.randf_range(-0.90, 0.90) * model.half_extent, 0.0, rng.randf_range(-0.90, 0.90) * model.half_extent)
+        var floor_y: float = model.floor_at(p)
+        if floor_y >= model.waterline - 0.9:
+            continue
+        var stalk_count: int = rng.randi_range(1, 3)
+        for stalk in range(stalk_count):
+            var offset = Vector3(rng.randf_range(-0.9, 0.9), 0.0, rng.randf_range(-0.9, 0.9))
+            var height: float = rng.randf_range(0.45, 1.8)
+            var radius: float = rng.randf_range(0.45, 1.25)
+            var base = Vector3(p.x + offset.x, floor_y + height * 0.5, p.z + offset.z)
+            reef_transforms.append(Transform3D(Basis.IDENTITY.scaled(Vector3(radius, height, radius)), base))
+    reef_instance = MultiMeshInstance3D.new()
+    reef_instance.name = "CoralAndMineralReefs"
+    var multi = MultiMesh.new()
+    multi.transform_format = MultiMesh.TRANSFORM_3D
+    multi.mesh = mesh
+    multi.instance_count = REEF_CAPACITY
+    reef_instance.multimesh = multi
+    geometry_root.add_child(reef_instance)
+    _upload_reef_transforms([])
+
+func update_remains(remains: Array) -> void:
+    if not is_instance_valid(reef_instance) or model == null:
+        return
+    _upload_reef_transforms(remains)
+
+func _upload_reef_transforms(remains: Array) -> void:
+    if not is_instance_valid(reef_instance) or reef_instance.multimesh == null:
+        return
+    var transforms: Array[Transform3D] = reef_transforms.duplicate()
+    for i in range(remains.size()):
+        if transforms.size() >= REEF_CAPACITY:
+            break
+        var item: Dictionary = remains[i]
+        if not bool(item.get("aquatic", false)):
+            continue
+        var values: Array = item.get("position", [])
+        if values.size() < 3:
+            continue
+        var p = Vector3(float(values[0]), float(values[1]), float(values[2]))
+        var floor_y: float = model.floor_at(p)
+        var age: float = maxf(0.0, float(item.get("age", 0.0)))
+        var growth: float = clampf(age / 90.0, 0.22, 1.55)
+        var body_size: float = clampf(float(item.get("size", 0.5)), 0.15, 2.3)
+        var height: float = clampf((0.32 + body_size * 0.42) * growth, 0.18, 2.8)
+        var radius: float = clampf(0.30 + body_size * 0.14, 0.22, 0.72)
+        p.y = floor_y + height * 0.5
+        transforms.append(Transform3D(Basis.IDENTITY.scaled(Vector3(radius, height, radius)), p))
+    var multi: MultiMesh = reef_instance.multimesh
+    for i in range(REEF_CAPACITY):
+        var transform = transforms[i] if i < transforms.size() else Transform3D(Basis.IDENTITY.scaled(Vector3(0.001, 0.001, 0.001)), Vector3(0.0, -10000.0, 0.0))
+        multi.set_instance_transform(i, transform)
 
 func _build_water_surface(half: float) -> void:
     var plane = MeshInstance3D.new()
@@ -127,6 +243,8 @@ func _build_water_surface(half: float) -> void:
     mesh.subdivide_depth = 96
     var mat = ShaderMaterial.new()
     mat.shader = preload("res://game/water_surface.gdshader")
+    water_material = mat
+    mat.set_shader_parameter("world_time", world_time)
     mesh.material = mat
     plane.mesh = mesh
     plane.position.y = waterline
@@ -151,7 +269,7 @@ func _build_air_markers(half: float) -> void:
     var rng = RandomNumberGenerator.new()
     rng.seed = 42119
     for i in range(mm.instance_count):
-        var p = Vector3(rng.randf_range(-half, half), rng.randf_range(waterline + 1.5, half * 0.55), rng.randf_range(-half, half))
+        var p = Vector3(rng.randf_range(-half, half), rng.randf_range(waterline + 1.5, model.ceiling_y - 1.0), rng.randf_range(-half, half))
         mm.set_instance_transform(i, Transform3D(Basis.IDENTITY, p))
     mm_instance.multimesh = mm
     geometry_root.add_child(mm_instance)

@@ -6,11 +6,11 @@ Die Evolution hat kein Ziel wie „Mensch“, „intelligenter“ oder „größ
 
 Standard ist nun die Küste von Taste 7. Gründer starten im Wasser und können noch nicht laufen oder fliegen. Die Küste besitzt offenen Himmel für später entwickelte Flieger. [Fortpflanzung, Entwicklung und wissenschaftliche Grenzen](LIFE_CYCLE_DE.md) beschreibt die neuen Abläufe. **L** setzt eine neue zufällige Lichtrichtung; die Wasseroberfläche hat deutlichere Wellen, Reflexe und eine Uferkontur.
 
-## Größere Welt
+## Noch größere Fläche und mehr Luftraum
 
-Der Ausgangsraum misst jetzt **144 × 86,4 × 144** statt **72 × 43,2 × 72** Einheiten. Alle drei Richtungen sind verdoppelt, das Volumen ist achtmal so groß. Die Grundmenge verteilter Nahrung wurde von 180 auf 540 erhöht; Nahrung liegt im Wasser und auf zugänglichen Böden. Die Populations- und Körperzellenlimits bleiben begrenzt.
+Die Standardfläche misst jetzt **288 × 288** statt **144 × 144** Einheiten. Relief und Wassertiefe bleiben auf einem mit Alpha22 vergleichbaren Maßstab, während die obere Weltgrenze von **43,2 auf 64,8** Einheiten steigt. So entstehen 50 Prozent mehr Raum über dem Ursprung für mögliche Fluglinien, ohne Berge und Meerestiefe nur wegen der größeren Fläche zu verdoppeln. Die Grundmenge verteilter Nahrung bleibt aus Leistungsgründen bei 540; Nahrung liegt im Wasser und auf zugänglichen Böden. Populations- und Körperzellenlimits bleiben begrenzt.
 
-Beim Übernehmen einer alten `settings/config.json` werden die alten Weltdimensionen einmal verdoppelt, mindestens auf die neuen Standardmaße. Eine gespeicherte Schema-Kennung verhindert erneutes Verdoppeln beim nächsten Start. Die restlichen Optionen bleiben erhalten. Neue Installationen starten direkt mit der größeren Welt.
+Beim Übernehmen einer alten `settings/config.json` wird die horizontale Breite einmal verdoppelt, mindestens auf das neue Standardmaß. Eine gespeicherte Schema-Kennung verhindert erneutes Verdoppeln beim nächsten Start. Die restlichen Optionen bleiben erhalten. Neue Installationen starten direkt mit der größeren Welt.
 
 ## Was die Anpassungen bewirken
 
@@ -28,8 +28,8 @@ Beim Übernehmen einer alten `settings/config.json` werden die alten Weltdimensi
 | Scheu und Verstecken | Bedrohung plus Rückzugsneigung führt zur Flucht oder hinter Deckung. Versteckte, getarnte Wesen werden aus geringerer Entfernung erkannt. |
 | Putzer | Kleine, spezialisierte Wesen entfernen Aufwuchs und Parasiten von größeren Wirten. Das ist von schädigendem Parasitismus getrennt. |
 | Parasitismus | Kontakt zu einem größeren Wirt ermöglicht Energieentzug, belastet aber den Wirt und kann ihn töten. |
-| Sesshafte Formen | Verwurzelungsneigung plus Photosynthese oder Filtration. Der Körper siedelt sich auf dem tatsächlichen Boden an und driftet nicht mehr herum. |
-| Pflanzen und Bäume | Blatt-/Filterstrukturen, Verzweigung und auf Land ausreichend Holz- und Stützanlagen. Licht, Wassertiefe und lokale Konkurrenz beeinflussen den Ertrag. Pflanzen können abgeweidet werden. |
+| Sesshafte Formen | Eine gemeinsam ausreichende Verwurzelungsneigung plus Photosynthese oder Filtration. Aquatische Gründer bleiben unter der Schwelle; Vererbung, Rekombination oder Mutation können sie bei Nachkommen überschreiten. Der Körper sucht dann den tatsächlichen Boden, verwurzelt sich erst bei Kontakt und driftet nicht mehr. |
+| Pflanzen und Bäume | Verbundene Wurzeln und Blatt-/Filterstrukturen; getrennte Wasserpflanzen, nicht verholzte Landpflanzen und bei ausreichenden Holz-/Stützanlagen Bäume. Licht, Wassertiefe und lokale Konkurrenz beeinflussen den Ertrag. Pflanzen können abgeweidet werden. |
 
 Diese Eigenschaften sind kombinierbar. „Insektenartig“ oder „baumartig“ bezeichnet hier eine sichtbare Ähnlichkeit, keine feste irdische Art oder wissenschaftliche Abstammungslinie. Individuelles Lernen und genetische Evolution sind getrennt: Nachkommen erben Anlagen; erlernte Jagd-, Flug- und Werkzeugfertigkeiten beginnen neu.
 

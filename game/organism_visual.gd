@@ -40,6 +40,8 @@ var render_active: bool = true
 var render_pending: bool = false
 var render_uploads: int = 0
 var skipped_uploads: int = 0
+var surface_material: ShaderMaterial
+var tool_material: StandardMaterial3D
 
 var owner_life = null
 var multimesh_instance: MultiMeshInstance3D
@@ -52,6 +54,7 @@ var focus_anchor_local = Vector3(0.0, 0.0, -1.0)
 var body_size_hint = 3.0
 var rear_anchor_index: int = -1
 var focus_anchor_index: int = -1
+var reproductive_anchor_index: int = -1
 
 func _ready() -> void:
     multimesh_instance = MultiMeshInstance3D.new()
@@ -62,9 +65,9 @@ func _ready() -> void:
     tool_mesh = MeshInstance3D.new()
     var tool = BoxMesh.new()
     tool.size = Vector3(0.12, 0.13, 0.62)
-    var mat = StandardMaterial3D.new()
-    mat.albedo_color = Color(0.75, 0.61, 0.31)
-    tool.material = mat
+    tool_material = StandardMaterial3D.new()
+    tool_material.albedo_color = Color(0.75, 0.61, 0.31)
+    tool.material = tool_material
     tool_mesh.mesh = tool
     tool_mesh.visible = false
     add_child(tool_mesh)
@@ -83,13 +86,16 @@ func _create_render_resources() -> void:
     var mm = MultiMesh.new()
     mm.transform_format = MultiMesh.TRANSFORM_3D
     mm.use_colors = true
+    mm.use_custom_data = true
     mm.mesh = sphere
     multimesh_instance.multimesh = mm
     var links = MultiMesh.new()
     links.transform_format = MultiMesh.TRANSFORM_3D
     links.use_colors = true
+    links.use_custom_data = true
     links.mesh = sphere
     links_instance.multimesh = links
+    surface_material = null
 
 func recreate_render_resources() -> void:
     if not multimesh_instance:
@@ -112,6 +118,62 @@ func set_view_mode(mode: String) -> void:
     view_mode = mode
     _prepare_render()
     _upload()
+
+func apply_textures() -> void:
+    if not owner_life or not multimesh_instance: return
+    if TextureAssets.enabled and view_mode == "natural":
+        var coat_texture = TextureAssets.body_texture(owner_life.genome.skin_pattern)
+        var specialized_texture = TextureAssets.specialized_body_texture()
+        # Optional assets must fail closed to the vertex-colour renderer. This
+        # keeps a runtime toggle safe even when a user replaced a PNG badly.
+        if coat_texture == null or specialized_texture == null:
+            multimesh_instance.material_override = null
+            links_instance.material_override = null
+            if tool_material: tool_material.albedo_texture = null
+            return
+        if surface_material == null:
+            surface_material = ShaderMaterial.new()
+            surface_material.shader = preload("res://game/organism_surface.gdshader")
+        surface_material.set_shader_parameter("coat", coat_texture)
+        surface_material.set_shader_parameter("specialized", specialized_texture)
+        surface_material.set_shader_parameter("coat_roughness", 0.85 if owner_life.rooted else 0.78 - float(owner_life.genome.mucus_cover) * 0.54)
+        multimesh_instance.material_override = surface_material
+        links_instance.material_override = surface_material
+        if tool_material: tool_material.albedo_texture = TextureAssets.texture_named("tool_wood")
+    else:
+        multimesh_instance.material_override = null
+        links_instance.material_override = null
+        if tool_material: tool_material.albedo_texture = null
+
+func _texture_weight(tissue: int) -> float:
+    return 1.0
+
+func _texture_category(tissue: int) -> int:
+    if tissue == Tissue.SKELETON: return 1
+    if tissue in [Tissue.NEURAL, Tissue.SENSOR]: return 2
+    if tissue in [Tissue.IRIS, Tissue.PUPIL, Tissue.FACET]: return 3
+    if tissue == Tissue.FIN: return 4
+    if tissue == Tissue.LEAF: return 5
+    if tissue in [Tissue.ROOT, Tissue.BARK]: return 6
+    if tissue in [Tissue.WING, Tissue.MEMBRANE]: return 7
+    if tissue in [Tissue.FEATHER, Tissue.QUILL]: return 8
+    if tissue == Tissue.HORN: return 9
+    if tissue == Tissue.BEAK: return 10
+    if tissue == Tissue.LEG: return 11
+    if tissue in [Tissue.ARMOR, Tissue.SCALE, Tissue.COCOON]: return 12
+    if tissue in [Tissue.GONAD, Tissue.REPRO_DUCT, Tissue.REPRO_OPENING, Tissue.CLASPER, Tissue.BROOD_SAC]: return 13
+    if tissue == Tissue.ORNAMENT: return 14
+    if tissue in [Tissue.BODY, Tissue.SKIN, Tissue.FUR, Tissue.MUCUS]: return 0
+    return 15
+
+func _texture_variation(cell_index: int) -> Vector2:
+    # Stable per segment and independent of simulation RNG: enabling textures
+    # must never alter biology, while adjacent body parts should not display
+    # the same conspicuous excerpt of an inherited coat.
+    var genome_seed: int = int(owner_life.genome.seed) if owner_life and owner_life.genome else 0
+    var first: int = posmod(genome_seed * 31 + cell_index * 1103 + 7919, 65521)
+    var second: int = posmod(genome_seed * 73 + cell_index * 1877 + 104729, 65519)
+    return Vector2(float(first) / 65521.0, float(second) / 65519.0)
 
 func maybe_rebuild() -> void:
     if not owner_life:
@@ -156,6 +218,7 @@ func _develop_body(complexity: float) -> void:
     var growth: float = log(1.0 + complexity)
     var plan: int = int(g.body_plan)
     var budget: int = visual_cap
+    reproductive_anchor_index = -1
     visual_cap = maxi(24, int(budget * (0.68 if owner_life.rooted else 0.62)))
     var life_stage: String = Cycle.stage(owner_life)
     if life_stage == "pupa":
@@ -201,17 +264,18 @@ func phenotype_key() -> String:
 
 func _develop_rooted(g, growth: float) -> void:
     var tree: bool = not owner_life.in_water and g.wood_drive > 0.60 and g.support_drive > 0.55
+    var woody: bool = not owner_life.in_water and g.wood_drive > 0.35
     var height: float = (2.5 + growth * 1.3) if tree else (0.8 + growth * 0.45)
     var radius: float = 0.18 + g.support_drive * 0.18
-    _add_chain(Vector3.ZERO, Vector3.UP * height, 10, Tissue.BARK if tree else Tissue.BODY, radius)
+    _add_chain(Vector3.ZERO, Vector3.UP * height, 10, Tissue.BARK if woody else Tissue.BODY, radius)
     for i in range(7):
         var angle: float = float(i) * 2.39996 + float(g.seed % 19)
         var radial = Vector3(cos(angle), 0.0, sin(angle))
         _add_chain(Vector3.ZERO, radial * (0.65 + g.root_drive) - Vector3.UP * 0.12, 3, Tissue.ROOT, radius * 0.5)
         var start = Vector3.UP * height * (0.30 + float(i) * 0.075)
         var tip = start + radial * height * (0.25 + g.branch_drive * 0.35) + Vector3.UP * height * 0.12
-        _add_chain(start, tip, 3, Tissue.BARK if tree else Tissue.BODY, radius * 0.45)
-        _add_cell(tip, Tissue.LEAF if g.photosynthesis > 0.5 else Tissue.FIN, 0.38 + g.photosynthesis * 0.65, Vector3(1.6, 0.35, 1.2))
+        _add_chain(start, tip, 3, Tissue.BARK if woody else Tissue.BODY, radius * 0.45)
+        _add_cell(tip, Tissue.LEAF if g.photosynthesis > 0.38 else Tissue.FIN, 0.38 + g.photosynthesis * 0.65, Vector3(1.6, 0.35, 1.2))
     rear_anchor_local = Vector3.ZERO
     focus_anchor_local = Vector3.UP * height * 0.7
     body_size_hint = height * 0.65
@@ -798,6 +862,7 @@ func _prepare_render() -> void:
             link_slots.append(-1)
     if owner_life and multimesh_instance and multimesh_instance.multimesh:
         multimesh_instance.multimesh.mesh.material.roughness = 0.85 if owner_life.rooted else 0.78 - float(owner_life.genome.mucus_cover) * 0.54
+    apply_textures()
 
 func _upload() -> void:
     if not multimesh_instance or not multimesh_instance.multimesh:
@@ -834,11 +899,16 @@ func _upload() -> void:
         if update_colors:
             var color: Color = _surface_color(cell)
             mm.set_instance_color(i, color)
+            var variation: Vector2 = _texture_variation(i)
+            var category: int = _texture_category(int(cell["t"]))
+            var surface_data = Color(_texture_weight(int(cell["t"])), variation.x, variation.y, float(category) / 15.0)
+            mm.set_instance_custom_data(i, surface_data)
             if link_slot >= 0:
                 var link_color: Color = color
                 if view_mode == "cell" and cell["joint"]:
                     link_color = Color(0.90, 0.30, 0.23) if cell["joint_mode"] == "hydrostat" else Color(0.25, 0.85, 0.90)
                 links.set_instance_color(link_slot, link_color)
+                links.set_instance_custom_data(link_slot, surface_data)
         if link_slot >= 0:
             var parent: int = int(cell.get("parent", 0))
             var anchor: Vector3 = posed_cells[parent] if parent >= 0 and posed_cells.size() == body_cells.size() else pos
@@ -949,11 +1019,12 @@ func _add_reproductive_structures(g) -> void:
     var center: Vector3 = focus_anchor_local.lerp(rear_anchor_local, 0.62)
     var size: float = maxf(0.30, body_size_hint * 0.15)
     var maturation: float = clampf((maturity - 0.60) / 0.40, 0.0, 1.0)
-    if owner_life.rooted and g.photosynthesis > 0.50:
+    if owner_life.rooted and g.photosynthesis > 0.38:
         _add_cell(focus_anchor_local, Tissue.ORNAMENT, size * 0.7 * maturation, Vector3(1.5, 0.5, 1.5))
         return
     # Schematic gonads/ducts are exposed by the scientific cell view; the
     # natural view shows only the small opening and applicable appendages.
+    reproductive_anchor_index = body_cells.size()
     _add_cell(center + Vector3(0, -size * 0.8, 0), Tissue.REPRO_OPENING, size * 0.20, Vector3(1.4, 0.2, 1.0))
     var role: String = Cycle.sex_role(g)
     if g.internal_fertilization >= 0.50 and role != "female":
@@ -968,6 +1039,11 @@ func _add_reproductive_structures(g) -> void:
     _add_cell(center + Vector3(-size * 0.4, 0, 0), Tissue.GONAD, size * 0.32 * maturation)
     _add_cell(center + Vector3(size * 0.4, 0, 0), Tissue.GONAD, size * 0.32 * maturation)
     _add_chain(center, center + Vector3(0, -size * 0.6, 0), 2, Tissue.REPRO_DUCT, size * 0.10)
+
+func reproductive_anchor() -> Vector3:
+    if reproductive_anchor_index >= 0 and reproductive_anchor_index < posed_cells.size():
+        return posed_cells[reproductive_anchor_index]
+    return focus_anchor_local.lerp(rear_anchor_local, 0.62)
 
 func _add_focused_eye(center: Vector3, radius: float) -> void:
     if visual_cap - body_cells.size() < 3: return

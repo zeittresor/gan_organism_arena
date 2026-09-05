@@ -2,6 +2,8 @@ extends RefCounted
 
 # Deterministic contact fixtures: a ramp and an uneven slope.
 var half_extent: float = 144.0
+var bottom_y: float = -86.4
+var ceiling_y: float = 86.4
 var waterline: float = -100.0
 var ground_y: float = 0.0
 var revision: int = 1

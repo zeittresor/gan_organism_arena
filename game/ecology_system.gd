@@ -15,6 +15,8 @@ var tool_events: int = 0
 var cleaning_events: int = 0
 var parasitic_events: int = 0
 var rooted_counts: Dictionary = {}
+var observer_enabled: bool = false
+var observer_position: Vector3 = Vector3.ZERO
 
 func configure(model, positions: Array[Vector3]) -> void:
     habitat = model
@@ -22,6 +24,10 @@ func configure(model, positions: Array[Vector3]) -> void:
     stocks.clear()
     for i in range(resources.size()):
         stocks.append(0.70)
+
+func set_observer_presence(enabled: bool, position: Vector3) -> void:
+    observer_enabled = enabled
+    observer_position = position
 
 func begin_tick(snapshot: Array, dt: float) -> void:
     population = snapshot
@@ -98,6 +104,7 @@ func reachable(org, p: Vector3) -> bool:
 func act(org, dt: float, rng: RandomNumberGenerator) -> void:
     if not org.alive:
         return
+    _update_observer_sense(org, dt)
     if Cycle.stage(org) == "pupa":
         org.behavior_state = "metamorphosing"
         org.velocity = Vector3.ZERO
@@ -150,6 +157,8 @@ func act(org, dt: float, rng: RandomNumberGenerator) -> void:
         org.steer_towards(org.refuge, minf(1.0, dt * 5.0))
         return
     org.decision_timer = 0.0
+    if _observer_action(org, dt):
+        return
     if Traits.sessile(org.genome):
         org.behavior_state = "settle"
         org.steer_towards(Vector3(org.global_position.x, habitat.floor_at(org.global_position), org.global_position.z), minf(1.0, dt * 4.0))
@@ -185,6 +194,42 @@ func act(org, dt: float, rng: RandomNumberGenerator) -> void:
         org.behavior_state = "flight_practice"
     elif org.stand_upright:
         org.behavior_state = "walk_upright"
+
+func _update_observer_sense(org, dt: float) -> void:
+    if not observer_enabled:
+        org.observer_awareness = maxf(0.0, float(org.observer_awareness) - dt * 0.16)
+        org.observer_distance = INF
+        return
+    var offset: Vector3 = observer_position - org.global_position
+    var distance: float = offset.length()
+    org.observer_distance = distance
+    var sensing_range: float = 10.0 + float(org.genome.sensory_drive) * 22.0 + float(org.intelligence) * 4.0
+    var awareness: float = clampf(1.0 - distance / maxf(1.0, sensing_range), 0.0, 1.0)
+    org.observer_awareness = lerpf(float(org.observer_awareness), awareness, minf(1.0, dt * 3.0))
+    if awareness > 0.02:
+        # The observer is a non-prey adult humanoid signal: eyes and attention
+        # can track it, but it never enters the food or mating candidate lists.
+        org.eye_target = observer_position
+
+func _observer_action(org, dt: float) -> bool:
+    if not observer_enabled or float(org.observer_awareness) <= 0.18:
+        return false
+    var offset: Vector3 = observer_position - org.global_position
+    var distance: float = maxf(0.1, offset.length())
+    var sensing_range: float = 10.0 + float(org.genome.sensory_drive) * 22.0 + float(org.intelligence) * 4.0
+    if distance > sensing_range:
+        return false
+    if float(org.genome.shyness) > 0.68 and distance < sensing_range * 0.72:
+        org.behavior_state = "avoid_observer"
+        org.steer_towards(org.global_position - offset.normalized() * 7.0, minf(1.0, dt * 3.0), 0.9)
+        return true
+    if float(org.genome.curiosity) > 0.62 and float(org.intelligence) > 0.08 and distance < sensing_range * 0.58 and org.prey_id < 0:
+        org.behavior_state = "inspect_observer"
+        org.steer_towards(observer_position, minf(1.0, dt * 2.0), 0.55)
+        return true
+    if distance < sensing_range * 0.40:
+        org.behavior_state = "observe_observer"
+    return false
 
 func _feed_rooted(org, dt: float) -> void:
     var patch: Vector2i = Vector2i(floori(org.global_position.x / 8.0), floori(org.global_position.z / 8.0))

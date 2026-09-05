@@ -1,0 +1,11 @@
+# Alpha23 — freie Sicht, Pflanzenlinien und größere Welt
+
+Die Verfolgungskamera verwendet weiterhin die anatomischen Heck- und Fokuspunkte des gewählten Lebewesens. Zusätzlich tastet sie nun die gesamte Verbindung zwischen Fokus und Kamera gegen dasselbe Gelände-Höhenfeld ab, das auch Bodenberührung und Körperstütze verwenden. Liegt ein Berg oder Hang dazwischen, wird die Kameraposition so weit angehoben, dass Zielpunkt und Sichtlinie oberhalb des Geländes bleiben. Beim Einschalten der Verfolgung wird die sichere Ansicht unmittelbar gewählt; danach bleibt die Bewegung geglättet.
+
+Eine sessile Linie benötigt weiterhin keine vorbestimmte irdische Pflanzenart. Sie braucht gemeinsam eine ausreichende vererbbare Substratverankerung und eine ortsfeste Energiequelle: Photosynthese oder Filtration/Putzen. Die aquatischen Gründer liegen unter der Verankerungsschwelle und starten beweglich. Ihre erbliche Variation liegt nun jedoch nahe genug an ihr, dass Rekombination oder gewöhnliche Mutation sie in späteren Generationen überschreiten können. Ein entsprechend veranlagtes Wesen sucht den Boden auf und verwurzelt sich erst bei wirklichem Kontakt.
+
+Photosynthetische Formen erhalten verbundene Wurzeln und Blätter. Dabei werden Wasserpflanzen, nicht verholzte Landpflanzen und strukturell gestützte Bäume getrennt benannt. Sessile Filtrierer bleiben ebenfalls möglich und tragen statt Blättern geeignete filternde Flächen. Das Ergebnis wird nicht garantiert: Fortpflanzung, Variation, erreichbarer Boden, Atmung, Nahrung und Selektion entscheiden weiter über das Überleben einer Linie.
+
+Die Standardfläche wächst von 144 × 144 auf 288 × 288 Einheiten. Vertikales Relief und Wassertiefe werden von der Horizontalgröße entkoppelt und bleiben auf dem bisherigen Maßstab; dadurch werden Berge nicht allein wegen der größeren Fläche doppelt hoch. Die obere Grenze steigt gezielt von 43,2 auf 64,8 Einheiten und stellt 50 Prozent mehr Luftraum bereit. Vorhandene Einstellungen ohne den neuen Volumenschlüssel werden einmalig migriert, spätere manuelle Größenänderungen nicht erneut verdoppelt.
+
+Der Installer prüft zusätzlich steile Hänge und verdeckende Bergkämme, sichere Kameraendpunkte, Pflanzenentwicklung an Land und unter Wasser, verbundene Wurzel-/Blattgewebe sowie einen reproduzierbaren Mutationspfad über die Sessilitätsschwelle.

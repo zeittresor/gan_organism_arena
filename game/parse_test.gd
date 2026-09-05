@@ -6,6 +6,9 @@ extends SceneTree
 # failures fatal without hot-reloading already-instantiated autoload scripts.
 const CORE_SCRIPTS = [
     "res://game/settings_store.gd",
+    "res://game/texture_assets.gd",
+    "res://game/skin_pattern.gd",
+    "res://game/texture_test.gd",
     "res://game/dna_codec.gd",
     "res://game/cell_cycle.gd",
     "res://game/affect_model.gd",
@@ -18,6 +21,8 @@ const CORE_SCRIPTS = [
     "res://game/locomotion.gd",
     "res://game/navigation.gd",
     "res://game/navigation_test.gd",
+    "res://game/follow_camera_solver.gd",
+    "res://game/follow_camera_test.gd",
     "res://game/anatomical_rig.gd",
     "res://game/locomotion_test.gd",
     "res://game/interaction_test.gd",
@@ -25,6 +30,9 @@ const CORE_SCRIPTS = [
     "res://game/localization.gd",
     "res://game/tts_windows.gd",
     "res://game/genome.gd",
+    "res://game/evolution_history.gd",
+    "res://game/evolution_test.gd",
+    "res://game/pause_test.gd",
     "res://game/physiology.gd",
     "res://game/experiment_api.gd",
     "res://game/ai_gateway.gd",

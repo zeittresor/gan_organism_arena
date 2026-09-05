@@ -49,6 +49,45 @@ func run_all() -> bool:
         var gamete: Dictionary = a.make_gamete(rng)
         if gamete["values"][names[0]] == gamete["values"][names[1]]: linked += 1
     check(linked > 340 and linked < 400, "adjacent loci remain linked with occasional recombination")
+
+    # A sexual child receives one real allele from each parent across anatomy,
+    # tissue, physiology and behavioural disposition. Pigment hue needs circular
+    # blending because 0.0 and 1.0 describe the same red on an HSV wheel.
+    var maternal = Genome.new()
+    var paternal = Genome.new()
+    maternal.ensure_diploid()
+    paternal.ensure_diploid()
+    var inherited_loci: Array[String] = ["support_drive", "light_skeleton", "limb_drive", "muscle_drive", "skin_thickness", "shell_drive", "fur_cover", "aggression", "curiosity"]
+    for locus in inherited_loci:
+        maternal.alleles[locus] = [0.18, 0.18]
+        paternal.alleles[locus] = [0.82, 0.82]
+    maternal.alleles["hue"] = [0.97, 0.97]
+    paternal.alleles["hue"] = [0.03, 0.03]
+    maternal.express_diploid()
+    paternal.express_diploid()
+    var maternal_gamete: Dictionary = maternal.make_gamete(rng, 0.0)
+    var paternal_gamete: Dictionary = paternal.make_gamete(rng, 0.0)
+    var mixed_child = maternal.fertilize(paternal, maternal_gamete, paternal_gamete, rng, 0.0, 0.0)
+    for locus in inherited_loci:
+        check(is_equal_approx(float(mixed_child.alleles[locus][0]), 0.18) and is_equal_approx(float(mixed_child.alleles[locus][1]), 0.82), "two-parent allele provenance: " + locus)
+    check(mixed_child.hue < 0.06 or mixed_child.hue > 0.94, "parental red hues blend across the circular pigment boundary")
+    var topology_is_encoded: bool = false
+    for chromosome in mixed_child.dna_document()["chromosomes"]:
+        for encoded_locus in chromosome["loci"]:
+            if encoded_locus["gene"] == "body_plan_code": topology_is_encoded = true
+    check(topology_is_encoded, "body topology is encoded in the exported diploid DNA")
+
+    # Injected ancestors use only a small ancestral topology set. DNA-changing
+    # macro mutations can open body plans that did not exist in that population.
+    var ancestor = Genome.new()
+    ancestor.randomize_from(rng, 91, 0)
+    var novelty_seen: bool = false
+    for i in range(24):
+        var descendant = ancestor.mutated(rng, 0.18, 1.0)
+        if int(descendant.body_plan) not in [0, 1, 3]:
+            novelty_seen = true
+            break
+    check(novelty_seen, "macro mutation reaches a topology absent from the ancestral founder pool")
     var helper = LifeTest.new()
     add_child(helper)
     var world = helper.make_world()

@@ -120,7 +120,8 @@ static func ground(org, world_half: float) -> void:
         return
     var radius: float = visual.contact_radius
     var ceiling: float = org.habitat.floor_upper_bound(position_value, radius)
-    if not org.rooted and position_value.y - radius > ceiling + 0.20 and absf(position_value.x) + radius < world_half and absf(position_value.z) + radius < world_half and position_value.y + radius < world_half * 0.60:
+    var world_top: float = float(org.habitat.ceiling_y) if org.habitat != null else world_half * 0.60
+    if not org.rooted and position_value.y - radius > ceiling + 0.20 and absf(position_value.x) + radius < world_half and absf(position_value.z) + radius < world_half and position_value.y + radius < world_top:
         org.grounded = false
         visual.ground_fast_checks += 1
     else:
@@ -170,8 +171,9 @@ static func ground_detail(org, world_half: float) -> void:
     org.grounded = correction > -0.15
     org.global_position.x += maxf(0.0, -world_half - min_x) - maxf(0.0, max_x - world_half)
     org.global_position.z += maxf(0.0, -world_half - min_z) - maxf(0.0, max_z - world_half)
-    if max_y > world_half * 0.60 and correction <= 0.0:
-        org.global_position.y -= max_y - world_half * 0.60
+    var world_top: float = float(org.habitat.ceiling_y) if org.habitat != null else world_half * 0.60
+    if max_y > world_top and correction <= 0.0:
+        org.global_position.y -= max_y - world_top
 
 static func separation_distance(a, b, shape_a: Array, shape_b: Array, normal: Vector3) -> float:
     var shift: float = 0.0

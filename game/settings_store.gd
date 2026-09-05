@@ -1,7 +1,7 @@
 extends Node
 
-const VERSION = "1.0.0-alpha22"
-const RELEASE_DATE = "2026-09-04"
+const VERSION = "1.0.0-alpha29"
+const RELEASE_DATE = "2026-09-05"
 
 var defaults = {
     "language": "en",
@@ -9,12 +9,12 @@ var defaults = {
     "simulation_tick_hz": 12.0,
     "evolution_rate": 1.0,
     "organism_cap": 28,
-    "initial_organisms": 16,
+    "initial_organisms": 10,
     "nutrient_count": 540,
     "visual_cell_cap": 180,
     "contact_quality": 85,
     "gravity_scale": 1.0,
-    "world_size": 144.0,
+    "world_size": 288.0,
     "thought_mode": "text",
     "thought_interval": 7.0,
     "tts_voice": "default",
@@ -35,9 +35,14 @@ var defaults = {
     "show_fps": true,
     "show_help_hint": true,
     "auto_reproduce": true,
-    "auto_reseed": false,
+    "auto_reseed": true,
+    "minimum_population": 5,
+    "plant_evolution_bias": 0.35,
     "ecology_schema": 1,
     "life_cycle_schema": 1,
+    "world_volume_schema": 1,
+    "population_rescue_schema": 1,
+    "startup_form_schema": 1,
     "max_history_events": 32,
     "body_rebuild_interval": 1.0,
     "nutrient_renewal": 1.0,
@@ -51,7 +56,12 @@ var defaults = {
     "social_spacing": 4.5,
     "follow_distance": 6.0,
     "follow_height": 1.6,
+    "camera_noclip": false,
+    "observer_presence": false,
+    "show_hud": true,
+    "show_crosshair": true,
     "neural_glow": true,
+    "textures_enabled": false,
     "fullscreen": true,
     "habitat_level": 7,
     "world_step": 1.0,
@@ -99,6 +109,32 @@ func load_settings() -> void:
             data["life_cycle_schema"] = 1
             save_settings()
 
+        # Alpha23 doubles the horizontal habitat while keeping terrain/depth
+        # proportions independent and adding 50% dedicated upper airspace.
+        if int(parsed.get("world_volume_schema", 0)) < 1:
+            data["world_size"] = clampf(maxf(288.0, float(parsed.get("world_size", 144.0)) * 2.0), 40.0, 1000.0)
+            data["world_volume_schema"] = 1
+            save_settings()
+
+        # Alpha24 turns the old event-only reseed into a continuously checked,
+        # user-disableable population floor. Preserve an explicit old switch;
+        # missing values use the new default. Do not overwrite later choices.
+        if int(parsed.get("population_rescue_schema", 0)) < 1:
+            data["auto_reseed"] = parsed.get("auto_reseed", true)
+            data["minimum_population"] = 5
+            data["population_rescue_schema"] = 1
+            save_settings()
+
+        # Alpha27 changes the fresh-world default from sixteen repeated
+        # founders to ten distinct samples from a fourteen-form startup pool.
+        # Preserve an intentionally changed value; only migrate the old
+        # untouched default.
+        if int(parsed.get("startup_form_schema", 0)) < 1:
+            if int(parsed.get("initial_organisms", 16)) == 16:
+                data["initial_organisms"] = 10
+            data["startup_form_schema"] = 1
+            save_settings()
+
 func save_settings() -> void:
     var dir = path.get_base_dir()
     DirAccess.make_dir_recursive_absolute(dir)
@@ -140,9 +176,9 @@ func read_profile(source: String) -> Dictionary:
 func validate_profile(values: Dictionary) -> Dictionary:
     var result: Dictionary = {}
     var enums: Dictionary = {"language": ["en", "de", "fr"], "speech_language": ["follow", "en", "de", "fr"], "view_mode": ["natural", "cell", "neural", "energy"], "thought_mode": ["off", "text", "tts", "both"], "renderer": ["forward_plus", "mobile", "compatibility"], "light_mode": ["auto_sun", "random", "top_left", "top_right", "bottom_left", "bottom_right", "left_middle", "right_middle", "center", "back"]}
-    var ranges: Dictionary = {"gravity_scale": [0.2, 2.5], "simulation_speed": [0.25, 3.0], "simulation_tick_hz": [3, 30], "evolution_rate": [0.1, 4.0], "organism_cap": [8, 80], "initial_organisms": [2, 80], "nutrient_count": [32, 1000], "visual_cell_cap": [48, 420], "contact_quality": [0, 100], "world_size": [40, 1000], "thought_interval": [2, 25], "camera_fov": [28, 105], "zoom_step": [1, 12], "light_pitch": [-90, 90], "light_yaw": [-360, 360], "move_speed": [1, 100], "mouse_sensitivity": [0.0001, 0.03], "max_history_events": [4, 96], "body_rebuild_interval": [0.25, 6], "nutrient_renewal": [0, 4], "temperature_offset": [-12, 12], "mutation_strength": [0, 0.5], "macro_mutation_rate": [0, 0.6], "crossover_rate": [0, 1], "viability_threshold": [0, 0.75], "mate_cooldown": [2, 90], "mating_radius": [3, 40], "social_spacing": [1.5, 12], "follow_distance": [2, 20], "follow_height": [0, 8], "habitat_level": [5, 9], "world_step": [0.25, 4], "courtship_strength": [0, 2], "group_strength": [0, 2], "predation_strength": [0, 2], "hierarchy_strength": [0, 2], "audio_volume": [0, 1], "organism_sound_interval": [1, 20]}
+    var ranges: Dictionary = {"gravity_scale": [0.2, 2.5], "simulation_speed": [0.25, 3.0], "simulation_tick_hz": [3, 30], "evolution_rate": [0.1, 4.0], "organism_cap": [8, 80], "initial_organisms": [2, 80], "minimum_population": [1, 80], "plant_evolution_bias": [0, 1], "nutrient_count": [32, 1000], "visual_cell_cap": [48, 420], "contact_quality": [0, 100], "world_size": [40, 1000], "thought_interval": [2, 25], "camera_fov": [28, 105], "zoom_step": [1, 12], "light_pitch": [-90, 90], "light_yaw": [-360, 360], "move_speed": [1, 100], "mouse_sensitivity": [0.0001, 0.03], "max_history_events": [4, 96], "body_rebuild_interval": [0.25, 6], "nutrient_renewal": [0, 4], "temperature_offset": [-12, 12], "mutation_strength": [0, 0.5], "macro_mutation_rate": [0, 0.6], "crossover_rate": [0, 1], "viability_threshold": [0, 0.75], "mate_cooldown": [2, 90], "mating_radius": [3, 40], "social_spacing": [1.5, 12], "follow_distance": [2, 20], "follow_height": [0, 8], "habitat_level": [5, 9], "world_step": [0.25, 4], "courtship_strength": [0, 2], "group_strength": [0, 2], "predation_strength": [0, 2], "hierarchy_strength": [0, 2], "audio_volume": [0, 1], "organism_sound_interval": [1, 20]}
     for key in values:
-        if not defaults.has(key) or key in ["ecology_schema", "life_cycle_schema"]: continue
+        if not defaults.has(key) or key in ["ecology_schema", "life_cycle_schema", "world_volume_schema", "population_rescue_schema", "startup_form_schema"]: continue
         var value = values[key]
         var initial = defaults[key]
         if initial is bool:

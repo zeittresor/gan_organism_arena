@@ -1,6 +1,6 @@
 {
   "ui": {
-    "hint": "F10 Einstellungen | F1 Hilfe | L zufälliges Licht | WASD + Maus bewegen | Q/E runter/hoch | LMB wählen | RMB folgen | Tab nächster | 1-4 Ansichten | 5-9 Habitate | NumPad +/- Welt | G injizieren | F8 OBJ | F12 Screenshot",
+    "hint": "P / Leertaste Pause | F10 Optionen + Hilfe | F1 Handbuch | WASD + Maus | Q/E runter/hoch | Mausrad Zoom | Linksklick wählen | Rechtsklick folgen | Tab nächster | L Licht",
     "settings_title": "GAN Organism Arena - Einstellungen",
     "help_title": "GAN Organism Arena - Projekthilfe / Tastenreferenz",
     "no_selection": "Kein Organismus ausgewählt. Mit dem Fadenkreuz anvisieren und links klicken oder Tab drücken.",
@@ -19,7 +19,18 @@
     "profile_write_error": "Einstellungsprofil konnte nicht gespeichert werden.",
     "paused": "PAUSIERT",
     "hud_format": "%s %s | FPS %.1f | Schritte %d | Wesen %d | Formen %d | Zellen %d\nHabitat %d %s | Welt %.1f | max. Körper %.1f | max. Denken %.2f | Ansicht %s%s",
-    "navigation_status": "Ziel: %s | Entfernung %.1f | Tempo %.2f | Mahlzeiten %d | Neue Kurse %d"
+    "navigation_status": "Ziel: %s | Entfernung %.1f | Tempo %.2f | Mahlzeiten %d | Neue Kurse %d",
+    "pause_manual": "PAUSIERT · P / Leertaste: Fortsetzen",
+    "pause_menu": "PAUSIERT · Menü geöffnet",
+    "pause_both": "PAUSIERT · Nach dem Menü mit P / Leertaste fortsetzen",
+    "textures_disabled": "Optionale PNG-Texturen sind ausgeschaltet. Aktiviere sie zuerst in den Optionen.",
+    "textures_reloaded": "PNG-Vorlagen neu geladen. Bereits vererbte Körpermuster wurden beibehalten.",
+    "texture_exported": "Vererbte Körpertextur exportiert",
+    "texture_warning": "%d Texturdatei(en) konnten nicht geladen werden; neutrales Material wird verwendet.",
+    "exit_title": "GAN Organism Arena beenden?",
+    "exit_body": "Wähle, was als Nächstes geschehen soll. Die Simulation bleibt während des geöffneten Dialogs pausiert.",
+    "world_saved": "Welt-Snapshot gespeichert",
+    "world_save_failed": "Der Welt-Snapshot konnte nicht gespeichert werden; die Anwendung bleibt geöffnet."
   },
   "settings": {
     "language": "Sprache",
@@ -31,6 +42,8 @@
     "simulation_tick_hz": "3D-Simulationstakte pro Sekunde",
     "evolution_rate": "Evolutionsgeschwindigkeit",
     "organism_cap": "Maximale lebende Organismen",
+    "minimum_population": "Ziel der automatischen Nachbesetzung",
+    "plant_evolution_bias": "Entdeckbarkeit der Pflanzennische",
     "nutrient_count": "Anzahl 3D-Nährstoffpartikel",
     "visual_cell_cap": "Maximale sichtbare Körperzellen pro Organismus",
     "body_rebuild_interval": "Intervall für Körper-Neuaufbau (Sekunden)",
@@ -46,6 +59,10 @@
     "social_spacing": "Bevorzugter Abstand zwischen Körpern",
     "follow_distance": "Verfolgerkamera-Abstand hinter Heck/Schwanz",
     "follow_height": "Höhe der Verfolgerkamera über dem Organismus",
+    "camera_noclip": "Kamera-Noclip durch Gelände erlauben",
+    "observer_presence": "Wesen können den menschlichen Beobachter wahrnehmen",
+    "show_hud": "Benutzeroberflächentext bei Betrachtung anzeigen",
+    "show_crosshair": "Fadenkreuz zum Zielen anzeigen",
     "habitat_level": "Habitat-Stufe (5-9)",
     "world_step": "Weltwachstum je Habitat-Stufe / NumPad +/-",
     "courtship_strength": "Balz / Partneranziehung",
@@ -67,7 +84,9 @@
     "vklp_write_enabled": "VKLP-Einsendungen erlauben",
     "vklp_url": "VKLP-Dienstadresse",
     "contact_quality": "Kontaktgenauigkeit",
-    "gravity_scale": "Planetengravitation (× Erde)"
+    "gravity_scale": "Planetengravitation (× Erde)",
+    "auto_reproduce": "Neue Fortpflanzungen erlauben",
+    "textures_enabled": "Optionale PNG-Texturen verwenden"
   },
   "actions": {
     "rebuild_visuals": "Organismenkörper / Shader-Ressourcen neu aufbauen",
@@ -79,10 +98,24 @@
     "save_settings": "Einstellungen speichern…",
     "load_settings": "Einstellungen laden…",
     "test_speech": "Sprachausgabe testen",
-    "export_genome": "DNA der Auswahl exportieren"
+    "export_genome": "DNA der Auswahl exportieren",
+    "evolution_overview": "Evolutionsübersicht",
+    "export_evolution": "Evolutionsverlauf exportieren",
+    "show_help": "Hilfe / Handbuch öffnen",
+    "back_settings": "Zurück zu den Optionen",
+    "reload_textures": "PNG-Texturen neu laden",
+    "export_texture": "Fell-/Hauttextur exportieren",
+    "exit_open_settings": "Optionen öffnen",
+    "exit_save_quit": "Welt-Snapshot speichern und beenden",
+    "exit_quit": "Ohne Speichern beenden",
+    "exit_cancel": "Abbrechen"
   },
   "help": {
-    "content": "[b]Alpha15: Optionen und Anatomie[/b]\nF10: MCP-/VKLP-Freigaben, Tooltips, Sprechsprache und Systemstimme, Sprachtest, Einstellungsprofile speichern/laden, DNA exportieren. Verbundene Körper bewegen Gelenke; Iris/Pupillen folgen Zielen, alternativ entstehen Facettenaugen. 88 gepaarte Gene bilden fiktive DNA; bezahlte Mitosen bauen/reparieren Gewebe, Meiose liefert haploide Keimzellen. Kombinierte klonale/sexuelle Strategien und kognitionsabhängige Gefühlszustände sind möglich. Profile speichern Einstellungen, keinen Weltstand.\n\n[b]Alpha14: Biologie[/b]\nVererbung nutzt Allelpaare mit Kopplung, Rekombination und rezessiven Belastungen. Entwicklung verbraucht Reserven; Erwachsene produzieren endliche Ei-/Spermienreserven. Embryonalphasen hängen von Energie, Sauerstoff und Temperatur ab. Nahrungspartikel füllen sich allmählich nach. Der Inspektor zeigt Entwicklungsfortschritt, Gametenreserven und Heterozygotie.\n\n[b]Optionale KI-Ergänzungen[/b]\nMCP/VKLP sind optional und sperren keine normalen Funktionen. Eine Verbindung lässt die Welt weiterlaufen. Schrittbetrieb wird ausdrücklich gewählt. Externes Wissen kann protokollierte Eingriffe begründen; Beobachtungen können als Claims mit Evidenz nach VKLP fließen. Siehe docs/AI_INTERFACES_DE.md.\n\n[font_size=26][b]GAN Organism Arena — alpha14[/b][/font_size]\n\n[b]Startwelt[/b]\nNeue Installationen starten in Küstenhabitat 7 mit Wasser, Land und offenem Himmel. Alle Gründer beginnen in zugänglichem Wasser mit guter Wasseratmung und schwachen Land-/Fluganlagen. Nachkommen können diese Grenzen durch Vererbung und Mutation überwinden; ihnen werden die Gründergrenzen nicht erneut aufgezwungen. Ein alter Startwert 5 wird einmal auf 7 umgestellt. Andere gespeicherte Habitate und spätere Entscheidungen bleiben erhalten.\n\n[b]Bedienung[/b]\nMaus: umsehen. W/S: vor/zurück; A/D: seitwärts; Q/E: ab-/aufsteigen; Shift: schneller. Mausrad: optisch zoomen; Shift+Mausrad: Beobachtertempo. L: bei jedem Tastendruck eine neue zufällige Lichtrichtung. Diese bleibt fest; auto_sun in den Optionen aktiviert wieder den Sonnenlauf. Linksklick wählt ein Wesen aus, Rechtsklick folgt hinter seinem Körperheck, Tab wählt das nächste. Esc gibt die Maus frei/fängt sie ein.\nF10: Optionen; F1: Hilfe, jeweils mit Pause. Leertaste: Pause. 1–4: natürliche, Zell-, Neural- und Energieansicht. 5: geschlossenes Aquarium; 6: Wasser/Inseln; 7: Küste mit Himmel; 8: Land/Flachwasser/Luft; 9: Wasser/Land/Himmel. NumPad +/- ändert die Weltgröße. G setzt einen aquatischen Vorfahren ein. F8 exportiert den gewählten Körper als OBJ; F12 speichert ein Bildschirmfoto.\nDie Wasseroberfläche hat Wellen, Lichtreflexe, stärkere Sichtbarkeit bei flachem Blickwinkel, eine sichtbare Unterseite und eine Uferkontur. Die Wellen sind eine optische Bewegung um den simulierten mittleren Wasserspiegel.\n\n[b]Entwicklung und Evolution[/b]\nIndividuen wachsen, reifen, lernen und altern. Genetische Evolution erfolgt über Generationen. Schlüpflinge/Neugeborene, Jungtiere, Heranwachsende und Erwachsene verändern Größe und Proportionen. Passende Erbanlagen ermöglichen zusätzlich eine aquatische Larve und bei kleinen gepanzerten Formen eine nicht fressende Puppenphase mit anschließender Metamorphose. Nahrungsmangel verzögert die Reifung. Nachwuchs erbt Anlagen, keine erlernten Jagd-, Flug- oder Werkzeugfertigkeiten.\nHaut, Schuppen, Federn mit Schäften, Fell/Borsten, Schleim, Membranen, Hörner, Schnäbel und Pigmentmuster sind kombinierbar. Sie beeinflussen Austrocknung, Atmung, Wärmeisolierung, Widerstand, Schutz und Energiebedarf. Federn allein erlauben keinen Flug. Die Körper bestehen aus stilisierten 3D-Zellen. Die Zellansicht legt mit der Reifung schematische innere Fortpflanzungsgewebe frei.\n\n[b]Fortpflanzung[/b]\nVerträgliche erwachsene Partner balzen und halten für die Befruchtungsphase Kontakt. Es gibt Ei- und Spermienproduzenten sowie Zwitter. Erbliche Erkennungs-/Entwicklungsunterschiede, Gametenrollen und Anatomie begrenzen Kreuzungen; ein anderer Familienname oder Körperplan verbietet sie nicht automatisch. Nicht jede Paarung erzeugt lebensfähigen oder fruchtbaren Nachwuchs.\nÄußere Befruchtung beim Laichen, innere Befruchtung mit Eiablage, zurückgehaltene dotterversorgte Eier und Lebendgeburt mit mütterlicher Versorgung sind unterschiedliche Wege. Verwurzelte photosynthetische Formen verwenden pflanzliche Verbreitungseinheiten und vereinfachte Gameten-/Pollenübertragung. Klonaler Nachwuchs braucht eine eigene Erbanlage; ein fehlender Partner ermöglicht keine automatische Klonung. Primäre Fortpflanzungsgewebe und sekundäre Schau-/Geschlechtsmerkmale reifen mit dem Körper. Nicht alle Wesen erhalten Säugetieranatomie.\nEier oder Embryonen entwickeln sich über Zeit und benötigen Energie. Äußere Eier können austrocknen oder gefressen werden; eine innere Brut ist vom Überleben des tragenden Wesens abhängig. Embryonen reservieren Populationsplätze. Das Abschalten neuer Fortpflanzung friert vorhandene Embryonen nicht ein. Erst bei Geburt werden Nachkommen gezählt und beide Eltern erfasst. Erbliche Brutpflege kann reale Energie an nahe Jungtiere übertragen. Zeiten, Anatomie, Vererbung und Fruchtbarkeitswerte sind vereinfachte Spielregeln, keine validierte biologische Simulation.\n\n[b]Lebensräume und Überleben[/b]\nAtmung, Feuchtigkeit, Körperstütze und Ausdauer begrenzen den Wechsel an Land oder in die Luft. Flug erfordert geeigneten Körperbau, reife Bewegungsorgane, Übung und Himmel (7–9). Kräftige Schwimmer können kurz nach niedrig fliegender Beute springen; geeignete Landformen nach oberflächennahen Schwimmern schnappen oder springen. Flugjäger können ins flache Wasser tauchen. Diese Manöver verbrauchen Energie/Ausdauer, brauchen Erholung und nutzen begrenzte Atemvorräte. Bisse benötigen tatsächliche Reichweite und übertragen nur entzogene Beuteenergie.\nWeitere mögliche Kombinationen sind amphibisches Leben, Rudeljagd/Flankieren, Lauerjagd, Verstecken, Putzen, Parasitismus, verschleißende Werkzeuge, aufrechter Gang, kleine insektenartige Formen, verwurzelte Filtrierer, Photosynthese und Landbäume. Es gibt keine garantierte irdische Art oder Evolutionsendstufe. Aussterben bleibt möglich; automatisches Nachbesetzen ist standardmäßig aus.\n\n[b]Anzeige und Optionen[/b]\nDie Auswahl zeigt Physiologie, Körperhülle, Verhalten, Fertigkeiten, Lebensstadium, Fortpflanzungsweg und -fortschritt, getragene Embryonen, Fruchtbarkeit und Eltern-IDs. Globale Zähler zeigen auch Embryonen und Verluste. Optionen steuern Renderer, Tempo/Taktrate, Mutation, Population/Zellbudget, Klang sowie Gedanken als Text/Windows-TTS. Sichtbare Zellen und Ereigniserinnerungen bleiben aus Leistungsgründen begrenzt. Der Kern ist regelbasiertes künstliches Leben, kein trainiertes GAN oder LLM pro Wesen.\n\n[b]Dateien und Installation[/b]\nDer portable Installer verwendet ein vorhandenes Godot-ZIP mit gültiger offizieller Prüfsumme wieder und installiert im Projektordner. Nach der Einrichtung ist kein Internet nötig. settings/config.json: Optionen; language/*.json: Übersetzungen; logs/: Diagnose; exports/obj/ und screenshots/: Ausgaben. MIT-Lizenz: LICENSE.txt."
+    "content": "[b]GAN Organism Arena — Handbuch[/b]\nDie Simulation beginnt mit jungen Wasserlebewesen an einer Küste. Jedes Wesen besitzt eigenes Erbmaterial, Energiereserven, Sinnes- und Bewegungsmöglichkeiten. Beobachte, welche Nachkommen entstehen und sich in der jeweiligen Umgebung erhalten. Es gibt keinen vorgeschriebenen Entwicklungsweg und keine garantierte spätere Tierart.\n\n[b]Bewegen, auswählen und verfolgen[/b]\nWASD und Maus bewegen die Kamera, Q/E senken oder heben sie. Shift beschleunigt die Bewegung. Das Mausrad zoomt; Shift und Mausrad ändern das Bewegungstempo der Kamera. Linksklick wählt ein anvisiertes Wesen, Tab das nächste. Rechtsklick schaltet die Verfolgung ein oder aus. Die Kamera berücksichtigt das Gelände. Escape gibt die Maus frei oder schließt zunächst ein geöffnetes Menü.\n\n[b]Pause und Menüs[/b]\nP, Leertaste oder die Pause-Taste halten die Welt an; erneutes Drücken setzt sie fort. Bewegung, Alterung, Energieverbrauch, Wachstum, Embryonen, Nahrungserneuerung, Wasserwellen, automatisches Licht und die laufenden Gedanken-/Tonausgaben halten an. Die Kamera bleibt außerhalb der Menüs bedienbar, damit du die Szene betrachten kannst. Eine gelbe Anzeige zeigt die Pause. Pausenzeit wird anschließend nicht nachgeholt.\nF10 öffnet die Optionen, F1 dieses Handbuch. Beide pausieren ebenfalls. Eine zuvor gesetzte manuelle Pause bleibt beim Schließen erhalten. Aus den Optionen geöffnete Hilfe führt wieder dorthin zurück. Bewusste Aktionen wie Einstellungsänderungen oder Exporte sind weiterhin möglich. Eine Schnittstelle kann eine lokale Pause nicht durch weitere Simulationsschritte umgehen; Beobachtungen bleiben verfügbar. Ein bewusst gewählter Schrittbetrieb wird beim Pausieren nicht auf Echtzeit umgestellt.\n\n[b]Welt, Wasser, Land und Licht[/b]\nDie Tasten 5–9 wechseln das Habitat; die einzelnen Namen stehen in der Habitatoption. Die Küste bietet Wasser, Land und Luft. Der Nummernblock +/− ändert die Weltgröße. L wählt bei jedem Drücken eine zufällige Lichtrichtung. In der Lichtoption kannst du auch feste Richtungen oder eine wandernde Sonne einstellen.\nDie Ahnen beginnen im Wasser. Erbänderungen können andere Atmungsweisen, Gliedmaßen und Stützgewebe ermöglichen. Landgang braucht geeignete Physiologie; Fliegen außerdem einen tragfähigen Körper, genügend Auftrieb/Energie, ausreichende Entwicklung und offenen Luftraum. Anlagen allein verleihen keine fertige Fähigkeit.\n\n[b]Nahrung, Bewegung und Überleben[/b]\nWesen suchen erreichbare Nahrung, erkunden und können auf Feinde oder Partner reagieren. Sie behalten ein Ziel für eine Zeit bei und planen bei ausbleibendem Fortschritt neu. Nahrung wird in Reichweite des Kopfes aufgenommen. Stärke, Körpergröße, Hüllen und Körperform beeinflussen Bewegung und Kosten. Sauerstoff, Feuchtigkeit, Temperatur und Energie können das Verhalten einschränken. Ein gut angepasstes Wesen kann mehr Nachwuchs hinterlassen; Mutationen können ebenso schaden.\nJagd, Rudelverhalten, Verstecken, Filtern, parasitische Ernährung oder Werkzeuggebrauch hängen von passenden Anlagen und Bedingungen ab. Ortsfeste Ernährung zusammen mit Bodenverankerung kann verwurzelte Wasser- oder Landformen hervorbringen. Bäume benötigen zusätzlich tragendes Gewebe. Gründer werden nicht als fertige Pflanzen oder Flugtiere eingesetzt.\n\n[b]DNA, Vererbung und neue Körperformen[/b]\nEin Genom enthält zwei Kopien je regulatorischem Genort. Die 91 Genorte steuern unter anderem Körperproportionen, Stützgewebe, Muskeln, Atmung, Hüllen und Verhalten. Bei sexueller Fortpflanzung erhält der Nachwuchs je eine Kopie aus Ei und Spermium. Während der Meiose werden elterliche Chromosomenabschnitte ausgetauscht. Klonale Fortpflanzung kopiert beide Genkopien.\nKleine und größere regulatorische Mutationen können einzelne Kopien verändern. Andere Kopien bleiben erhalten; dadurch können Anlagen verborgen bleiben und in späteren Generationen erneut zusammentreffen. Farbton, Sättigung und Helligkeit werden ebenfalls vererbt. Erlernte Erinnerungen werden nicht in die Keimbahn geschrieben. Der DNA-Export zeigt Genpositionen und tatsächliche neue Alleländerungen. Der fiktive Code ist keine reale Proteinsynthese.\nDer Körpergenerator besitzt sieben Grundformen mit vielen kontinuierlichen Variationen. Neue Kombinationen können von ihren Ahnen stark abweichen. Eine Grundform ist jedoch keine wissenschaftlich bestimmte Art, und die Formenvielfalt des Generators ist nicht unbegrenzt.\n\n[b]Zellteilung, Fortpflanzung und Aufwachsen[/b]\nMitose ermöglicht Gewebewachstum, Reparatur und bei geeigneten Linien klonale Vermehrung. Meiose erzeugt haploide Keimzellen für sexuelle Fortpflanzung. Auch kombinierte Strategien sind möglich. Ein ausgewachsenes Wesen braucht kompatible Partnerrollen, nutzbare Fortpflanzungsstrukturen und genügend Energie beziehungsweise Keimzellreserven.\nJe nach Anlage gibt es äußeres Ablaichen, Eiablage, zurückgehaltene Eier, lebend geborenen Nachwuchs oder klonale Ausbreitung. Balz und Kontakt gehen einer möglichen Befruchtung voraus. Embryonen benötigen Zeit und Ressourcen, können scheitern und reservieren Populationsplätze. Jungtiere wachsen erst danach weiter; passende Entwicklung kann Larven- oder Puppenstadien enthalten. Hunger und Sauerstoffmangel können Wachstum bremsen. Der Schalter für neue Fortpflanzungen beendet nicht die Entwicklung vorhandener Embryonen.\n\n[b]Population und Nachbesetzen[/b]\nDie automatische Nachbesetzung strebt standardmäßig mindestens fünf lebende Wesen an. Fehlende Plätze werden mit unverwandten aquatischen Jungtieren mit zufälligen Genen besetzt, auch nach vollständigem Aussterben. Bestandslimit und reservierte Embryoplätze begrenzen das Auffüllen. Die Evolutionsübersicht zeigt einen möglichen Fehlbestand. Abschalten erlaubt eine Welt ohne Überlebende. Neue Fortpflanzungen lassen sich unabhängig davon abschalten. G setzt manuell ein weiteres Anfangswesen ein, sofern Platz verfügbar ist.\n\n[b]Anzeigen und Evolutionsübersicht[/b]\n1–4 wechseln zwischen natürlicher Darstellung, Zell-/Gewebe-, Nerven- und Energieansicht. Die Auswahlansicht zeigt Lebensstadium, Eltern, Energie, Sauerstoff, Fortpflanzungszustand, Anatomie und das aktuelle Bewegungsziel. Körper- und Denkwerte sind interne Vergleichswerte, keine Zentimeter oder IQ-Werte. Gedanken beschreiben modellierte Zustände. Sprechsprache und Bildschirmtext können getrennt gewählt werden; Sprachausgabe benötigt eine passende Systemstimme.\nDie Evolutionsübersicht in F10 trennt natürliche sexuelle/klonale Geburten von automatischen und manuellen Einsätzen. Sie zeigt Generationen, Todesfälle, verwurzelte Wesen, erste neue Körpergrundformen und jüngste Abstammungen. Eine zuvor manuell eingesetzte Form zählt nicht als spätere evolutionäre Neuentdeckung.\n\n[b]Leistung und Berührungsgenauigkeit[/b]\nBei niedriger Bildrate senke zuerst die Kontaktgenauigkeit, sichtbare Körperzellen oder Populationsgrenze. Weniger Kontaktgenauigkeit spart Berechnungen, erlaubt aber stärkere kleine Überschneidungen. Höhere Simulationstakte verfeinern Entscheidungen und kosten CPU-Zeit. Darstellungsdetails und Körper-Neuaufbau bestimmen weitere Kosten. Das Aussehen wird auch außerhalb des Bildes vereinfacht, während die Biologie weiterläuft. Ein anderer Grafikmodus benötigt einen Programmneustart; bei Problemen kann der Compatibility-Starter helfen.\n\n[b]Speichern, Exporte und neue Welt[/b]\nEinstellungsprofile speichern Optionen und lassen sich wieder laden. Sie enthalten keinen Weltspielstand. DNA-Export speichert Erbmaterial des ausgewählten Wesens, F8 dessen aktuelle Geometrie als OBJ, F12 einen Screenshot. Der Evolutionsverlauf speichert Beobachtungen und bis zu 2.048 Abstammungseinträge als JSON; verworfene ältere Einträge sind ausgewiesen, Gesamtzähler bleiben erhalten. Auch dieser Export lässt sich nicht als Weltspielstand laden. Eine neue Welt beginnt einen neuen Lauf und eine neue Aufzeichnung.\n\n[b]Optionale KI-Schnittstellen[/b]\nMCP und VKLP sind unabhängig aktivierbar und standardmäßig aus. Zur normalen Nutzung ist keine KI-Verbindung erforderlich. Verbundene Systeme können beobachten und ausdrücklich gesteuerte Experimente ausführen; freigegebene Zusatzinformationen können protokollierte Parameteränderungen begründen. Eine Verbindung allein startet die Welt nicht neu. Eigene VKLP-Schreibfreigaben regeln Übermittlungen. Lokale Pausen haben Vorrang. Die Exporte enthalten Modellannahmen, damit Ergebnisse korrekt dem fiktiven Versuch zugeordnet werden können.\n\nIm folgenden Nachschlagebereich findest du jede Option und jede Schaltfläche noch einmal einzeln erklärt.\n\n[b]Vollständige Tastenübersicht[/b]\nW/S oder Hoch/Runter bewegen vor/zurück; A/D oder Links/Rechts seitwärts; Q/E nach unten/oben; die Maus blickt umher. Shift beschleunigt. Das Rad zoomt; Shift+Rad ändert das Bewegungstempo. Linksklick wählt, Tab wählt das nächste Wesen, Rechtsklick folgt. P/Leertaste/Pause pausiert. 1–4 wählen Natur-/Zell-/Neural-/Energieansicht. 5–9 wählen Habitate. Nummernblock +/− ändert die Weltgröße. G setzt einen Gründer ein. L ändert das Licht zufällig. F1 öffnet Hilfe, F2 blendet das HUD aus/ein, F8 exportiert OBJ, F9 lädt aktivierte PNG-Vorlagen neu, F10 öffnet Optionen, F12 speichert ein Bildschirmfoto. Escape schließt ein Fenster oder gibt/fängt die Maus.",
+    "escape_title": "Escape / Abschlussdialog",
+    "escape": "Escape öffnet vier Möglichkeiten: Optionen öffnen, eine vollständige Weltaufnahme speichern und beenden, ohne Speichern beenden oder abbrechen.",
+    "settings_reference": "Alle Optionen im Einzelnen",
+    "actions_reference": "Schaltflächen und Exporte"
   },
   "ecology": {
     "traits": "Anpassungen",
@@ -93,6 +126,8 @@
     "medium_changes": "Wasser-/Landwechsel",
     "prey": "Beute",
     "tree": "baumartig",
+    "plant": "Landpflanze",
+    "aquatic_plant": "Wasserpflanze",
     "sessile": "verwurzelt / sesshaft",
     "amphibious": "amphibisch",
     "fast_swimmer": "schneller Schwimmer",
@@ -151,7 +186,10 @@
     "shore_snap": "Zuschnappen am Ufer",
     "leap_snap": "Beutesprung an Land",
     "tending_young": "Nachwuchs versorgen",
-    "seek_mate": "Partnersuche"
+    "seek_mate": "Partnersuche",
+    "avoid_observer": "meidet den menschlichen Beobachter",
+    "inspect_observer": "untersucht den menschlichen Beobachter",
+    "observe_observer": "beobachtet den menschlichen Besucher"
   },
   "life": {
     "reproduction": "Fortpflanzung",
@@ -204,7 +242,9 @@
     "dna_export": "Vollständige DNA: F10 → DNA exportieren",
     "emotion": "Gefühlszustand",
     "sense": "Augen",
-    "anatomy": "Anatomie: Knorpelgelenke %d | flexible Panzergelenke %d | weiche Muskelsegmente %d | aktiv %d"
+    "observer": "Wahrnehmung des menschlichen Beobachters %d%% bei %.1f Einheiten",
+    "anatomy": "Anatomie: Knorpelgelenke %d | flexible Panzergelenke %d | weiche Muskelsegmente %d | aktiv %d",
+    "mutation_counts": "Genänderungen %d (größere %d)"
   },
   "tooltips": {
     "language": "Sprache für Menüs, Statusanzeigen und Gedanken der Wesen. Wirkt sofort.",
@@ -215,7 +255,8 @@
     "vklp_write_enabled": "Zusätzlich ausdrücklich angeforderte Aussagen an das eingestellte VKLP-Ledger senden erlauben. Zum Lesen ist diese Freigabe nicht nötig.",
     "vklp_url": "Basisadresse deines VKLP-Dienstes, z. B. http://127.0.0.1:8000. Entfernte Dienste benötigen HTTPS. API-Schlüssel in der Umgebungsvariable VKLP_API_KEY hinterlegen.",
     "renderer": "Grafikverfahren ab dem nächsten Neustart. Kompatibilität kann bei älterer Grafikhardware helfen.",
-    "auto_reseed": "Setzt bei leerer Welt automatisch Gründer ein. Aus erhält Aussterben als Versuchsergebnis.",
+    "auto_reseed": "Füllt eine schrumpfende oder bereits leere Population fortlaufend bis zum gewählten Ziel mit genetisch zufälligen aquatischen Jungtieren auf. Abschalten erlaubt Aussterben.",
+    "minimum_population": "Anzahl lebender Organismen, die bei aktiver Nachbesetzung erhalten wird (Standard 5). Das wirksame Ziel kann die Populationsgrenze nicht überschreiten; Embryonen zählen nicht als lebende Organismen.",
     "fullscreen": "Zwischen Vollbild und Fenster wechseln, ohne die Simulation neu zu starten.",
     "view_mode": "Natürliche Gewebe, getrennte Zellen, Nervengewebe oder Energiefarben anzeigen. Biologie und Kontakte verwenden in jeder Ansicht denselben Körper.",
     "light_mode": "Richtung der Beleuchtung. Automatisch folgt dem Sonnenlauf; Zufällig wählt eine neue Richtung. Taste L würfelt direkt neu.",
@@ -228,8 +269,8 @@
     "nutrient_count": "Anzahl endlicher Nahrungspartikel. Eine Änderung baut das Nahrungsfeld neu auf und verändert das Nahrungsangebot.",
     "visual_cell_cap": "Maximale Gewebezellen pro Wesen, dazu höchstens ein Verbindungssegment je Zelle. Mehr Zellen zeigen mehr Anatomie und erhöhen den Grafikaufwand.",
     "body_rebuild_interval": "Sekunden zwischen Prüfungen auf gewachsene oder veränderte Anatomie. Gelenkanimation läuft dazwischen weiter.",
-    "mutation_strength": "Typische Stärke erblicher Genveränderungen bei Fortpflanzung. Stärkere Änderungen können Lebensfähigkeit verbessern oder verschlechtern.",
-    "macro_mutation_rate": "Wahrscheinlichkeit größerer Körperbauänderungen beim Nachwuchs. Häufige große Änderungen können schlecht angepasste Formen erzeugen.",
+    "mutation_strength": "Stärke kleiner erblicher Alleländerungen. Null schaltet kleine Mutationen ab. Für keinerlei neue Mutationen zusätzlich die Wahrscheinlichkeit größerer Mutationen auf null setzen.",
+    "macro_mutation_rate": "Wahrscheinlichkeit einer größeren regulatorischen Mutation pro Nachkomme. Pro betroffenem Gen verändert sich eine Kopie; die andere bleibt erhalten. Das kann verborgen bleiben, ohne die sichtbare Form sofort zu ändern.",
     "crossover_rate": "Häufigkeit versuchter sexueller Kreuzungen, abhängig von Reife, Kompatibilität und vorhandenen Keimzellen.",
     "viability_threshold": "Erforderliche Entwicklungsstabilität für Fortpflanzung. Niedrige Stabilität verringert auch frühe Überlebenschancen.",
     "mate_cooldown": "Erholungszeit in Simulationssekunden nach Fortpflanzung bis zum nächsten möglichen Versuch.",
@@ -239,9 +280,13 @@
     "group_strength": "Stärke von Zusammenhalt und koordiniertem Bewegen bei Wesen mit sozialen Eigenschaften.",
     "predation_strength": "Intensität von Jagd und Beutefressen, weiterhin begrenzt durch Anatomie, Energie und verfügbare Beute.",
     "hierarchy_strength": "Einfluss des sozialen Rangs auf Bewegung in der Nähe anderer Wesen.",
-    "follow_distance": "Kameraabstand hinter dem ausgewählten Wesen im Verfolgungsmodus.",
-    "follow_height": "Höhe der verfolgenden Kamera über ihrem Ziel.",
-    "camera_fov": "Kamerasichtfeld in Grad. Kleine Werte zoomen heran, große zeigen mehr Umgebung.",
+  "follow_distance": "Kameraabstand hinter dem ausgewählten Wesen im Verfolgungsmodus.",
+  "follow_height": "Höhe der verfolgenden Kamera über ihrem Ziel.",
+  "camera_noclip": "Erlaubt der Beobachterkamera, Gelände und Berge zu durchdringen. Die Weltgrenzen bleiben aktiv; abschalten nutzt wieder terrain-sichere Bewegung und Verfolgung.",
+  "observer_presence": "Fügt ein virtuelles erwachsenes, menschenähnliches Beobachtersignal hinzu. Empfindliche Wesen können den Beobachter ansehen, anfliegen oder meiden; er gilt nie als Nahrung oder Paarungspartner.",
+  "show_hud": "Blendet Status-, Auswahl- und Gedankentext während der normalen Betrachtung ein oder aus. Optionen und Hilfe bleiben über F10 und F1 erreichbar.",
+  "show_crosshair": "Blendet das mittige Fadenkreuz für die Auswahl per Linksklick ein oder aus. Auswahl und Tab-Navigation bleiben trotzdem aktiv.",
+  "camera_fov": "Kamerasichtfeld in Grad. Kleine Werte zoomen heran, große zeigen mehr Umgebung.",
     "zoom_step": "Änderung des Sichtfelds je Mausradschritt beim Umsehen.",
     "audio_enabled": "Hauptschalter für Umwelt- und Wesenklänge. Gesprochene Gedanken werden gesondert über den Gedankenmodus gesteuert.",
     "ambient_audio": "Hintergrundgeräusche des Lebensraums bei eingeschaltetem Ton aktivieren.",
@@ -261,7 +306,19 @@
     "close_settings": "Dieses Fenster schließen und mit aktuellen Einstellungen zur Simulation zurückkehren.",
     "export_genome": "Gepaarte fiktive DNA-Chromosomen mit zugeordneten Genpositionen, Komplementärsträngen und Genomdaten als JSON speichern.",
     "contact_quality": "0–100: Niedrigere Werte erlauben leichte Überschneidungen und begrenzen die Korrekturschritte zwischen Körpern. Unter 90 wird der Boden je Körperteil am Mittelpunkt geprüft; ab 90 zusätzlich an vier Randpunkten. 100 bietet die höchste Genauigkeit und braucht mehr CPU-Zeit. Standard: 85. Wirkt sofort und wird im Einstellungsprofil gespeichert. Die Zahl ist eine Qualitätsstufe, keine Trefferquote.",
-    "gravity_scale": "Schwerkraft von 0,2× bis 2,5× Erdgravitation. Beeinflusst Fallen, Sprunghöhe, Auftriebskräfte und die zum Fliegen nötige Tragkraft; 1,0 ist der Standard. Wirkt sofort und wird in Einstellungsprofilen gespeichert."
+    "gravity_scale": "Schwerkraft von 0,2× bis 2,5× Erdgravitation. Beeinflusst Fallen, Sprunghöhe, Auftriebskräfte und die zum Fliegen nötige Tragkraft; 1,0 ist der Standard. Wirkt sofort und wird in Einstellungsprofilen gespeichert.",
+    "auto_reproduce": "Erlaubt neue Balz, Befruchtung und klonale Fortpflanzung. Bereits entstandene Embryonen entwickeln sich bei ausgeschalteter Option weiter. Unabhängig vom automatischen Nachbesetzen.",
+    "evolution_overview": "Zeigt natürliche und klonale Geburten, eingesetzte Anfangswesen, Generationen, verwurzelte Organismen, jüngste Abstammungen und erstmals entstandene Körpergrundformen dieses Laufs.",
+    "export_evolution": "Speichert Evolutionszähler und bis zu 2.048 Abstammungseinträge mit Geburts-/Todesdaten als JSON in exports/evolution. Verworfene Einträge werden ausgewiesen; kein ladbarer Weltspielstand.",
+    "show_help": "Öffnet das ausführliche Handbuch zu Steuerung, Lebenswelt, Vererbung, Lebensstadien, allen Optionen und Exporten. Beim Schließen kehrst du zu den Optionen zurück; die Welt bleibt währenddessen pausiert.",
+    "textures_enabled": "Lädt austauschbare PNG-Dateien für Gelände und Körper. Standardmäßig aus. Jedes Jungtier erhält ein neues Pixel-Mischbild aus den tatsächlich verwendeten Elterntexturen; bestehende Nachkommen behalten ihr Erbmuster.",
+    "reload_textures": "Lädt die austauschbaren PNG-Vorlagen aus den Textur-Unterordnern neu. Bereits vererbte Körpermuster bleiben bestehen; Gelände und neue Gründer verwenden die Ersetzungen.",
+    "export_texture": "Speichert das erzeugte vererbte Körpermuster des ausgewählten Wesens als PNG unter exports/textures. Erfordert aktivierte optionale Texturen.",
+    "plant_evolution_bias": "Macht die Entwicklung einer verwurzelten Pflanzennische leichter oder schwieriger. Senkt die vererbten Schwellen für Verankerung und ortsfeste Nahrung, verwurzelt aber keine aquatischen Gründer beim Start.",
+    "exit_open_settings": "Schließt diesen Dialog und öffnet die vollständigen Optionen; die Simulation bleibt pausiert.",
+    "exit_save_quit": "Speichert eine vollständige JSON-Weltaufnahme mit Wesen, DNA, Nährstoffen, Überresten und Kamerazustand und beendet dann das Programm.",
+    "exit_quit": "Beendet das Programm sofort, ohne eine Weltaufnahme zu schreiben.",
+    "exit_cancel": "Schließt diesen Dialog und kehrt ohne Weltänderung zur vorherigen Ansicht zurück."
   },
   "option_values": {
     "en": "Englisch",
@@ -319,5 +376,32 @@
     "crustacean": "Segmentiert mit Beinen",
     "cephalopod": "Mantel mit Armen",
     "unknown": "Unbekannt"
+  },
+  "evolution": {
+    "run": "Startwert %d | Simulationszeit %.1f s",
+    "population": "Lebend %d | Sich entwickelnde Embryonen %d | Verwurzelte Wesen %d",
+    "generations": "Höchste Generation: lebend %d / jemals erreicht %d",
+    "births": "Natürliche Nachkommen %d | Sexuell %d | Klonal %d",
+    "mutated": "Nachkommen mit neuen Mutationen %d | Mit größeren Mutationen %d",
+    "founders": "Anfangswesen %d | Automatisch nachbesetzt %d | Manuell eingesetzt %d",
+    "deaths": "Todesfälle %d",
+    "floor": "Automatischer Mindestbestand: %d lebende Wesen",
+    "floor_off": "Automatischer Mindestbestand: aus",
+    "capacity_wait": "Es fehlen %d: vorhandene Embryonen können die übrigen Plätze reservieren.",
+    "discoveries": "Erstmals durch Fortpflanzung entstandene Körpergrundformen: %d",
+    "discovery": "%s — Wesen #%d, Generation %d, nach %.1f s",
+    "discovery_note": "Gezählt wird das erstmalige Auftreten einer Körpergrundform in diesem Lauf, keine neue biologische Art. Zuvor manuell eingesetzte Formen gelten ebenfalls als bekannt. Kleinere vererbte Formänderungen sind innerhalb jeder Grundform möglich.",
+    "recent": "Zuletzt geborene oder eingesetzte Wesen (Eltern -1 = kein simulierter Elternteil):",
+    "record": "#%d | G%d | %s | %s | Eltern %d / %d | %s",
+    "origin_initial": "Anfangswesen",
+    "origin_population_rescue": "Nachbesetzung",
+    "origin_manual": "manuell eingesetzt",
+    "origin_sexual": "sexuelle Geburt",
+    "origin_clonal": "klonale Geburt",
+    "alive": "lebend",
+    "dead": "verstorben",
+    "close": "Schließen",
+    "exported": "Evolutionsverlauf gespeichert",
+    "retention": "Aufbewahrte Geburtseinträge: %d. Ältere verworfene Einträge: %d. Gesamtzähler und erste Entdeckungen bleiben erhalten. Der Export enthält die aufbewahrte Abstammung; er ist eine Beobachtung, kein Weltspielstand."
   }
 }

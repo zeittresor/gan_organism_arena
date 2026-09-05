@@ -64,6 +64,8 @@ var affect_valence: float = 0.0
 var affect_arousal: float = 0.0
 var affect_bond: float = 0.0
 var emotion: String = "reflex"
+var observer_awareness: float = 0.0
+var observer_distance: float = INF
 var eye_target = Vector3(0, 0, -5)
 var gaze_direction = Vector3.FORWARD
 var last_thought = ""
@@ -83,6 +85,8 @@ var senescence = 0.0
 var behavior_state: String = "forage"
 var social_rank: float = 0.5
 var pair_target_id: int = -1
+var courtship_facing: Vector3 = Vector3.ZERO
+var courtship_alignment: float = 0.0
 var habitat_stress: float = 0.0
 
 var habitat = null
@@ -267,8 +271,10 @@ func motion_step(delta: float, world_half_extent: float) -> void:
         p.x = clampf(p.x, -world_half_extent, world_half_extent)
         velocity.x = 0.0
         bounced = true
-    if absf(p.y) > world_half_extent * 0.60:
-        p.y = clampf(p.y, -world_half_extent * 0.60, world_half_extent * 0.60)
+    var lower_y: float = float(habitat.bottom_y) if habitat != null else -world_half_extent * 0.60
+    var upper_y: float = float(habitat.ceiling_y) if habitat != null else world_half_extent * 0.60
+    if p.y < lower_y or p.y > upper_y:
+        p.y = clampf(p.y, lower_y, upper_y)
         velocity.y = 0.0
         bounced = true
     if absf(p.z) > world_half_extent:
@@ -278,7 +284,7 @@ func motion_step(delta: float, world_half_extent: float) -> void:
     if habitat != null:
         # Aquatic ancestors cannot climb an emergent shore via floor correction.
         if habitat.is_water(previous) and not habitat.is_water(p) and burst_time <= 0.0 and not can_fly:
-            if Traits.walking(genome) < 0.18 or not Cycle.locomotor_maturity(self):
+            if not Navigation.land_capable(self):
                 p = previous
                 velocity.y = minf(0.0, velocity.y)
     global_position = p
@@ -305,6 +311,12 @@ func body_clearance() -> float:
 
 func apply_environment(dt: float, model) -> void:
     habitat = model
+    # Keep aquatic ancestors physically submerged until their lineage has had
+    # several generations to evolve land respiration and support. This also
+    # repairs stale positions after a steep habitat rebuild.
+    if bool(genome.aquatic_ancestry) and int(genome.aquatic_steps) < 3 and not model.is_water(global_position):
+        global_position = model.nearest_medium(global_position, true, body_clearance() + 0.5)
+        velocity.y = minf(velocity.y, 0.0)
     var depth: float = model.waterline - global_position.y
     if model.floor_at(global_position) >= model.waterline:
         in_water = false
@@ -321,10 +333,11 @@ func apply_environment(dt: float, model) -> void:
         medium_changes += 1
         medium_timer = 0.0
         last_medium = in_water
-    if Traits.sessile(genome) and age_seconds > 12.0 and grounded:
+    var plant_bias: float = clampf(float(_setting("plant_evolution_bias", 0.35)), 0.0, 1.0)
+    if Traits.sessile(genome, plant_bias) and age_seconds > 8.0 + (1.0 - plant_bias) * 8.0 and grounded:
         rooted = true
-    stand_upright = not in_water and not rooted and Traits.upright(genome) and Cycle.locomotor_maturity(self)
-    can_fly = not rooted and model.has_sky() and Traits.flight_body(genome) and Traits.lift(genome) > 0.24 * Support.gravity_scale(self) and Cycle.locomotor_maturity(self) and Cycle.development_fraction(self) >= 0.82
+    stand_upright = not in_water and Navigation.land_capable(self) and not rooted and Traits.upright(genome) and Cycle.locomotor_maturity(self)
+    can_fly = Navigation.land_capable(self) and not rooted and model.has_sky() and Traits.flight_body(genome) and Traits.lift(genome) > 0.24 * Support.gravity_scale(self) and Cycle.locomotor_maturity(self) and Cycle.development_fraction(self) >= 0.82
     if can_fly and not in_water and energy > 0.35:
         flight_skill = minf(1.0, flight_skill + dt * 0.020 * (0.4 + genome.neural_drive))
     airborne = can_fly and flight_skill > 0.22 and not in_water and stamina > 0.18 and energy > 0.25
@@ -349,7 +362,7 @@ func apply_environment(dt: float, model) -> void:
     if rooted:
         velocity = Vector3.ZERO
     elif airborne and burst_time <= 0.0:
-        cruise_altitude = minf(maxf(floor_y + body_clearance() + 3.0, model.waterline + 3.5), model.half_extent * 0.55)
+        cruise_altitude = minf(maxf(floor_y + body_clearance() + 3.0, model.waterline + 3.5), model.ceiling_y - body_clearance())
     elif grounded and not in_water and burst_time <= 0.0:
         velocity.y = maxf(0.0, velocity.y)
     if energy <= 0.0001:
@@ -389,7 +402,13 @@ func steer_towards(target: Vector3, weight: float = 1.0, speed_multiplier: float
 func ecology_labels() -> Array[String]:
     var labels: Array[String] = []
     if rooted:
-        labels.append("tree" if not in_water and genome.wood_drive > 0.60 and genome.support_drive > 0.55 else "sessile")
+        if genome.photosynthesis > 0.38:
+            if in_water:
+                labels.append("aquatic_plant")
+            else:
+                labels.append("tree" if genome.wood_drive > 0.60 and genome.support_drive > 0.55 else "plant")
+        else:
+            labels.append("sessile")
     if Traits.amphibious(genome): labels.append("amphibious")
     if Traits.swim_speed(genome) > 3.0: labels.append("fast_swimmer")
     if can_fly: labels.append("flight" if flight_skill > 0.22 else "flight_practice")
@@ -444,6 +463,9 @@ func body_plan_name() -> String:
     if genome != null and genome.has_method("body_plan_name"):
         return str(genome.body_plan_name())
     return "unknown"
+
+func lineage_summary() -> Dictionary:
+    return {"id": organism_id, "parents": [parent_a, parent_b], "family": genome.family_id, "generation": genome.generation, "plan": body_plan_name(), "mutations": genome.mutation_events, "macro_mutations": genome.macro_mutation_events, "crossovers": genome.crossover_events, "pigment": {"hue": genome.hue, "saturation": genome.pigment_saturation, "value": genome.pigment_value}, "coat": genome.skin_pattern.summary(), "genetic_health": genome.genetic_health()}
 
 func follow_camera_data() -> Dictionary:
     var rear: Vector3 = global_position + global_transform.basis.z * 1.5

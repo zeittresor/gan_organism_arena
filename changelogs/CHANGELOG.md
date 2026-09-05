@@ -1,5 +1,67 @@
 # Changelog
 
+## 1.0.0-alpha29 — 2026-09-05
+
+- Add a paused Escape exit prompt with localized choices to open settings, save a complete world snapshot and quit, quit without saving, or cancel.
+- Save-and-quit writes `exports/world_saves/world_<unix-time>.json` with organisms, diploid DNA/phenotypes, nutrients, remains, evolution counters and camera state; live Genome objects are excluded so the archive stays valid JSON.
+- Add the **Plant-niche discoverability** option. A moderate default bias makes inherited anchoring plus stationary feeding reach rooted aquatic or land plants more often, while aquatic founders remain motile.
+- Retain bounded aquatic death remains and render them as slowly growing seabed coral/mineral stalks; deterministic reef anchors also populate deeper coast habitats.
+- Extend EN/DE/FR labels, tooltips and help text for the new option and exit actions.
+
+## 1.0.0-alpha28 — 2026-09-05
+
+- Start the observer at a terrain-safe shore/water viewpoint instead of a fixed coordinate that could be inside a mountain.
+- Keep free camera movement above the analytic terrain and keep follow-camera paths clear of the ground; add an optional Noclip setting for deliberate exploration through mountains and the seabed.
+- Add an optional adult human-like observer signal. Organisms can perceive it, orient their eyes toward it, inspect it or avoid it, while it remains outside food and mating logic.
+- Add persistent options for HUD text and crosshair visibility, with explanatory EN/DE/FR tooltips and profile support.
+
+## 1.0.0-alpha27 — 2026-09-05
+
+- Replace recognizable large landmarks in all four original terrain maps with lower-macro-frequency material detail while preserving compact 256×256, edge-closed PNGs.
+- Add deterministic stochastic terrain sampling: neighbouring regions blend independently offset, quarter-turned and reflected samples instead of displaying one obvious repeated grid.
+- Add deep-seabed, wet-shore, beach-sand and grass maps. The terrain shader blends these around the actual waterline and retains the habitat-specific ground as the regional land material.
+- Give every rendered body segment a stable individual texture excerpt/orientation; inherited coat pixels and biological random streams remain unchanged.
+- Expand the optional library to 33 replaceable maps: eight terrain, six inheritable coats, fifteen specialised/future tissue fallbacks and wood/stone/metal/cloth. Unknown tissue uses an adaptive fallback, and the current carried tool uses wood.
+- Replace head-chasing courtship with persistent pair docking points and a common side-by-side orientation. Internal contact now checks reproductive-region proximity, tolerates momentary solver gaps and completes a verified approach-to-birth integration.
+- Guard the optional texture toggle with complete-map checks and a vertex-colour fallback so invalid replacement PNGs cannot take down the running application.
+- Mark aquatic ancestry outside the DNA loci and require three descendant steps before evolved respiration, support and locomotion can open a land or flight niche; steep-shore corrections keep early lineages submerged.
+- Set the fresh-world population to ten and generate a seed-driven fourteen-entry founder pool: seven canonical aquatic plans plus seven new diploid crossover mixtures, sampled without repetition.
+
+## 1.0.0-alpha26 — 2026-09-05
+
+- Replace three oversized 1254×1254 PNG files (about 9 MB) with ten compact 256×256 templates totalling about 708 KB.
+- Supply six distinct organism patterns (skin, scales, fur, membrane, plates and mottle) plus four habitat-specific terrain patterns.
+- Make every bundled map technically seamless by matching opposite boundary pixels and softly blending the nearby border regions.
+- Give each founder a deterministic two-template recipe informed by its surface traits. Sexual descendants combine the complete recipes and, when textures are active, the actual parent pixels; clonal descendants retain an independent copy.
+- Keep runtime maps bounded at 128×128, cache byte buffers during weighted mixing and leave all PNG work disabled until the user activates textures.
+
+## 1.0.0-alpha25 — 2026-09-05
+
+- Add optional replaceable terrain/body PNG textures, disabled by default. Sexual offspring receive an owned 50/50 pixel mixture of both parents' actual inherited maps; clones receive an independent copy. This continues across generations.
+- Add F9 texture reload, selected coat PNG export and F2 HUD toggle. Existing inherited coats survive template replacement and parent death.
+- Add a full pause across biology, movement, development and presentation using P, Space or Pause; add a detailed in-app handbook and complete README control reference.
+- Preserve the unmutated homolog during major regulatory mutation; record actual allele changes, including inherited gamete changes and clonal recessive-load changes.
+- Restore the original 88-locus order; append topology and two new inherited pigment loci (91 total, map `arena.loci/3`). Make hue blending independent of parent order.
+- Add event-driven, bounded genealogy and all-run evolutionary counters. Separate natural reproduction from automatic/manual injections and distinguish first natural topology appearances.
+- Add F10 evolution overview, JSON history export and independent new-reproduction toggle; update EN/DE/FR help/tooltips and precise mutation controls.
+- Apply population rescue immediately while paused/stepped, clean dead pending nodes and preserve explicitly disabled migrated preferences.
+- Include genealogy in optional evidence exports; add native evolution regression gate (exit 34). Native Windows/Godot execution was unavailable during preparation; source checks and installer gates are documented.
+
+## 1.0.0-alpha24 — 2026-09-05
+
+- Automatische Nachbesetzung ist standardmäßig aktiv und prüft nach jedem Simulationsschritt unabhängig von neuen Todesereignissen den einstellbaren Zielbestand (Standard 5). Ein bereits leerer Zustand wird in einem Durchlauf aufgefüllt; Abschalten lässt Aussterben weiterhin zu.
+- Neue Gründer sind junge, unverwandte Wasserorganismen mit zufälligen Genen, aber nur drei aquatischen Ahnenbauplänen und moderaten Größen. Weitere Topologien und extreme Größen entstehen dadurch erst in Nachkommen.
+- Der Körperbauplan ist als 89. diploider Genort `body_plan_code` Bestandteil der exportierten fiktiven DNA. Rekombination und Makromutation wirken auf dieses Gen statt auf ein separates Form-Flag.
+- Sexuelle Nachkommen erhalten nachweisbar Struktur-, Muskel-, Hüllen-, Physiologie- und Verhaltensallele beider Eltern. Die gemeinsame Pigmentfarbe mischt den Farbton zirkulär und korrekt über die Rotgrenze.
+- F10-Regler, Profile, EN/DE/FR-Tooltips sowie MCP/VKLP-Parameter wurden ergänzt; Modellkennung `arena-biology-7`.
+
+## 1.0.0-alpha23 — 2026-09-04
+
+- Geländesichere RMB-Verfolgungskamera: Zielpunkt und geglättete Zwischenposition prüfen die vollständige Sichtlinie gegen das gemeinsame Heightfield; beim Aktivieren wird eine sichere erhöhte Ansicht gewählt.
+- Erreichbare sessile Evolution aus weiterhin beweglichen Wassergründern: gekoppelte Schwellen für Verankerung und ortsfeste Ernährung, gezielte Bodensuche, Wurzeln sowie unterscheidbare Wasserpflanzen, Landpflanzen, Filtrierer und Bäume.
+- Standardfläche 288 × 288; Relief und Wassertiefe bleiben entkoppelt auf vergleichbarem Niveau, die obere Grenze steigt von 43,2 auf 64,8 Einheiten. Einmalige Migration älterer Einstellungen.
+- Neue Kamera-, Pflanzen-, Vererbungs- und Raumtests im Installer-Gate.
+
 ## 1.0.0-alpha14 — 2026-09-02
 
 - Fix des gemeldeten alpha13-Installationsabbruchs: explizite Array[Vector3]-Argumente für Ressourcenlisten in Test- und Weltinitialisierung.

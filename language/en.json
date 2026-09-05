@@ -1,6 +1,6 @@
 {
   "ui": {
-    "hint": "F10 Settings | F1 Help | L random light | WASD + mouse move | Q/E down/up | LMB select | RMB follow | Tab next | 1-4 views | 5-9 habitats | NumPad +/- world | G inject | F8 OBJ | F12 screenshot",
+    "hint": "P / Space Pause | F10 Settings + Help | F1 Handbook | WASD + mouse | Q/E down/up | Wheel zoom | LMB select | RMB follow | Tab next | L light",
     "settings_title": "GAN Organism Arena - Settings",
     "help_title": "GAN Organism Arena - Project Guide / Key Reference",
     "no_selection": "No organism selected. Aim at one and left-click, or press Tab.",
@@ -19,7 +19,18 @@
     "profile_write_error": "Could not save settings profile.",
     "paused": "PAUSED",
     "hud_format": "%s %s | FPS %.1f | steps %d | organisms %d | forms %d | cells %d\nhabitat %d %s | world %.1f | max body %.1f | max mind %.2f | view %s%s",
-    "navigation_status": "Goal: %s | Distance %.1f | Speed %.2f | Meals %d | New routes %d"
+    "navigation_status": "Goal: %s | Distance %.1f | Speed %.2f | Meals %d | New routes %d",
+    "pause_manual": "PAUSED · P / Space: resume",
+    "pause_menu": "PAUSED · Menu open",
+    "pause_both": "PAUSED · After closing menus, press P / Space to resume",
+    "textures_disabled": "Optional PNG textures are disabled. Enable them in Settings first.",
+    "textures_reloaded": "PNG templates reloaded. Existing inherited coats were preserved.",
+    "texture_exported": "Inherited coat texture exported",
+    "texture_warning": "%d texture file(s) could not be loaded; neutral material is used.",
+    "exit_title": "Exit GAN Organism Arena?",
+    "exit_body": "Choose what should happen next. The simulation is paused while this dialog is open.",
+    "world_saved": "World snapshot saved",
+    "world_save_failed": "The world snapshot could not be saved; the application remains open."
   },
   "settings": {
     "language": "Language",
@@ -31,6 +42,8 @@
     "simulation_tick_hz": "3D simulation ticks per second",
     "evolution_rate": "Evolution rate",
     "organism_cap": "Maximum living organisms",
+    "minimum_population": "Automatic reseed target",
+    "plant_evolution_bias": "Plant-niche discoverability",
     "nutrient_count": "3D nutrient particle count",
     "visual_cell_cap": "Maximum visible body cells per organism",
     "body_rebuild_interval": "Body morphology refresh interval (seconds)",
@@ -46,6 +59,10 @@
     "social_spacing": "Preferred social body spacing",
     "follow_distance": "Follow camera distance behind tail/rear",
     "follow_height": "Follow camera height above organism",
+    "camera_noclip": "Allow camera noclip through terrain",
+    "observer_presence": "Let organisms perceive the human observer",
+    "show_hud": "Show interface text during observation",
+    "show_crosshair": "Show aiming crosshair",
     "habitat_level": "Habitat stage (5-9)",
     "world_step": "World growth per habitat stage / NumPad +/-",
     "courtship_strength": "Courtship / mate attraction",
@@ -67,7 +84,9 @@
     "vklp_write_enabled": "Allow VKLP submissions",
     "vklp_url": "VKLP service URL",
     "contact_quality": "Contact accuracy",
-    "gravity_scale": "Planetary gravity (× Earth)"
+    "gravity_scale": "Planetary gravity (× Earth)",
+    "auto_reproduce": "Allow new reproduction",
+    "textures_enabled": "Use optional PNG textures"
   },
   "actions": {
     "rebuild_visuals": "Rebuild organism bodies / shader resources",
@@ -79,10 +98,24 @@
     "save_settings": "Save settings…",
     "load_settings": "Load settings…",
     "test_speech": "Test speech",
-    "export_genome": "Export selected DNA"
+    "export_genome": "Export selected DNA",
+    "evolution_overview": "Evolution overview",
+    "export_evolution": "Export evolution history",
+    "show_help": "Open help / handbook",
+    "back_settings": "Back to settings",
+    "reload_textures": "Reload PNG textures",
+    "export_texture": "Export selected coat texture",
+    "exit_open_settings": "Open settings",
+    "exit_save_quit": "Save world snapshot and quit",
+    "exit_quit": "Quit without saving",
+    "exit_cancel": "Cancel"
   },
   "help": {
-    "content": "[b]Alpha15 options and anatomy[/b]\nF10: MCP/VKLP permissions, tooltips, spoken language and installed voice, speech test, save/load settings profiles, export DNA. Connected bodies articulate; irises and pupils follow targets, with compound-eye alternatives. 88 paired loci encode fictional DNA; paid mitoses build/repair tissues and meiosis supplies haploid gametes. Mixed clonal/sexual strategies and cognition-dependent affect are possible. Profiles contain settings, not world saves.\n\n[b]Alpha14 biology[/b]\nInheritance uses paired alleles with linkage, recombination and recessive load. Development spends reserves; adults produce finite egg/sperm reserves. Embryonic phases depend on energy, oxygen and temperature. Food particles refill gradually. Inspector shows developmental progress, gamete reserves and heterozygosity.\n\n[b]Optional AI additions[/b]\nMCP/VKLP are optional and do not change or disable normal controls. Connecting leaves live playback unchanged. Fixed stepping is explicitly selected. External knowledge may inform logged interventions; simulation observations can become evidence-backed VKLP claims. See docs/AI_INTERFACES_DE.md.\n\n[font_size=26][b]GAN Organism Arena — alpha14[/b][/font_size]\n\n[b]Starting world[/b]\nNew installations start in coastal habitat 7, with water, land and open sky. All founders begin in accessible water with aquatic respiration and weak terrestrial/flight capacities. Descendants can develop other capabilities through inheritance and mutation; they are not clamped to their ancestors' aquatic limits. An old default of habitat 5 migrates to 7 once. Other saved habitats and subsequent choices are preserved.\n\n[b]Observe and control[/b]\nMouse: look. W/S: forward/back. A/D: strafe. Q/E: down/up. Shift: faster movement. Wheel: optical zoom. Shift+wheel: observer speed. L: a new random light direction on every press. This selects a fixed random sun angle; choose auto_sun in Settings to resume automatic movement. LMB selects, RMB follows behind the selected body's rear, Tab selects the next organism. Esc releases/captures the mouse.\nF10: settings; F1: help. Both pause the simulation. Space: pause. 1–4: Natural, Cell, Neural, Energy views. 5: enclosed aquarium; 6: water/islands; 7: coast with sky; 8: land/shallows/air; 9: mixed water/land/sky. NumPad +/- changes world size. G injects an aquatic ancestor. F8 exports the selected body as OBJ. F12 saves a screenshot.\nThe water surface now has visible waves, highlights, stronger grazing-angle opacity, a visible underside and a shoreline contour. Waves are cosmetic around the mean simulated water level.\n\n[b]Development and evolution[/b]\nIndividuals grow, mature, learn and age. Genetic evolution occurs across generations. Hatchlings, juveniles, subadults and adults have changing size/proportions. Suitable inherited combinations also permit an aquatic larva and, for small armored forms, a nonfeeding pupal stage followed by adult metamorphosis. Poor nutrition delays maturation. Each new offspring starts without its parents' learned hunting, flight or tool skills.\nSkin, scales, feathers/quills, fur/bristles, mucus, membranes, horns, beaks and pigment patterns can combine. Coverings influence drying, respiration, insulation, drag, protection and energy cost. Feathers alone do not enable flight. Natural rendering is stylized instanced geometry; Cell view exposes schematic internal reproductive tissue as maturity develops.\n\n[b]Reproduction[/b]\nCompatible mature parents court and maintain contact for a fertilization phase. Egg-producing, sperm-producing and hermaphroditic roles exist. Genetic recognition/development differences, gamete roles and anatomy constrain crosses; a different family name or body plan is not automatically incompatible. All pairings do not necessarily produce viable or fertile offspring.\nAquatic external spawning, internal fertilization with egg laying, retention of yolk-fed eggs and maternally nourished live birth are distinct routes. Rooted photosynthetic forms use propagules and simplified gamete/pollen transfer. Clonal offspring require a separate inherited capability; finding no mate never grants automatic cloning. Reproductive tissue and secondary display traits mature with the body; they are not all modeled on mammalian anatomy.\nEggs or embryos take time and energy to develop. External eggs may dry out or be eaten; an internal brood depends on the carrier's survival. Developing offspring reserve population slots. Disabling new reproduction does not freeze existing embryos. Birth records both parents; parental-care traits can transfer real energy to nearby young. Times, anatomy, inheritance and fertility scores are simplified game rules, not a validated biological simulator.\n\n[b]Habitat and survival[/b]\nRespiration, moisture, body support and stamina constrain land and air transitions. Flight needs a suitable body, mature locomotion, practice and sky (7–9). Strong swimmers may breach briefly for low aerial prey; suitable land forms can snap at shallow swimmers or jump, and aerial predators may dive into shallow water. These moves spend energy/stamina, have cooldowns and use finite breath reserves. Bites require physical range and transfer actual prey energy.\nOther possible combinations include amphibious life, pack pursuit/flanking, ambush, hiding, cleaning, parasitism, finite tools, upright gait, small insect-like forms, rooted filters, photosynthesis and land trees. No Earth species or evolutionary destination is guaranteed. Extinction is possible: automatic reseeding defaults off.\n\n[b]Inspector and settings[/b]\nSelection shows physiology, coverings, behavior, learned skills, life stage, reproductive route/progress, carried embryos, fertility and parent IDs. Global counts include developing embryos and losses. Settings control rendering, simulation speed/tick rate, mutation, population and visible-cell budgets, sound and thought text/Windows TTS. Visible cells and event history are bounded for performance. The current core is rule-based developmental artificial life, not a trained GAN or LLM controlling each organism.\n\n[b]Files and installation[/b]\nThe portable installer reuses an official-checksum-valid nearby Godot ZIP and installs inside the project folder. No Internet is needed after setup. settings/config.json stores options; language/*.json stores translations; logs/ contains diagnostics; exports/obj/ and screenshots/ contain exports. MIT license: LICENSE.txt."
+    "content": "[b]GAN Organism Arena — handbook[/b]\nThe world begins with young aquatic organisms on a coast. Each has its own inherited material, energy reserves, senses and movement capabilities. Observe which descendants arise and survive in their environment. There is no prescribed evolutionary path or guaranteed future species.\n\n[b]Move, select and follow[/b]\nWASD and mouse move the camera; Q/E move down/up. Shift increases camera speed. The wheel zooms; Shift plus wheel adjusts camera movement speed. Left click selects the organism under the crosshair, Tab the next one. Right click toggles following. Follow placement accounts for terrain. Escape releases the mouse or first closes an open menu.\n\n[b]Pause and menus[/b]\nP, Space or the Pause key stops the world; press again to resume. Movement, ageing, energy use, growth, embryos, food renewal, water waves, automatic lighting and ongoing thought/audio output stop. Outside menus the camera remains usable for inspection. A yellow message identifies the pause. Paused wall-clock time is not caught up later.\nF10 opens settings and F1 this handbook; both pause the world too. A manual pause stays set when menus close. Help opened from settings returns there. Deliberate settings changes and exports remain available. Interfaces can still observe but cannot bypass a local pause by advancing or changing the world. Pausing preserves an explicitly selected stepped experiment mode.\n\n[b]Habitats, land, water and light[/b]\nKeys 5–9 switch habitats; their names appear in the habitat option. The coast offers water, land and airspace. Numpad +/− changes world size. Each L press chooses a new light direction. The light option also offers fixed directions and an automatic sun.\nAncestors start in water. Inherited changes can enable other respiratory systems, limbs and support tissue. Land movement requires suitable physiology; flight also requires adequate body structure, lift, energy, development and sky. Carrying a genetic tendency alone does not grant a finished ability.\n\n[b]Food, movement and survival[/b]\nOrganisms seek reachable food, explore and react to threats or partners. They retain goals for a while and replan after poor progress. Food is consumed within head reach. Strength, body size, covering and shape affect movement and costs. Oxygen, moisture, temperature and energy can constrain behaviour. Adapted individuals may leave more descendants; mutation can also be harmful.\nHunting, packs, hiding, filtering, parasitic feeding and tool use depend on suitable traits and conditions. Stationary feeding together with substrate anchoring can yield rooted aquatic or land forms. Trees also need structural support. Founders are not injected as ready-made plants or flyers.\n\n[b]DNA, inheritance and new bodies[/b]\nA genome holds two copies per regulatory locus. Its 91 loci influence proportions, support, muscles, respiration, coverings and behaviour. Sexual offspring receive one copy from egg and sperm; meiosis exchanges parental chromosome segments. Clonal reproduction copies both homologs.\nSmall and major regulatory mutations change individual copies while retaining their counterparts. Some changes remain latent and may combine in later generations. Hue, saturation and brightness are inherited too. Learned memories are not written into the germ line. DNA export maps loci and actual new allele changes. This fictional code does not implement real protein synthesis.\nThe body generator has seven basic topologies with continuous variations. Descendants can look very different from their ancestors. A topology is not a scientific species definition, and the generator’s geometry grammar remains finite.\n\n[b]Cell division, reproduction and development[/b]\nMitosis supports tissue growth, repair and, in suitable lineages, clonal reproduction. Meiosis produces haploid gametes for sexual reproduction. Combined strategies are possible. A mature organism still needs compatible reproductive roles, usable anatomy and enough energy or gamete reserves.\nTraits can support external spawning, egg laying, retained eggs, live birth or clonal propagation. Courtship and contact precede possible fertilization. Embryos need resources and time, may fail and reserve population slots. Young grow through stages; suitable development can include larvae or pupae. Hunger and low oxygen slow growth. Disabling new reproduction does not stop existing embryos developing.\n\n[b]Population and replacements[/b]\nAutomatic replacement targets at least five living organisms by default. Missing places are filled with unrelated aquatic young with random genes, including after extinction. Population capacity and embryo reservations limit refill. The overview shows any deficit. Disable replacement to allow complete extinction. New reproduction has a separate switch. G manually introduces a founder if room is available.\n\n[b]Views and evolutionary observations[/b]\nKeys 1–4 show natural bodies, cells/tissues, neural structures and energy. Selection details include life stage, parents, energy, oxygen, reproductive state, anatomy and navigation goals. Body and mind scores are internal comparison values, not centimetres or IQ. Thoughts describe modelled states. Display and spoken language can be selected separately; speech needs a matching installed system voice.\nF10’s overview separates natural sexual/clonal offspring from automatic/manual introductions. It shows generations, deaths, rooted organisms, first new topologies and recent parentage. A previously injected topology does not count as a subsequent evolutionary discovery.\n\n[b]Performance and contact accuracy[/b]\nFor low frame rates, first lower contact accuracy, visible body-cell count or population capacity. Lower contact accuracy saves computation but permits more small overlaps. Higher simulation tick rates refine decisions and cost CPU time. Visual detail and morphology rebuild intervals affect other costs. Offscreen visual work is reduced while biology continues. A different renderer needs a restart; try the Compatibility launcher if needed.\n\n[b]Profiles, exports and a new world[/b]\nSettings profiles save/load options, not a world state. DNA export saves the selected genome; F8 exports its current OBJ geometry; F12 takes a screenshot. Evolution export saves observations and up to 2,048 genealogy records as JSON. Discarded older records are reported and totals survive eviction. It is not a reloadable world save either. Resetting the world begins a new run and recording.\n\n[b]Optional AI interfaces[/b]\nMCP and VKLP can be enabled independently and are off by default. Normal use needs no AI connection. Connected systems can observe and run explicit experiments; supplied information can support logged parameter changes. Connecting alone does not reset the world. Separate VKLP write permission governs submissions. Local pauses take priority. Exports include model assumptions so observations stay attributable to their fictional experiment.\n\nThe reference below explains every option and button individually.\n\n[b]Complete key reference[/b]\nW/S or Up/Down move forward/back; A/D or Left/Right strafe; Q/E move down/up; mouse movement looks around. Shift accelerates movement. Wheel zooms; Shift+wheel adjusts movement speed. Left click selects, Tab selects the next organism, right click follows. P/Space/Pause pauses. 1–4 select natural/cell/neural/energy views. 5–9 select habitats. Numpad +/− resizes the world. G introduces a founder. L randomizes light. F1 opens help, F2 hides/shows the HUD, F8 exports OBJ, F9 reloads enabled PNG templates, F10 opens settings, F12 saves a screenshot. Escape closes a panel or releases/recaptures the mouse.",
+    "escape_title": "Escape / exit prompt",
+    "escape": "Escape opens four choices: open settings, save a complete world snapshot and quit, quit without saving, or cancel.",
+    "settings_reference": "Every option explained",
+    "actions_reference": "Buttons and exports"
   },
   "ecology": {
     "traits": "Adaptations",
@@ -93,6 +126,8 @@
     "medium_changes": "Water/land changes",
     "prey": "Prey",
     "tree": "tree-like",
+    "plant": "land plant",
+    "aquatic_plant": "aquatic plant",
     "sessile": "rooted / sessile",
     "amphibious": "amphibious",
     "fast_swimmer": "fast swimmer",
@@ -151,7 +186,10 @@
     "shore_snap": "snapping at the shoreline",
     "leap_snap": "jumping for prey",
     "tending_young": "feeding young",
-    "seek_mate": "Seeking a mate"
+    "seek_mate": "Seeking a mate",
+    "avoid_observer": "avoiding the human observer",
+    "inspect_observer": "inspecting the human observer",
+    "observe_observer": "observing the human visitor"
   },
   "life": {
     "reproduction": "Reproduction",
@@ -204,7 +242,9 @@
     "dna_export": "Full DNA in F10 → Export DNA",
     "emotion": "Affect",
     "sense": "Eyes",
-    "anatomy": "Anatomy: cartilage joints %d | flexible shell joints %d | soft muscle segments %d | active %d"
+    "observer": "Human observer awareness %d%% at %.1f units",
+    "anatomy": "Anatomy: cartilage joints %d | flexible shell joints %d | soft muscle segments %d | active %d",
+    "mutation_counts": "Gene changes %d (major %d)"
   },
   "tooltips": {
     "language": "Language of menus, status text and organism thoughts. Applied immediately.",
@@ -215,7 +255,8 @@
     "vklp_write_enabled": "Additionally permit explicitly requested claim submissions to the configured VKLP ledger. Reading alone does not require this permission.",
     "vklp_url": "Base URL of your VKLP service, for example http://127.0.0.1:8000. Remote services require HTTPS. Keep the API key in the VKLP_API_KEY environment variable.",
     "renderer": "Graphics backend used after the next restart. Compatibility can help on older graphics hardware.",
-    "auto_reseed": "Automatically introduces founders if the world becomes empty. Off preserves extinction as an experiment outcome.",
+    "auto_reseed": "Continuously restores a declining or already empty population to the selected target with genetically random aquatic hatchling founders. Turn it off to allow extinction.",
+    "minimum_population": "Number of living organisms maintained while automatic reseed is on (default 5). The effective target cannot exceed the population cap; embryos do not count as living organisms.",
     "fullscreen": "Switch between fullscreen and a window without restarting the simulation.",
     "view_mode": "Display natural tissues, separated cells, nervous tissue or energy colors. Biology and collisions use the same body in every view.",
     "light_mode": "Direction of scene lighting. Automatic follows the sun; random chooses a new direction. The L key randomizes it directly.",
@@ -228,8 +269,8 @@
     "nutrient_count": "Number of finite food particles in the world. Changing this rebuilds the nutrient field and changes food availability.",
     "visual_cell_cap": "Maximum tissue cells per organism, plus at most one connecting segment per cell. Higher values show more anatomy and cost more rendering time.",
     "body_rebuild_interval": "Seconds between checks for grown or changed anatomy. Joint animation continues between rebuilds.",
-    "mutation_strength": "Typical magnitude of inherited gene changes at reproduction. Stronger changes can help or harm viability.",
-    "macro_mutation_rate": "Probability of larger body-plan changes in offspring. Frequent large changes can produce poorly adapted forms.",
+    "mutation_strength": "Magnitude of small inherited allele changes. Zero disables small mutations. Also set major-mutation probability to zero to disable all new mutations.",
+    "macro_mutation_rate": "Chance of a major regulatory mutation per offspring. Each affected locus changes one homolog, preserving the other. The mutation may remain latent without changing the visible body immediately.",
     "crossover_rate": "Frequency of attempted sexual crossing, subject to maturity, compatibility and available gametes.",
     "viability_threshold": "Minimum developmental stability required for reproduction. Low stability also reduces early survival.",
     "mate_cooldown": "Recovery time in simulated seconds after reproduction before another attempt is possible.",
@@ -239,9 +280,13 @@
     "group_strength": "Strength of cohesion and coordinated movement for organisms with social traits.",
     "predation_strength": "Intensity of hunting and feeding interactions, still limited by anatomy, energy and available prey.",
     "hierarchy_strength": "Influence of social rank on movement near other organisms.",
-    "follow_distance": "Distance behind the selected organism when following with the camera.",
-    "follow_height": "Height of the following camera above its target.",
-    "camera_fov": "Camera field of view in degrees. Smaller values zoom in; larger values show more surroundings.",
+  "follow_distance": "Distance behind the selected organism when following with the camera.",
+  "follow_height": "Height of the following camera above its target.",
+  "camera_noclip": "Allows the observer camera to pass through terrain and mountains. World boundaries still apply; turn it off for terrain-aware movement and following.",
+  "observer_presence": "Adds a virtual adult human-like observer signal. Sensitive organisms can look at, approach or avoid the observer; it is never treated as food or a mate.",
+  "show_hud": "Shows or hides status, selection and thought text during normal viewing. The settings and help panels remain available through F10 and F1.",
+  "show_crosshair": "Shows or hides the centre aiming marker used for left-click organism selection. Hiding it does not disable selection or Tab navigation.",
+  "camera_fov": "Camera field of view in degrees. Smaller values zoom in; larger values show more surroundings.",
     "zoom_step": "Change in field of view per mouse-wheel notch while looking around.",
     "audio_enabled": "Master switch for environmental and organism sounds. Spoken thoughts have their own thought-mode setting.",
     "ambient_audio": "Enable background habitat sounds when audio is enabled.",
@@ -261,7 +306,19 @@
     "close_settings": "Close this panel and return to the simulation with the current settings.",
     "export_genome": "Save paired fictional DNA chromosomes with mapped gene locations, complementary strands and genome metadata as JSON.",
     "contact_quality": "0–100: Lower values allow slight overlap and limit body contact correction passes. Below 90, ground support uses the centre of each body part; from 90, four footprint edges are also tested. 100 gives the highest accuracy at greater CPU cost. Default: 85. Applies immediately and is saved in settings profiles. The number is a quality level, not an accuracy percentage.",
-    "gravity_scale": "Sets gravitational acceleration from 0.2× to 2.5× Earth gravity. Changes falling, ballistic jump height, buoyancy forces and the lift needed for flight; 1.0 is the default. Applies immediately and is saved in settings profiles."
+    "gravity_scale": "Sets gravitational acceleration from 0.2× to 2.5× Earth gravity. Changes falling, ballistic jump height, buoyancy forces and the lift needed for flight; 1.0 is the default. Applies immediately and is saved in settings profiles.",
+    "auto_reproduce": "Allows new courtship, fertilization and clonal reproduction. Existing embryos keep developing when switched off. Independent of automatic population replacement.",
+    "evolution_overview": "Shows natural and clonal births, introduced founders, generations, rooted organisms, recent parentage and the first appearance of new body topologies in this run.",
+    "export_evolution": "Saves evolutionary counters and up to 2,048 birth/death genealogy records as JSON in exports/evolution. Reports discarded history; this is not a reloadable world save.",
+    "show_help": "Opens the full guide to controls, the living world, inheritance, developmental stages, every option and exports. Closing it returns to settings while the world remains paused.",
+    "textures_enabled": "Loads replaceable terrain and organism PNG files. Off by default. When enabled, every child receives a new pixel mixture made from the actual parent coat images; existing descendants retain their inherited pattern.",
+    "reload_textures": "Reloads the replaceable PNG templates from the textures subfolders. Existing inherited organism coats stay unchanged; the terrain and newly created founders use the replacements.",
+    "export_texture": "Writes the selected organism’s generated inherited coat pattern to exports/textures as a PNG file. Requires optional textures to be enabled.",
+    "plant_evolution_bias": "Makes the rooted-plant niche easier or harder to discover. It lowers the inherited anchoring and stationary-food thresholds, but never roots aquatic founders on spawn.",
+    "exit_open_settings": "Closes this prompt and opens the full options panel; the simulation remains paused.",
+    "exit_save_quit": "Writes a complete JSON observation snapshot, including organisms, DNA, nutrients, remains and camera state, then exits.",
+    "exit_quit": "Exits immediately without writing a world snapshot.",
+    "exit_cancel": "Closes this prompt and returns to the previous view without changing the world."
   },
   "option_values": {
     "en": "English",
@@ -319,5 +376,32 @@
     "crustacean": "Segmented with legs",
     "cephalopod": "Mantle and arms",
     "unknown": "Unknown"
+  },
+  "evolution": {
+    "run": "Seed %d | Simulation time %.1f s",
+    "population": "Living %d | Developing embryos %d | Rooted organisms %d",
+    "generations": "Highest generation: living %d / reached %d",
+    "births": "Natural offspring %d | Sexual %d | Clonal %d",
+    "mutated": "Offspring with new mutations %d | With major mutations %d",
+    "founders": "Initial founders %d | Automatic replacements %d | Manual injections %d",
+    "deaths": "Deaths %d",
+    "floor": "Automatic population floor: %d living organisms",
+    "floor_off": "Automatic population floor: off",
+    "capacity_wait": "Missing %d: existing embryos may reserve the remaining places.",
+    "discoveries": "New topologies first appearing through reproduction: %d",
+    "discovery": "%s — organism #%d, generation %d, at %.1f s",
+    "discovery_note": "Counts the first appearance of a body topology in this run, not a biological species. Earlier manual injections also count as already known. Inherited shape variation remains possible within each topology.",
+    "recent": "Latest births and introductions (parent -1 = no simulated parent):",
+    "record": "#%d | G%d | %s | %s | Parents %d / %d | %s",
+    "origin_initial": "initial founder",
+    "origin_population_rescue": "automatic replacement",
+    "origin_manual": "manual injection",
+    "origin_sexual": "sexual birth",
+    "origin_clonal": "clonal birth",
+    "alive": "alive",
+    "dead": "dead",
+    "close": "Close",
+    "exported": "Evolution history saved",
+    "retention": "Retained birth records: %d. Older records discarded: %d. Totals and first discoveries survive eviction. Export contains the retained genealogy; it is an observation, not a world save."
   }
 }

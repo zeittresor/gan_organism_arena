@@ -40,6 +40,8 @@ The preferred next technical step is a GDExtension/C++ or compute-shader module 
 
 Neighbour steering combines cohesion with a preferred separation radius. Very close organisms repel before their steering loops collapse into permanent oscillation. Reproduction has a cooldown and does not require two parents to occupy the same point. The observer follow camera queries anatomical rear/focus anchors from the generated morphology and follows behind the tail/rear in movement space.
 
+Alpha23 additionally samples the entire focus-to-camera segment against `habitat_model.floor_at()`. Both the immediate follow placement and every smoothed intermediate position receive terrain clearance, so a ridge cannot contain the camera or occlude the selected body. Horizontal extent, vertical relief/depth and the upper air ceiling are separate habitat dimensions.
+
 
 ## Alpha8 habitat/ecology layer
 
@@ -108,3 +110,22 @@ Hidden connectors have no MultiMesh slot. Active links use compact contiguous in
 `steer_towards` assigns the winning intention rather than averaging opposed destinations. `locomotion.gd` still bounds physical turns and acceleration. Social and affect steering remain bounded route influences. `reproduction_system.gd` caches a compatible partner of interest at 0.8–1.1 second intervals and approaches before probabilistic courtship, without bypassing maturity, gametes, compatibility, capacity or fertilization rules.
 
 Model identifier `arena-biology-6`, observation schema `arena.observation/1`: additive navigation fields expose goal, target, speed, food target, mate interest, meal count and replans. UI controls and optional protocol permission behavior are unchanged.
+
+## Alpha24 population and topology genetics
+
+`sim_world.gd` separates death removal from `_maintain_population_floor()`. The latter executes even for an already empty array, fills all currently available slots toward `minimum_population`, records founder and aggregate rescue provenance, and does nothing when `auto_reseed` is false. New installations and one-time migrated settings use `true` and 5. Initial/rescue founders are age-zero aquatic organisms drawn from topology codes 0, 1 and 3; embryos never count as living floor members, but their reserved capacity is respected.
+
+`body_plan_code` is the 89th quantitative diploid locus and is present in `arena.dna/1`. Expression maps its continuous value into one of seven procedural topology grammars. Sexual reproduction carries one homolog from each parent, while a macro-mutation writes a different code into both homologs so the structural change remains heritable. Three topology grammars are used by automatic ancestors; the other four can therefore be evolutionary novelties. Continuous anatomy, covering, physiology and behavior loci still generate many phenotypes inside each grammar; this is not unrestricted geometry generation or a reconstruction of named Earth taxa.
+
+Founder `size_gene` is constrained to 0.32–0.68, whereas descendants retain the full allele interval. `ecology_traits.gd` maps its endpoint phenotypes to a broader 0.18–2.30 body scale. Viability, energetic cost, food capture, locomotion and finite space continue to select against unsupported extremes.
+
+All sexually produced diploid loci preserve maternal/paternal allele provenance. The expressed HSV hue uses a shortest-arc circular midpoint, and natural skin, scales, armor/shell, feathers and fur derive their variants from that inherited base pigment. Model identifier `arena-biology-7`; observation schema remains additively compatible as `arena.observation/1`.
+
+
+## Alpha25 inheritance and event history
+
+The original 88 loci retain their order; topology, pigment saturation and pigment brightness are appended. The map identifier is `arena.loci/3` (91 loci). Major regulatory mutations edit one homolog at each selected locus and then express the complete diploid genotype. They no longer replace both homologs with a phenotype value. `mutation_events` counts actual changed alleles; `macro_mutation_events` is the major subset, and `mutation_log` stores gene/copy/before/after/kind for changes newly arising in the offspring. Gamete mutation records survive fertilization. None of these counters claims cumulative ancestral mutation burden.
+
+`evolution_history.gd` consumes founder/birth/death events. It keeps run totals, first-seen topologies and the last 2,048 birth records with parent IDs and optional death times. Evictions are counted; totals and first observations survive them. Reports are deep copies. A new world/reset creates a fresh history. Manual/automatic introductions do not count as natural births or new natural topologies. Body topology is not a species definition.
+
+The F10 overview snapshots this history while options pause live simulation. Export writes `arena.evolution/1` JSON; this is a bounded observation history, not a replay/save-state implementation. MCP evidence exports forward the same captured history. Ordinary observations copy only the small totals dictionary. There is no per-frame genealogy scan or added rendering geometry. `refresh_population_floor()` removes pending dead nodes before refilling, including paused and explicitly stepped worlds. Model version is `arena-biology-8`.

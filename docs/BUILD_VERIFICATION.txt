@@ -1,43 +1,35 @@
-GAN Organism Arena alpha22 build verification (2026-09-04)
+GAN Organism Arena alpha29 build verification (2026-09-05)
 
-Native user evidence: Alpha21 installation completed all eight steps, including
-parse, self-test and smoke test. Supplied 2026-09-04 logs have no ERROR/WARNING
-entries. Runtime samples show temporary high movement/contact costs and later
-population decline. Screenshots alone cannot establish motion trajectories.
+Translated production-source suite:
+PAUSE 13; EVOLUTION 185; CAMERA 6; NAVIGATION 43; POSTURE 868;
+SUPPORT 857; LOCOMOTION 3371; INTERACTION 5458; ECOLOGY 60;
+SURFACE 71; LIFE CYCLE 122; BIOLOGY 629; EXPERIMENT 21.
+All 11704 named checks plus the morphology/genome/language integration passed.
 
-Alpha22 source execution with substitute engine objects:
-NAVIGATION SELFTEST:  43  checks;  0  failures
-POSTURE SELFTEST:  868  checks;  0  failures
-SUPPORT SELFTEST:  857  checks;  0  failures
-LOCOMOTION SELFTEST:  3371  checks;  0  failures
-INTERACTION SELFTEST:  5443  checks;  0  failures
-ECOLOGY SELFTEST:  51  checks;  0  failures
-SURFACE SELFTEST:  71  checks;  0  failures
-LIFE CYCLE SELFTEST:  115  checks;  0  failures
-BIOLOGY SELFTEST:  617  checks;  0  failures
-EXPERIMENT SELFTEST:  21  checks;  0  failures
-SELFTEST OK: morphology_signatures= 7  total_cells= 1548  crossover_family= 99  viable= 0.92  unstable= 0.0  thought= Approach carefully, then take the resource.
-All 11457 named assertions and the core test passed.
+Native installer suite additionally contains TEXTURE 20. Expected native named
+check total: 11724. It verifies 50/50 parent-pixel mixing, 75/25 inheritance in
+the next generation, clone copies, parent immutability, survival after parent
+destruction, template replacement, bounded memory, disabled zero-work behavior
+and unchanged biological random results. It also loads all 33 sources, builds
+the bounded specialised atlas and resolves all transition maps. An independent
+RGB pixel oracle and macro-landmark frequency gate passed.
 
-Navigation cases include three body plans reaching bottom food at the head,
-actual displacement, finite feeding range, persistent exploration, no-progress
-recovery, stage-aware food selection, sensing range, partner approach before
-courtship, and respiration taking priority over partner seeking.
+Production docking/courtship/gestation/birth/growth integration: PASS, 1 offspring.
+Aquatic founder medium lock: PASS, founders and first three lineage generations remain aquatic until evolved land traits are present.
+Texture toggle safety: PASS, invalid optional assets fall back to vertex colours without binding incomplete samplers.
+Startup founder pool: PASS, ten distinct initial organisms are sampled from seven canonical plus seven seed-driven crossover forms.
+Performance structural/cache regression: PASS, 42 cases.
+OBJ export regression: PASS, four views, no GPU readback.
+MCP/VKLP unit and permission tests: PASS, 15 tests.
+Grammar/package UI: PASS, 55 GDScripts and 68 fully localized option/action
+tooltips in EN/DE/FR. All 33 seamless 256x256 PNG assets decode successfully,
+remain below 3 MiB, and cover eight terrain, 21 body/tissue and four material maps.
 
-Production coupling/gestation/birth/development integration passes, with one
-offspring and bounded energy/capacity. Production OBJ regression passes natural,
-cell, energy and natural view transitions without graphics readback. Fifteen
-Python adapter unit tests pass. The unchanged active protocol transport was not
-re-run end-to-end in this iteration; observation serialization is covered by
-the production experiment self-test.
+Windows/Godot 4.7.2, GPU output, TTS and FPS were not executable in this build
+environment. Native parse, self-test and smoke gates remain mandatory in the
+Windows installer. Alpha21 remains the latest clean native evidence supplied by
+the user.
 
-47 GDScripts grammar checked, all registered for native parsing and package
-verification. 55 settings/actions retain EN/DE/FR labels/tooltips. Navigation
-status and partner-seeking labels are also provided in all three languages.
-
-Native Alpha22 Windows/Godot execution, GPU output, TTS and FPS were NOT tested
-here. The Python source harness does not model Godot's complete type system,
-rendering server or runtime behavior. Windows installer gates remain active.
-
-Archive gate verifies fresh extraction, ZIP CRC, all payload SHA-256 entries
-and file count. Personal settings, generated logs and temporary data excluded.
+Archive verification requires a fresh extraction, CRC, per-payload SHA-256 and
+file-count match. Personal settings, generated logs and temporary files are
+excluded.

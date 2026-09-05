@@ -12,6 +12,34 @@ func _finish(code: int) -> void:
     get_tree().quit(code)
 
 func _run() -> void:
+    var texture_test = preload("res://game/texture_test.gd").new()
+    add_child(texture_test)
+    var texture_ok: bool = texture_test.run_all()
+    texture_test.queue_free()
+    if not texture_ok:
+        _finish(36)
+        return
+    var pause_test = preload("res://game/pause_test.gd").new()
+    add_child(pause_test)
+    var pause_ok: bool = pause_test.run_all()
+    pause_test.queue_free()
+    if not pause_ok:
+        _finish(35)
+        return
+    var evolution_test = preload("res://game/evolution_test.gd").new()
+    add_child(evolution_test)
+    var evolution_ok: bool = evolution_test.run_all()
+    evolution_test.queue_free()
+    if not evolution_ok:
+        _finish(34)
+        return
+    var camera_test = preload("res://game/follow_camera_test.gd").new()
+    add_child(camera_test)
+    var camera_ok: bool = camera_test.run_all()
+    camera_test.queue_free()
+    if not camera_ok:
+        _finish(33)
+        return
     var navigation_test = preload("res://game/navigation_test.gd").new()
     add_child(navigation_test)
     var navigation_ok: bool = navigation_test.run_all()

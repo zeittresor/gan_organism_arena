@@ -1,7 +1,10 @@
 extends RefCounted
 
 const GRID: int = 64
-var half_extent: float = 72.0
+var half_extent: float = 144.0
+var vertical_extent: float = 72.0
+var bottom_y: float = -43.2
+var ceiling_y: float = 64.8
 var level: int = 5
 var waterline: float = 43.2
 var ground_y: float = -43.2
@@ -14,9 +17,15 @@ var revision: int = 0
 func configure(p_level: int, size: float) -> void:
     level = clampi(p_level, 5, 9)
     half_extent = maxf(10.0, size * 0.5)
-    ground_y = -half_extent * 0.60
+    # X/Z use the full configured width. Vertical relief deliberately scales at
+    # half that rate, preserving prior depths after the width doubles. The
+    # upper bound is 50% higher than the previous symmetric 0.60 ceiling.
+    vertical_extent = maxf(10.0, size * 0.25)
+    bottom_y = -vertical_extent * 0.60
+    ceiling_y = vertical_extent * 0.90
+    ground_y = bottom_y
     var levels: Array[float] = [0.60, 0.38, 0.12, -0.08, -0.18]
-    waterline = half_extent * levels[level - 5]
+    waterline = vertical_extent * levels[level - 5]
     heights.resize((GRID + 1) * (GRID + 1))
     for z in range(GRID + 1):
         for x in range(GRID + 1):
@@ -54,9 +63,9 @@ func _height_raw(x: float, z: float) -> float:
         for center in [Vector2(-0.42, -0.30), Vector2(0.35, 0.30), Vector2(0.40, -0.48)]:
             var d: float = Vector2(x, z).distance_squared_to(center) / 0.17
             island = maxf(island, pow(maxf(0.0, 1.0 - d), 2.0))
-        return half_extent * (-0.52 + island * 1.06)
+        return vertical_extent * (-0.52 + island * 1.06)
     var ridges: float = x * 0.62 + sin(z * 5.2 + x * 2.0) * 0.14 + cos(x * 7.0 - z * 3.0) * 0.08
-    return half_extent * clampf(ridges - 0.08, -0.56, 0.46)
+    return vertical_extent * clampf(ridges - 0.08, -0.56, 0.46)
 
 func vertex(x: int, z: int) -> Vector3:
     return Vector3((float(x) / GRID * 2.0 - 1.0) * half_extent, heights[z * (GRID + 1) + x], (float(z) / GRID * 2.0 - 1.0) * half_extent)
@@ -107,7 +116,7 @@ func nearest_medium(p: Vector3, want_water: bool, clearance: float = 0.65) -> Ve
                 best_d = d
     # No land in the aquarium: air breathers can only seek the surface.
     if best_d == INF and not want_water:
-        best.y = minf(half_extent * 0.60 - clearance, waterline + clearance)
+        best.y = minf(ceiling_y - clearance, waterline + clearance)
     return best
 
 

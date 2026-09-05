@@ -19,6 +19,11 @@ static func can_feed(org, point: Vector3) -> bool:
     return mouth_position(org).distance_squared_to(point) <= radius * radius
 
 static func land_capable(org) -> bool:
+    # Aquatic founders and their first generations remain in the water. The
+    # non-heritable ancestry marker prevents a lucky mutation from bypassing
+    # the intended multi-generation transition.
+    if bool(org.genome.aquatic_ancestry) and int(org.genome.aquatic_steps) < 3:
+        return false
     return Cycle.air_breathing(org) >= 0.28 and Cycle.locomotor_maturity(org) and Traits.walking(org.genome) >= 0.18
 
 static func waypoint(org, rng: RandomNumberGenerator, recovery: bool = false) -> Vector3:

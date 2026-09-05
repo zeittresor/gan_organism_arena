@@ -8,12 +8,13 @@ const TTSScript = preload("res://game/tts_windows.gd")
 const OBJExporterScript = preload("res://game/obj_exporter.gd")
 const HabitatVisualScript = preload("res://game/habitat_visual.gd")
 const AudioEcosystemScript = preload("res://game/audio_ecosystem.gd")
+const ExperimentAPIScript = preload("res://game/experiment_api.gd")
 
 const Cycle = preload("res://game/life_cycle.gd")
 
 const APP_NAME = "GAN Organism Arena"
-const VERSION = "1.0.0-alpha22"
-const RELEASE_DATE = "2026-09-04"
+const VERSION = "1.0.0-alpha29"
+const RELEASE_DATE = "2026-09-05"
 
 var ai_gateway = null
 var sim_world = null
@@ -33,11 +34,14 @@ var perf_timer = 0.0
 var auto_sun_time = 0.0
 var manual_pause = false
 var panel_pause = false
+var last_presentation_time: float = 0.0
 var _rng = RandomNumberGenerator.new()
 var habitat_visual = null
 var audio_ecosystem = null
-var base_world_size: float = 144.0
+var base_world_size: float = 288.0
 var manual_world_delta: float = 0.0
+var last_world_snapshot_path: String = ""
+var reef_visual_timer: float = 0.0
 
 func _ready() -> void:
     _rng.randomize()
@@ -45,7 +49,7 @@ func _ready() -> void:
     AppLog.info("Godot: %s | OS: %s | renderer setting: %s" % [Engine.get_version_info().get("string", "unknown"), OS.get_name(), str(SettingsStore.get_value("renderer", "forward_plus"))])
     _apply_window_mode()
     _build_environment()
-    base_world_size = float(SettingsStore.get_value("world_size", 144.0))
+    base_world_size = float(SettingsStore.get_value("world_size", 288.0))
     _create_habitat()
     _build_dust()
     _create_world()
@@ -79,6 +83,8 @@ func _apply_habitat_level(level: int, announce: bool = true) -> void:
     var size: float = _current_world_size()
     if is_instance_valid(habitat_visual):
         habitat_visual.configure(level, size)
+        if is_instance_valid(swim_camera):
+            swim_camera.set_habitat(habitat_visual.model)
     if is_instance_valid(sim_world):
         sim_world.set_habitat(level, size, habitat_visual.waterline, habitat_visual.ground_y, habitat_visual.model, habitat_visual.resource_positions)
         if not sim_world.experiment_settings.is_empty():
@@ -94,7 +100,7 @@ func _apply_habitat_level(level: int, announce: bool = true) -> void:
         env.fog_density = lerpf(0.0065, 0.0015, air_mix)
         env.ambient_light_energy = lerpf(0.72, 1.05, air_mix)
     if announce and is_instance_valid(ui):
-        ui.set_thought("Habitat %d: %s | world %.1f³" % [level, _habitat_name(level), size])
+        ui.set_thought("Habitat %d: %s | world %.1f × %.1f | air top %.1f" % [level, _habitat_name(level), size, size, habitat_visual.model.ceiling_y])
     AppLog.info("habitat level=%d name=%s world_size=%.1f" % [level, _habitat_name(level), size])
 
 func _habitat_name(level: int) -> String:
@@ -117,9 +123,14 @@ func _create_camera() -> void:
     swim_camera = CameraScript.new()
     swim_camera.name = "Observer"
     add_child(swim_camera)
-    swim_camera.global_position = Vector3(0.0, 4.0, 34.0)
-    swim_camera.rotation = Vector3(0.0, 0.0, 0.0)
+    if is_instance_valid(habitat_visual) and habitat_visual.model != null:
+        swim_camera.set_habitat(habitat_visual.model)
+        swim_camera.place_safe_observer_start(habitat_visual.model)
+    else:
+        swim_camera.global_position = Vector3(0.0, 6.0, 24.0)
+        swim_camera.rotation = Vector3.ZERO
     sim_world.observer_camera = swim_camera.camera
+    swim_camera.set_noclip(bool(SettingsStore.get_value("camera_noclip", false)))
 
 func _create_ui() -> void:
     ui = UIScript.new()
@@ -127,6 +138,7 @@ func _create_ui() -> void:
     ui.setting_changed.connect(_on_setting_changed)
     ui.action_requested.connect(_on_action_requested)
     ui.panels_changed.connect(_on_panels_changed)
+    ui.quit_requested.connect(_on_quit_requested)
     _refresh_selection_text()
 
 func _build_environment() -> void:
@@ -158,15 +170,16 @@ func _build_environment() -> void:
     add_child(sun)
 
 func _build_aquarium_bounds() -> void:
-    var half = float(SettingsStore.get_value("world_size", 144.0)) * 0.5
-    var yhalf = half * 0.60
+    var half = float(SettingsStore.get_value("world_size", 288.0)) * 0.5
+    var bottom = -half * 0.30
+    var top = half * 0.45
     var mesh = ImmediateMesh.new()
     mesh.surface_begin(Mesh.PRIMITIVE_LINES)
     var c = Color(0.10, 0.48, 0.62, 0.24)
     mesh.surface_set_color(c)
     var corners = [
-        Vector3(-half,-yhalf,-half), Vector3(half,-yhalf,-half), Vector3(half,-yhalf,half), Vector3(-half,-yhalf,half),
-        Vector3(-half,yhalf,-half), Vector3(half,yhalf,-half), Vector3(half,yhalf,half), Vector3(-half,yhalf,half)
+        Vector3(-half,bottom,-half), Vector3(half,bottom,-half), Vector3(half,bottom,half), Vector3(-half,bottom,half),
+        Vector3(-half,top,-half), Vector3(half,top,-half), Vector3(half,top,half), Vector3(-half,top,half)
     ]
     var edges = [[0,1],[1,2],[2,3],[3,0],[4,5],[5,6],[6,7],[7,4],[0,4],[1,5],[2,6],[3,7]]
     for e in edges:
@@ -175,10 +188,10 @@ func _build_aquarium_bounds() -> void:
     # internal reference grid, sparse enough not to dominate the scene
     for i in range(-3, 4):
         var t = float(i) / 3.0 * half
-        mesh.surface_add_vertex(Vector3(t, -yhalf, -half))
-        mesh.surface_add_vertex(Vector3(t, -yhalf, half))
-        mesh.surface_add_vertex(Vector3(-half, -yhalf, t))
-        mesh.surface_add_vertex(Vector3(half, -yhalf, t))
+        mesh.surface_add_vertex(Vector3(t, bottom, -half))
+        mesh.surface_add_vertex(Vector3(t, bottom, half))
+        mesh.surface_add_vertex(Vector3(-half, bottom, t))
+        mesh.surface_add_vertex(Vector3(half, bottom, t))
     mesh.surface_end()
     var instance = MeshInstance3D.new()
     instance.mesh = mesh
@@ -210,9 +223,11 @@ func _build_dust() -> void:
     mm.transform_format = MultiMesh.TRANSFORM_3D
     mm.mesh = sphere
     mm.instance_count = 380
-    var half = float(SettingsStore.get_value("world_size", 144.0)) * 0.5
+    var half = float(SettingsStore.get_value("world_size", 288.0)) * 0.5
+    var dust_bottom: float = habitat_visual.model.bottom_y if is_instance_valid(habitat_visual) else -half * 0.30
+    var dust_top: float = habitat_visual.model.ceiling_y if is_instance_valid(habitat_visual) else half * 0.45
     for i in range(mm.instance_count):
-        var p = Vector3(rng.randf_range(-half, half), rng.randf_range(-half * 0.58, half * 0.58), rng.randf_range(-half, half))
+        var p = Vector3(rng.randf_range(-half, half), rng.randf_range(dust_bottom, dust_top), rng.randf_range(-half, half))
         var s = rng.randf_range(0.6, 2.2)
         mm.set_instance_transform(i, Transform3D(Basis.IDENTITY.scaled(Vector3.ONE * s), p))
     mm_instance.multimesh = mm
@@ -221,15 +236,24 @@ func _build_dust() -> void:
 func _process(delta: float) -> void:
     if not is_instance_valid(sim_world) or not is_instance_valid(ui):
         return
-    _update_sun(delta)
-    thought_timer += delta
-    organism_audio_timer += delta
+    var world_delta: float = maxf(0.0, sim_world.presentation_time - last_presentation_time)
+    last_presentation_time = sim_world.presentation_time
+    if manual_pause or panel_pause: world_delta = 0.0
+    _update_sun(world_delta)
+    if is_instance_valid(habitat_visual):
+        habitat_visual.set_world_time(sim_world.presentation_time)
+        reef_visual_timer += delta
+        if reef_visual_timer >= 0.50 and sim_world.has_method("remains_snapshot"):
+            reef_visual_timer = 0.0
+            habitat_visual.update_remains(sim_world.remains_snapshot())
+    thought_timer += world_delta
+    organism_audio_timer += world_delta
     hud_timer += delta
     perf_timer += delta
-    if thought_timer >= float(SettingsStore.get_value("thought_interval", 7.0)):
+    if world_delta > 0.0 and thought_timer >= float(SettingsStore.get_value("thought_interval", 7.0)):
         thought_timer = 0.0
         _emit_next_thought()
-    if organism_audio_timer >= float(SettingsStore.get_value("organism_sound_interval", 4.5)):
+    if world_delta > 0.0 and organism_audio_timer >= float(SettingsStore.get_value("organism_sound_interval", 4.5)):
         organism_audio_timer = 0.0
         _emit_organism_audio()
     if hud_timer >= 0.20:
@@ -251,22 +275,16 @@ func _unhandled_input(event: InputEvent) -> void:
                 ui.toggle_settings()
             KEY_F1:
                 ui.toggle_help()
+            KEY_F2:
+                ui.toggle_hud()
+            KEY_F9:
+                _reload_textures()
             KEY_ESCAPE:
-                if ui.settings_open:
-                    ui.toggle_settings(false)
-                elif ui.help_open:
-                    ui.toggle_help(false)
-                elif Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
-                    swim_camera.release_mouse()
-                else:
-                    swim_camera.capture_mouse()
-            KEY_SPACE:
-                if sim_world.experiment_mode:
-                    sim_world.experiment_mode = false
-                    manual_pause = true
-                    sim_world.record_event("mode", {"mode": "live", "source": "space_key"})
+                ui.show_exit_dialog()
+            KEY_SPACE, KEY_P, KEY_PAUSE:
                 manual_pause = not manual_pause
                 _sync_pause_state()
+                sim_world.record_event("pause", {"paused": manual_pause, "source": "keyboard"})
             KEY_L:
                 _randomize_light()
             KEY_G:
@@ -299,7 +317,7 @@ func _unhandled_input(event: InputEvent) -> void:
                 _save_screenshot()
             KEY_TAB:
                 _select_next()
-    elif event is InputEventMouseButton and event.pressed and not ui.settings_open and not ui.help_open:
+    elif event is InputEventMouseButton and event.pressed and not ui.settings_open and not ui.help_open and not ui.exit_open:
         if event.button_index == MOUSE_BUTTON_LEFT:
             _select_from_crosshair()
         elif event.button_index == MOUSE_BUTTON_RIGHT and is_instance_valid(sim_world.selected):
@@ -420,10 +438,13 @@ func _refresh_selection_text() -> void:
     var dna: String = org.genome.DNA.encode(float(org.genome.alleles["hue"][0])) + org.genome.DNA.encode(float(org.genome.alleles["symmetry"][0]))
     text += "\n" + L10n.text("biology.emotion") + ": " + L10n.text("emotions." + org.emotion) + " | " + L10n.text("biology.sense") + ": " + L10n.text("senses.compound" if org.genome.compound_eye_drive > 0.58 else "senses.focused")
     text += "\nDNA: " + dna + "… | " + L10n.text("biology.dna_export")
+    text += " | " + L10n.text("biology.mutation_counts") % [org.genome.mutation_events, org.genome.macro_mutation_events]
     var anatomy: Dictionary = org.visual.anatomy_counts
     text += "\n" + L10n.text("biology.anatomy") % [anatomy["cartilage"], anatomy["membrane"], anatomy["hydrostat"], anatomy["active"]]
     var goal_label: String = L10n.text("behavior." + org.navigation_goal, org.navigation_goal.replace("_", " "))
     text += "\n" + L10n.text("ui.navigation_status") % [goal_label, org.global_position.distance_to(org.navigation_target), org.velocity.length(), org.feeding_events, org.navigation_replans]
+    if bool(SettingsStore.get_value("observer_presence", false)) and float(org.observer_awareness) > 0.02:
+        text += "\n" + L10n.text("biology.observer") % [int(round(float(org.observer_awareness) * 100.0)), float(org.observer_distance)]
     ui.set_selection(text)
 
 func _on_panels_changed(open: bool) -> void:
@@ -436,8 +457,16 @@ func _on_panels_changed(open: bool) -> void:
     _sync_pause_state()
 
 func _sync_pause_state() -> void:
+    var paused: bool = manual_pause or panel_pause
     if is_instance_valid(sim_world):
-        sim_world.process_mode = Node.PROCESS_MODE_DISABLED if (manual_pause or panel_pause) else Node.PROCESS_MODE_INHERIT
+        sim_world.set_simulation_paused(paused)
+        sim_world.process_mode = Node.PROCESS_MODE_DISABLED if paused else Node.PROCESS_MODE_INHERIT
+        last_presentation_time = sim_world.presentation_time
+    if paused: tts.stop()
+    if is_instance_valid(audio_ecosystem): audio_ecosystem.set_paused(paused)
+    if is_instance_valid(ui):
+        ui.set_pause_status(manual_pause, panel_pause)
+        _refresh_hud()
 
 func _on_setting_changed(key: String, value) -> void:
     if is_instance_valid(sim_world):
@@ -462,17 +491,36 @@ func _on_setting_changed(key: String, value) -> void:
             if str(value) == "off": ui.set_thought("")
         "mcp_enabled", "vklp_enabled", "vklp_write_enabled":
             _sync_optional_ai()
+        "auto_reseed", "minimum_population", "organism_cap":
+            if is_instance_valid(sim_world):
+                sim_world.refresh_population_floor()
         "world_size":
             _apply_habitat_level(int(SettingsStore.get_value("habitat_level", 7)))
         "fullscreen":
             _apply_window_mode()
         "view_mode":
             sim_world.set_view_mode(str(value))
+        "textures_enabled":
+            TextureAssets.set_enabled(bool(value))
+            if bool(value) and TextureAssets.load_error != "":
+                TextureAssets.set_enabled(false)
+                SettingsStore.set_value("textures_enabled", false)
+                if is_instance_valid(ui): ui.set_thought(L10n.text("ui.texture_warning", "Textures unavailable; using safe vertex colours."))
+            _apply_textures()
         "light_mode":
             _apply_light_mode(str(value))
         "camera_fov":
             if is_instance_valid(swim_camera):
                 swim_camera.set_zoom_fov(float(value), false)
+        "camera_noclip":
+            if is_instance_valid(swim_camera):
+                swim_camera.set_noclip(bool(value))
+        "observer_presence":
+            if is_instance_valid(sim_world):
+                sim_world.set_observer_presence(bool(value))
+        "show_hud", "show_crosshair":
+            if is_instance_valid(ui):
+                ui.refresh_visibility()
         "visual_cell_cap":
             sim_world.set_visual_cap(int(value))
         "contact_quality":
@@ -495,6 +543,12 @@ func _on_action_requested(action: String) -> void:
             ui.show_profile_dialog(true)
         "load_settings":
             ui.show_profile_dialog(false)
+        "show_help":
+            ui.toggle_help(true)
+        "reload_textures":
+            _reload_textures()
+        "export_texture":
+            _export_texture()
         "test_speech":
             tts.stop()
             var samples: Dictionary = {"en": "This is the English voice for the organisms.", "de": "Das ist die deutsche Stimme für die Lebewesen.", "fr": "Voici la voix française des organismes."}
@@ -524,10 +578,116 @@ func _on_action_requested(action: String) -> void:
                     file.close()
                     ui.set_thought("DNA: " + path)
                 else: ui.set_thought(L10n.text("ui.profile_write_error"))
+        "evolution_overview":
+            ui.show_evolution_report(sim_world.evolution_report())
+        "export_evolution":
+            var folder: String = ProjectSettings.globalize_path("res://exports/evolution")
+            DirAccess.make_dir_recursive_absolute(folder)
+            var path: String = folder.path_join("evolution_%s_step_%d.json" % [Time.get_datetime_string_from_system().replace(":", "-"), sim_world.sim_steps])
+            var file = FileAccess.open(path, FileAccess.WRITE)
+            if file:
+                file.store_string(JSON.stringify(sim_world.evolution_report(), "  "))
+                file.close()
+                ui.set_thought(L10n.text("evolution.exported") + ": " + path)
+            else: ui.set_thought(L10n.text("ui.profile_write_error"))
         "reset_world":
             _reset_world()
         "close_settings":
             ui.toggle_settings(false)
+
+func _on_quit_requested(action: String) -> void:
+    if action == "save_quit":
+        var path: String = _save_world_snapshot()
+        if path.is_empty():
+            ui.set_thought(L10n.text("ui.world_save_failed", "The world snapshot could not be saved; the application remains open."))
+            AppLog.info("World snapshot failed; quit cancelled")
+            return
+        last_world_snapshot_path = path
+        AppLog.info("World snapshot saved: %s" % path)
+    get_tree().quit()
+
+func _save_world_snapshot() -> String:
+    if not is_instance_valid(sim_world):
+        return ""
+    SettingsStore.save_settings()
+    var folder: String = ProjectSettings.globalize_path("res://exports/world_saves")
+    if DirAccess.make_dir_recursive_absolute(folder) != OK and not DirAccess.dir_exists_absolute(folder):
+        return ""
+    var timestamp: String = Time.get_datetime_string_from_system(true)
+    var filename: String = "world_%d.json" % int(Time.get_unix_time_from_system())
+    var path: String = folder.path_join(filename)
+    var api = ExperimentAPIScript.new()
+    api.configure(sim_world)
+    var organisms: Array = []
+    for org in sim_world.organisms:
+        if not is_instance_valid(org) or not org.alive:
+            continue
+        var item: Dictionary = api.organism_data(org, true)
+        # Gamete pools contain live Genome objects and are deliberately omitted
+        # from JSON snapshots; the diploid DNA/phenotype remains complete.
+        item.erase("gametes")
+        organisms.append(item)
+    var nutrient_points: Array = []
+    var nutrient_reserves: Array = []
+    if is_instance_valid(sim_world.nutrient_field):
+        for point in sim_world.nutrient_field.points:
+            nutrient_points.append([point.x, point.y, point.z])
+        nutrient_reserves = sim_world.nutrient_field.reserves.duplicate()
+    var camera_data: Dictionary = {}
+    if is_instance_valid(swim_camera):
+        camera_data = {"position": [swim_camera.global_position.x, swim_camera.global_position.y, swim_camera.global_position.z], "rotation": [swim_camera.rotation.x, swim_camera.rotation.y, swim_camera.rotation.z], "fov": swim_camera.camera.fov if is_instance_valid(swim_camera.camera) else 0.0, "follow": is_instance_valid(swim_camera.follow_target)}
+    var payload: Dictionary = {
+        "schema": "arena.world-save/1",
+        "version": VERSION,
+        "saved_at": timestamp,
+        "settings": SettingsStore.data.duplicate(true),
+        "simulation": {"seed": sim_world.run_seed, "step": sim_world.sim_steps, "time": sim_world.elapsed_sim_time, "presentation_time": sim_world.presentation_time, "paused": sim_world.simulation_paused, "habitat_level": sim_world.habitat_level, "world_size": sim_world.half_extent * 2.0, "metrics": sim_world.metrics(), "evolution": sim_world.evolution_report()},
+        "observation": api.observation(),
+        "events": sim_world.event_log.duplicate(true),
+        "organisms": organisms,
+        "nutrients": {"points": nutrient_points, "reserves": nutrient_reserves},
+        "remains": sim_world.remains_snapshot() if sim_world.has_method("remains_snapshot") else [],
+        "camera": camera_data
+    }
+    var file = FileAccess.open(path, FileAccess.WRITE)
+    if not file:
+        return ""
+    file.store_string(JSON.stringify(payload, "  "))
+    file.close()
+    return path
+
+func _apply_textures() -> void:
+    if is_instance_valid(habitat_visual): habitat_visual.apply_textures()
+    if is_instance_valid(sim_world):
+        for org in sim_world.organisms:
+            if is_instance_valid(org) and is_instance_valid(org.visual): org.visual.apply_textures()
+    if TextureAssets.enabled and not TextureAssets.warnings.is_empty():
+        ui.set_thought(L10n.text("ui.texture_warning") % TextureAssets.warnings.size())
+
+func _reload_textures() -> void:
+    if not TextureAssets.enabled:
+        ui.set_thought(L10n.text("ui.textures_disabled"))
+        return
+    TextureAssets.reload_sources()
+    ui.set_thought(L10n.text("ui.textures_reloaded"))
+    _apply_textures()
+
+func _export_texture() -> void:
+    if not TextureAssets.enabled:
+        ui.set_thought(L10n.text("ui.textures_disabled"))
+        return
+    if not is_instance_valid(sim_world.selected):
+        ui.set_thought(L10n.text("ui.select_first"))
+        return
+    var org = sim_world.selected
+    var folder: String = ProjectSettings.globalize_path("res://exports/textures")
+    DirAccess.make_dir_recursive_absolute(folder)
+    var path: String = folder.path_join("organism_%05d_step_%d.png" % [org.organism_id, sim_world.sim_steps])
+    var pixels: Image = TextureAssets.resolve_image(org.genome.skin_pattern)
+    if pixels.save_png(path) == OK:
+        ui.set_thought(L10n.text("ui.texture_exported") + ": " + path)
+    else:
+        ui.set_thought(L10n.text("ui.profile_write_error"))
 
 func _export_selected() -> void:
     if not is_instance_valid(sim_world.selected):
@@ -560,6 +720,7 @@ func _reset_world() -> void:
     if is_instance_valid(ai_gateway): ai_gateway.api.configure(sim_world)
     sim_world.record_event("user_reset", {"seed": sim_world.run_seed})
     ui.set_thought(L10n.text("ui.world_reset", "A new evolutionary world has been generated."))
+    _sync_pause_state()
 
 func _apply_window_mode() -> void:
     var fullscreen = bool(SettingsStore.get_value("fullscreen", true))
