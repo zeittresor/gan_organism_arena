@@ -1,261 +1,70 @@
 # GAN Organism Arena
 
-**Program version:** GAN Organism Arena v1.0.0-alpha29
-
-**License:** MIT
+A 3D artificial-life world for watching organisms feed, grow, reproduce and evolve. Start with ten aquatic organisms sampled from fourteen changing startup forms and observe what their descendants become as inherited traits and mutations meet the environment.
 
-## Short description
+**Windows · Portable · 1.0.0-alpha30**  
+Interface and speech settings: English, German and French.
 
-GAN Organism Arena is now a real **3D artificial-life aquarium** (inspired by Conway's Game of Life) instead of a 2D cellular simulation with a 3D visualization layer. Organisms exist and move in X/Y/Z, consume resources in a volume, reproduce through mutation and two-parent genetic crossover, build three-dimensional bodies, accumulate bounded experience, and develop increasingly expressive communication.
+## Start playing
 
-<img width="1920" height="1080" alt="arena_00016396" src="https://github.com/user-attachments/assets/d911d339-64ae-4c53-91b3-40f50154e580" />
+1. Extract the Windows ZIP into its own folder.
+2. Run **`install_windows.bat`** once.
+3. Start the simulation with **`run_windows.bat`**.
 
-<img width="1920" height="1080" alt="arena_00004683" src="https://github.com/user-attachments/assets/cd0b7163-48f2-4555-a4fb-e169a1b69580" />
+Godot is installed inside the project folder. The installer reuses a verified local runtime archive when available; otherwise it downloads it. A separate Godot installation is unnecessary.
 
-<img width="1920" height="1080" alt="arena_00001393" src="https://github.com/user-attachments/assets/bb9b0e14-66b8-4403-ab44-4ba09e8e1f62" />
+## Complete controls
 
-<img width="1920" height="1080" alt="arena_00007194" src="https://github.com/user-attachments/assets/6f9bca8e-0d98-496f-8665-d37b66d887b2" />
+| Key / mouse | Action |
+| --- | --- |
+| W / S or Up / Down | Move camera forward / backward |
+| A / D or Left / Right | Move camera left / right |
+| Q / E | Move camera down / up |
+| Mouse movement | Look around while the pointer is captured |
+| Shift while moving | Move the camera three times faster |
+| Mouse wheel | Zoom in / out, including while following |
+| Shift + mouse wheel | Reduce / increase camera movement speed |
+| Left click | Select the organism under the crosshair |
+| Tab | Select the next organism |
+| Right click | Start / stop following the selected organism |
+| **P, Space or Pause** | **Pause / resume the world** |
+| **F10 → Help** or **F1** | **Full guide and option reference** |
+| F2 | Hide / show the HUD for an unobstructed view |
+| F8 | Export the selected organism as OBJ |
+| F9 | Reload optional PNG templates when textures are enabled |
+| F10 | Open / close settings |
+| F12 | Save a screenshot |
+| L | Randomize lighting |
+| G | Introduce one unrelated young aquatic founder if capacity permits |
+| 1 / 2 / 3 / 4 | Natural / cell / neural / energy view |
+| 5 / 6 / 7 / 8 / 9 | Open water / seabed and islands / coast / land and shallows / full sky habitat |
+| Numpad + / − | Increase / decrease world size |
+| Escape | Open the exit prompt: settings, save world + quit, quit without saving, or cancel |
 
-<img width="1920" height="1080" alt="arena_00001877" src="https://github.com/user-attachments/assets/c91da578-978a-4d93-91b4-570ef8703176" />
+While paused, you can still look around and inspect organisms. Opening settings, help or the exit prompt also pauses the world. World shortcuts are inactive while menus are open. Escape again cancels the exit prompt; closing the window opens the same prompt.
 
-On Windows, run:
+## Make it your world
 
-```text
-install_windows.bat
-```
+Use F10 to adjust the habitat, population, reproduction, sound and graphics, or save and load settings profiles. Hover over an option for an explanation. The **Help** button explains the simulation and every option in detail. **Plant-niche discoverability** controls how readily inherited anchoring and stationary feeding can produce rooted aquatic or land plants; founders still start as motile aquatic organisms.
 
-## Controls
+The camera starts at a terrain-safe shore viewpoint. Follow mode keeps the complete camera path above the heightfield. In Settings, **Camera noclip** optionally allows travel through mountains and the seabed. **Human observer presence** adds an adult humanoid signal that organisms can notice, approach or avoid without making the observer edible or a mating target. **Show interface text** and **Show aiming crosshair** can be switched off independently for clean observation; F2 remains a quick HUD toggle.
 
-- Mouse — free look
-- W/S — swim forward/back
-- A/D — strafe
-- Q/E — descend/ascend
-- Shift — boost
-- Mouse wheel — optical zoom; Shift + wheel — observer speed
-- L — new random light direction; persists until changed
-- LMB — select organism under crosshair
-- RMB — follow/unfollow selected organism
-- Tab — next organism
-- Space — pause/resume
-- F10 — settings
-- F1 — detailed in-app help
-- 1/2/3/4 — Natural / Cell / Neural / Energy views
-- 5/6/7/8/9 — Change habitat
-- G — inject a random organism
-- F8 — export selected organism as OBJ
-- F10 — Settings
-- F12 — screenshot
-- Esc — Exit / save / options
+Optional PNG textures are off by default. Enable them in F10 to use eight terrain, 21 organism/tissue and four future tool/material patterns. The 33 supplied seamless 256×256 files together remain below 3 MiB. Terrain maps include deep seabed, wet shore, beach sand and grass and blend according to height around the waterline. Landscape maps contain no dominant source landmarks; the terrain shader also blends deterministic random offsets, quarter-turns and reflections so one tile no longer appears as an obvious grid. Body segments use stable individual excerpts and orientations. Specialized tissues such as bone, eyes, fins, leaves, bark, wings, feathers, horns, beaks, limbs/claws, armour and reproductive surfaces are assigned thematic maps; an adaptive fallback prevents future unknown tissue from becoming untextured. Wood, stone, metal and cloth are prepared for tools or clothing, and the current carried tool uses wood. Replace files below `textures`, then press F9 or use **Reload PNG textures**. Founders receive varied weighted coat pairs. Every sexual offspring receives a new 50/50 pixel mixture of its parents' actual coat maps; this continues through later generations. Clonal offspring copy their parent's map. The generated texture of a selected organism can be exported from Settings.
 
-## Rendering backends
+If an optional image is missing or invalid, the texture switch fails safely back to the normal vertex-colour materials. Aquatic founders and descendants with fewer than three inherited transition steps remain in the water; land and flight require evolved respiration, support and locomotion rather than appearing at startup.
 
-The Settings menu supports:
+The **Evolution overview** separates natural offspring from automatically introduced replacements. Dead organisms leave a finite amount of edible tissue. Scavengers can feed on it, decomposition returns part to nearby food particles, and hard remains persist temporarily as inert substrate. Coral-like outcrops and stones decorate the seabed; dead animals do not automatically become living coral. DNA and evolution history can be exported for inspection. Evolution is experimental: particular creatures or abilities are not guaranteed.
 
-- `forward_plus` — Vulkan, recommended for modern GPUs;
-- `mobile` — lighter Vulkan renderer;
-- `compatibility` — OpenGL fallback.
+Use **F10 → Save world / Load world** for resumable `.arena` checkpoints. They preserve organisms, DNA, gametes, developing embryos, inherited texture pixels, food stocks, remains, history, camera and random-generator state. **Escape → Save world and quit** saves under `exports/world_saves` and exits only after verifying the file. Loaded worlds start paused: close the menu and press **P** to continue. Loading preserves your current interface permissions. Alpha29 JSON analysis snapshots are not resumable checkpoints. Rendering and contact caches are rebuilt on load; frame-exact replay across versions is not promised.
 
-For debugging, `run_console.bat` starts the console build and leaves engine errors visible. `run_mobile.bat` forces the lighter Vulkan Mobile renderer.
+Offspring receive one homolog from each parent at every locus. Head, torso, limb and tail development use tissue-specific regulatory mixtures of those inherited variants; body parts need not all resemble the same parent. Cognitive and behavioral predispositions are inherited too, while experience and practiced skills develop during life. Mutations can be beneficial, neutral or harmful; the habitat determines which variants reproduce successfully. Head proportions now follow supporting body tissue, with only mild juvenile enlargement.
 
-Renderer changes require a restart because Godot selects the graphics backend before loading the project. `run_compatibility.bat` is provided as a diagnostic fallback.
+Each new world builds seven canonical founder genomes plus seven fresh crossover mixtures of those genomes, then samples ten distinct entries from the fourteen-form pool. The pool is driven by the run seed, so the same seed is reproducible while a new start produces a different initial gene pool.
 
-## Performance model
+## Having trouble?
 
-The project deliberately decouples simulation from rendering. Organism decision/evolution ticks default to 12 Hz while the camera can render at the display frame rate. Each organism uses two MultiMeshes for body tissues and their connections. Articulated poses update at up to 20 Hz. Only visible organisms need animation uploads; biology and physical poses continue outside the camera view. Morphology is rebuilt only when development visibly changes. Per-organism event memory is bounded.
+For slower or incompatible graphics hardware, try `run_compatibility.bat`. If installation or startup fails, use `run_diagnostics.bat` and include the files from `logs` when reporting the problem.
 
-The most useful performance controls are:
+Optional AI connections: [MCP and VKLP guide](docs/AI_INTERFACES_DE.md). They are off by default and are not required to use the application.
 
-- **Contact accuracy** (default 85; 100 for detailed footprint support)
-- **3D simulation ticks per second**
-- **Maximum living organisms**
-- **Maximum visible body cells per organism**
-- **Body morphology refresh interval**
-- **3D nutrient particle count**
-
-## Directory layout
-
-```text
-GAN Organism Arena/
-├─ project.godot
-├─ scenes/
-├─ game/
-├─ language/          editable EN/DE/FR JSON
-├─ settings/          persistent config.json
-├─ logs/
-│  └─ install/
-├─ exports/
-│  └─ obj/
-├─ screenshots/
-├─ runtime/
-│  └─ godot/          portable Godot runtime after installation
-├─ docs/
-├─ changelogs/
-├─ install_windows.bat
-├─ run_windows.bat
-├─ run_compatibility.bat
-├─ run_parse_test.bat
-├─ run_selftest.bat
-└─ run_editor.bat
-```
-
-## Notes on the term “GAN”
-
-The project name is retained from its original concept. The current core is better described as **developmental artificial life**: genomes, local developmental rules, selection, mutation, morphology, behavior and cognition. A future GAN/critic or learned morphology evaluator can be added as an optional evolutionary pressure rather than pretending a GAN is the correct tool for every part of the simulation.
-
-## Languages
-
-EN / DE / FR
-
-
-**Changelog**
-
-## 1.0.0-alpha29
-
-- Add a paused Escape exit prompt with localized choices to open settings, save a complete world snapshot and quit, quit without saving, or cancel.
-- Save-and-quit writes `exports/world_saves/world_<unix-time>.json` with organisms, diploid DNA/phenotypes, nutrients, remains, evolution counters and camera state; live Genome objects are excluded so the archive stays valid JSON.
-- Add the **Plant-niche discoverability** option. A moderate default bias makes inherited anchoring plus stationary feeding reach rooted aquatic or land plants more often, while aquatic founders remain motile.
-- Retain bounded aquatic death remains and render them as slowly growing seabed coral/mineral stalks; deterministic reef anchors also populate deeper coast habitats.
-- Extend EN/DE/FR labels, tooltips and help text for the new option and exit actions.
-
-## 1.0.0-alpha28
-
-- Start the observer at a terrain-safe shore/water viewpoint instead of a fixed coordinate that could be inside a mountain.
-- Keep free camera movement above the analytic terrain and keep follow-camera paths clear of the ground; add an optional Noclip setting for deliberate exploration through mountains and the seabed.
-- Add an optional adult human-like observer signal. Organisms can perceive it, orient their eyes toward it, inspect it or avoid it, while it remains outside food and mating logic.
-- Add persistent options for HUD text and crosshair visibility, with explanatory EN/DE/FR tooltips and profile support.
-
-## 1.0.0-alpha27
-
-- Replace recognizable large landmarks in all four original terrain maps with lower-macro-frequency material detail while preserving compact 256×256, edge-closed PNGs.
-- Add deterministic stochastic terrain sampling: neighbouring regions blend independently offset, quarter-turned and reflected samples instead of displaying one obvious repeated grid.
-- Add deep-seabed, wet-shore, beach-sand and grass maps. The terrain shader blends these around the actual waterline and retains the habitat-specific ground as the regional land material.
-- Give every rendered body segment a stable individual texture excerpt/orientation; inherited coat pixels and biological random streams remain unchanged.
-- Expand the optional library to 33 replaceable maps: eight terrain, six inheritable coats, fifteen specialised/future tissue fallbacks and wood/stone/metal/cloth. Unknown tissue uses an adaptive fallback, and the current carried tool uses wood.
-- Replace head-chasing courtship with persistent pair docking points and a common side-by-side orientation. Internal contact now checks reproductive-region proximity, tolerates momentary solver gaps and completes a verified approach-to-birth integration.
-- Guard the optional texture toggle with complete-map checks and a vertex-colour fallback so invalid replacement PNGs cannot take down the running application.
-- Mark aquatic ancestry outside the DNA loci and require three descendant steps before evolved respiration, support and locomotion can open a land or flight niche; steep-shore corrections keep early lineages submerged.
-- Set the fresh-world population to ten and generate a seed-driven fourteen-entry founder pool: seven canonical aquatic plans plus seven new diploid crossover mixtures, sampled without repetition.
-
-## 1.0.0-alpha26
-
-- Replace three oversized 1254×1254 PNG files (about 9 MB) with ten compact 256×256 templates totalling about 708 KB.
-- Supply six distinct organism patterns (skin, scales, fur, membrane, plates and mottle) plus four habitat-specific terrain patterns.
-- Make every bundled map technically seamless by matching opposite boundary pixels and softly blending the nearby border regions.
-- Give each founder a deterministic two-template recipe informed by its surface traits. Sexual descendants combine the complete recipes and, when textures are active, the actual parent pixels; clonal descendants retain an independent copy.
-- Keep runtime maps bounded at 128×128, cache byte buffers during weighted mixing and leave all PNG work disabled until the user activates textures.
-
-## 1.0.0-alpha25
-
-- Add optional replaceable terrain/body PNG textures, disabled by default. Sexual offspring receive an owned 50/50 pixel mixture of both parents' actual inherited maps; clones receive an independent copy. This continues across generations.
-- Add F9 texture reload, selected coat PNG export and F2 HUD toggle. Existing inherited coats survive template replacement and parent death.
-- Add a full pause across biology, movement, development and presentation using P, Space or Pause; add a detailed in-app handbook and complete README control reference.
-- Preserve the unmutated homolog during major regulatory mutation; record actual allele changes, including inherited gamete changes and clonal recessive-load changes.
-- Restore the original 88-locus order; append topology and two new inherited pigment loci (91 total, map `arena.loci/3`). Make hue blending independent of parent order.
-- Add event-driven, bounded genealogy and all-run evolutionary counters. Separate natural reproduction from automatic/manual injections and distinguish first natural topology appearances.
-- Add F10 evolution overview, JSON history export and independent new-reproduction toggle; update EN/DE/FR help/tooltips and precise mutation controls.
-- Apply population rescue immediately while paused/stepped, clean dead pending nodes and preserve explicitly disabled migrated preferences.
-- Include genealogy in optional evidence exports; add native evolution regression gate (exit 34). Native Windows/Godot execution was unavailable during preparation; source checks and installer gates are documented.
-
-### Alpha22: purposeful exploration, feeding and partner seeking
-
-- Individuals keep exploration waypoints and forage with energy-based hysteresis. Fruitless approaches trigger a new route and a temporary target cooldown. Local food sensing uses the current developmental stage.
-- Nutrients are captured at the articulated head. Body origins no longer have to enter the food particle, and land food is not shifted upward to the body origin.
-- Ecological actions replace competing intentions; existing turn/acceleration limits smooth the resulting movement. Compatible receptive adults approach partners before the random courtship event starts. Emergency respiration and escape take priority.
-- Selection details show the current goal, distance, speed, meal count and route retries in EN/DE/FR. Optional observations include the same navigation data; diagnostic logs include movement/feeding summaries.
-- Existing anatomical restrictions still govern swimming, land locomotion and flight. See [Alpha22 notes](docs/ALPHA22_DE.md) and [validation status](docs/TESTING.md).
-
-### Alpha21: headless installer and OBJ export hotfix
-
-- Hidden connectors receive no render instance. Active connectors use compact indices, including after view changes.
-- Rendering and OBJ export share CPU pose buffers; the exporter no longer reads per-instance transforms from the graphics server.
-- Regression tests check hidden anatomy, connector allocation and natural/cell view transitions without graphics readback. Native installer gates stay enabled.
-- See [Alpha21 notes](docs/ALPHA21_DE.md) and [validation status](docs/TESTING.md). Windows/Godot execution was not available here.
-
-### Alpha20: articulated shore posture and connector fixes
-
-- Axial joints now follow the local terrain tangent without alternating overcorrection; their bounded range and proximal pivot allow long bodies to curve over ridges. Unsupported body mass biases the support pitch instead of treating one tail contact as a clamp.
-- Up/down swimming turns also propagate into trailing joints and relax smoothly afterwards. Head/tail interaction anchors follow the actual articulated pose.
-- Cranial horns and beaks attach to the head even when their material/size sample comes from a remote limb. Hidden internal tissues have fully hidden connectors, removing long needle-like residual geometry in natural view and OBJ export.
-- Adds native installer regression cases for sharp ridges, steep shores, independent segment bending, vertical swim turns and connector geometry. See [Alpha20 notes](docs/ALPHA20_DE.md) and [validation status](docs/TESTING.md). Native Windows/Godot rendering was not available in this build environment.
-
-### Alpha19: ground-following spines and planetary gravity
-
-- Axial joints can settle vertically along uneven terrain as well as bend sideways. An overdamped, bounded pose solver preserves rigid bones and connected segment lengths, including across body rebuilds.
-- Buoyancy follows the immersed fraction of structural body volume. Dry overhangs lose water support; unsupported bodies and pupae fall. Powered flight needs adequate anatomy, reserves and lift at the selected gravity.
-- F10 **Planetary gravity (× Earth)**: 0.20–2.50, default 1.00; live changes, settings-profile persistence and explanatory EN/DE/FR tooltips. Also available as the optional experiment parameter `gravity_scale`.
-- Structural tissue carries ground contact; feathers and similar coverings no longer lift the whole body like rigid stilts. Local sensing is cached; wholly contained collision spheres are removed without shrinking the occupied envelope.
-- Read [Alpha19 notes](docs/ALPHA19_DE.md) and [validation status](docs/TESTING.md). Local checks execute production logic with substitute engine objects; Alpha19 still needs native Windows/Godot visual validation.
-
-### Alpha18: installer self-test hotfix
-
-- Fixes the step-5 runtime error in `locomotion_test.gd`: nutrient fixture positions are constructed as an explicit `Array[Vector3]` before assigning the typed property.
-- The fixture node belongs to the test scene, so it also has a cleanup owner if a test aborts.
-- Static package verification rejects bare array literals assigned to known typed-array members. The guard detects the original alpha17 failure.
-- Includes the Alpha17 movement and anatomical-joint changes. See [validation status](docs/TESTING.md) for the distinction between native user logs and local source checks.
-
-### Alpha17: stable locomotion and anatomical joints
-
-- Steering intent, body turning, propulsion and contact impulses are separate. Limited angular acceleration, gradual turns and persistent food/prey targets prevent rapid body-axis reversals.
-- Continuously integrated gait phase fixes animation jumps after speed changes or long runtimes. Compatible body rebuilds preserve joint poses.
-- Rigid bones/shafts and fixed attachments inherit their parent frame. Cartilage joints, flexible shell joints and muscular hydrostats have anatomy-dependent axes, angular limits and muscle-driven strokes.
-- Terrain support follows posed tissue orientation. Existing contact-quality controls, caches, visibility savings and the tissue budget are retained.
-- Localized anatomy counts, Cell-view joint markers and optional API joint data make the mechanisms inspectable.
-- Read [Alpha17 movement notes](docs/ALPHA17_DE.md) and [validation status](docs/TESTING.md). Native Windows/Godot rendering has not been executed for this build here.
-
-### Alpha16: performance and adjustable contact accuracy
-
-- F10 **Contact accuracy** slider (0–100, default 85), live updates and profile persistence, with explanatory EN/DE/FR tooltips.
-- Terrain tile bounds, pose-aware contact caches and proximity checks avoid unnecessary detailed work. Quality 100 retains the detailed articulated contact model; lower settings tolerate small overlaps and use fewer contact passes.
-- Static render scales/colors are reused. Invisible organisms skip graphics uploads while articulation, collision and biology continue; re-entry and OBJ export flush the current pose.
-- Detailed ten-second runtime diagnostics identify motion, biology and contact CPU costs, rendering workload and cache/visibility savings.
-- Read [alpha16 performance notes](docs/ALPHA16_DE.md) and [verification](docs/TESTING.md). Source benchmarks are not Windows FPS measurements.
-
-### Alpha15: connected bodies, options and developmental mechanisms
-
-F10 now contains independent **MCP/VKLP permission switches**, a separate VKLP submission permission, a service URL, explanatory tooltips for every option, and **Save settings / Load settings** JSON profiles. Connecting an allowed adapter preserves normal controls and the current population. The direct VKLP client also works with MCP disabled.
-
-Menu/thought language and spoken language can be selected separately (English, German, French). Installed voices are filtered by speech language, with a test button. Thoughts, memory fragments and HUD labels are localized. A missing matching system voice is reported instead of speaking in a different language.
-
-Bodies have connected, length-preserving animated branches and a flexible axial chain. Body envelopes resolve overlap, including mating contact; rotated tissue footprints constrain terrain contact and gravity returns unsupported land organisms to the ground. Focused eyes have colored irises and pupils that follow targets; inherited traits can instead produce compound eyes and antennae. Gradually developed affect influences exploration, attachment and escape behavior.
-
-**88 paired quantitative loci** now map to inspectable fictional A/C/G/T DNA chromosomes with gene offsets and complementary strands. F10 exports the selected DNA as JSON. Mitotic growth and tissue repair consume energy. Reciprocal meiotic tetrads produce actual stored haploid gametes; fertilization restores paired alleles. Heritable facultative strategies can invest in both clonal buds and sexual reproduction. Odd-looking forms remain eligible if they can function and survive.
-
-See [Alpha15 details and controls](docs/ALPHA15_DE.md), [AI interfaces](docs/AI_INTERFACES_DE.md), and [validation status](docs/TESTING.md). Visual style remains procedural instanced geometry; the reference creature is not a promised photorealistic rendering.
-
-### Alpha14: deeper biological mechanisms
-
-The world remains the main application and runs fully offline without AI integrations. Inheritance now uses **84 diploid loci**, linked segregation/recombination, partial dominance, inherited sex chromosomes and eight recessive-load loci. Juvenile development spends real reserves; mature organisms synthesize finite egg/sperm reserves. Embryonic stages develop according to energy, temperature, oxygen and health. Food particles refill over time instead of instantly recreating consumed energy.
-
-**All alpha13 controls and features remain available**, including with MCP, VKLP or both active. Connecting does not pause/reset the world or lock controls. Fixed stepping is an explicitly chosen experiment mode. Optional Python-standard-library adapters let AIs observe and run experiments, apply external information with provenance, and send simulation-scoped claims/evidence to the user's VKLP 0.1 service. A visible game continues when the MCP connection closes.
-
-See [Biology](docs/BIOLOGY_RESEARCH_DE.md), [optional AI interfaces and runnable examples](docs/AI_INTERFACES_DE.md), and [validation status](docs/TESTING.md). The optional adapters require Python 3.10+; normal installation and gameplay do not. The installer keeps its cache search and native Godot parsing/self-test gates.
-
-The following sections describe the retained earlier features. Alpha14's biology document supersedes older descriptions of scalar inheritance and age-only development.
-
-### Alpha13: coastal ancestors and complete reproductive cycles
-
-New worlds start in **coastal habitat 7**, now with usable sky. Aquatic founders begin underwater with constrained terrestrial/flight traits; those bounds apply only to founders, so their descendants can evolve beyond them. The previous default of habitat 5 migrates once; other saved habitats remain selected.
-
-Reproduction now has compatible gamete roles, courtship/contact, fertilization, egg incubation or embryo retention/gestation, birth and immature offspring. Twenty additional inherited parameters cover reproductive anatomy, dimorphism/displays, developmental stages, genetic compatibility and brief cross-medium hunting. External spawning, internal egg laying, yolk-fed egg retention, maternal provisioning and plant/clonal propagules are distinct mechanisms. There is no automatic cloning fallback for sexual organisms. Embryos consume parental resources, can be lost and reserve population slots.
-
-Bodies visibly grow through life stages; appropriate combinations can develop larvae and pupae. Scientific Cell view exposes schematic primary reproductive tissues; secondary display structures mature with the body. Individuals develop and learn; populations evolve genetically across generations. Arbitrary Earth species cannot cross merely because they meet: compatibility is an explicit simplified model, not a biological guarantee.
-
-Strong swimmers can breach for low aerial prey; land hunters can snap at nearby swimmers or leap; suitable flyers can dive shallowly. Physical reach, breath, stamina and recovery constrain these actions. The water surface now has animated waves, view-angle highlights/opacity, a visible underside and a terrain-matched shore contour. **L chooses a new random sun direction on each press**; it stays fixed until changed or auto_sun is selected.
-
-The installer includes **51 ecology + 71 covering + 115 life-cycle assertions**. They pass in the source-translation harness; native Godot/Windows rendering and installation have not been tested here. See [Life cycles and model limits](docs/LIFE_CYCLE_DE.md) and [Testing](docs/TESTING.md).
-
-**Alpha11 parser hotfix:** renamed the ecological gene loop binding `trait` to `gene_name`. Godot 4.7.2 rejected the old identifier and consequently could not load the dependent simulation/self-test scripts. Package validation now also checks loop bindings, constant names and static-function parameters against reserved names. The alpha10 ecology and larger world are retained.
-
-### Alpha12: heritable body coverings
-
-Organisms can combine **skin, scales, feathers with quills, fur/bristles, mucus, membranes, horns/spines, beaks and pigment patterns**. Nine additional inherited genes affect visible structures, insulation, water drag, drying, skin breathing, protection, bite strength and maintenance costs. Feathers can develop on non-flying bodies without fins; flight still requires a capable skeleton/body, wings, air respiration, practice and open sky. A simple local temperature gradient gives insulation both benefits and costs.
-
-Coverings share the existing cell budget and use stylized instanced geometry. Tree stems gain bark colouring. The inspector separates coverings from ecological adaptations and displays ambient temperature. EN/DE/FR help and 71 covering assertions are included, alongside the 51 ecology assertions. The alpha11 reserved-name fix remains included.
-
-### Alpha10: larger world and ecological specialization
-
-The default world is now **144 × 86.4 × 144 units**, twice each previous dimension (eight times the volume). Old settings migrate once. New heritable traits connect respiration, locomotion, body load, feeding and behavior: amphibious life, structurally gated flight in sky habitats, pack hunting, ambush, tools, hiding, cleaning, parasitism, upright gait, small insect-like forms and rooted photosynthetic/filter-feeding bodies. Land trees require supporting traits. The visible terrain and organism floor queries now share one heightfield.
-
-The inspector shows adaptations, current behavior, oxygen, stamina, moisture and learned skills. Evolution remains constrained by the implemented gene/body grammar; no particular Earth species or advanced form is guaranteed. Population rescue is now optional and off by default; there is no forced culling based on complexity/intelligence.
-
-**Source:** https://github.com/zeittresor/gan_organism_arena
+[Changes](changelogs/CHANGELOG.md) · [License: MIT](LICENSE.txt)

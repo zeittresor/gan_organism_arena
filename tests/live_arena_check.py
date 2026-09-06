@@ -9,7 +9,7 @@ from arena_client import ArenaClient
 
 with ArenaClient(*sys.argv[1:]) as client:
     client.call("arena_mode", mode="stepped")
-    params = {'initial_organisms': 2, 'organism_cap': 12, 'nutrient_count': 32}
+    params = {'initial_organisms': 2, 'organism_cap': 12, 'nutrient_count': 32, 'auto_reseed': False}
     first = client.call('arena_reset', seed=42, parameters=params)
     assert first['step'] == 0 and len(first['organisms']) == 2
     first = client.call('arena_step', steps=12)
@@ -22,7 +22,7 @@ with ArenaClient(*sys.argv[1:]) as client:
     assert len(detail['genome']['alleles']) == 91
     assert detail['dna']['ploidy'] == 2
     assert detail['cell_cycle']['gamete_ploidy'] == 1
-    client.call('arena_parameters', parameters={'nutrient_renewal': 0.0})
+    client.call('arena_parameters', parameters={'nutrient_renewal': 0.0, 'plant_evolution_bias': 0.8})
     events = client.call('arena_events', after=0)
     assert any(e['kind'] == 'intervention' for e in events['events'])
     evidence = client.call('arena_export')

@@ -1,7 +1,7 @@
 $ErrorActionPreference = 'Stop'
 $Root = Split-Path -Parent $PSScriptRoot
-$ExpectedVersion = '1.0.0-alpha29'
-$ExpectedDate = '2026-09-05'
+$ExpectedVersion = '1.0.0-alpha30'
+$ExpectedDate = '2026-09-06'
 
 function Require-File([string]$RelativePath) {
     $Path = Join-Path $Root $RelativePath
@@ -21,6 +21,9 @@ $Required = @(
     'scenes\SmokeTest.tscn',
     'game\main.gd',
     'game\sim_world.gd',
+    'game\world_save.gd',
+    'game\application_test.gd',
+    'game\ui_test.gd',
     'game\organism.gd',
     'game\organism_visual.gd',
     'game\genome.gd',
