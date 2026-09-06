@@ -71,6 +71,16 @@ Offspring receive one homolog from each parent at every locus. Head, torso, limb
 
 Each new world builds seven canonical founder genomes plus seven fresh crossover mixtures of those genomes, then samples ten distinct entries from the fourteen-form pool. The pool is driven by the run seed, so the same seed is reproducible while a new start produces a different initial gene pool.
 
+## Inheritance rather than blending of individual trait values
+
+There are 84 continuous trait loci, each possessing two alleles. During sexual reproduction, each parent contributes a haploid set. Adjacent loci are arranged in groups of up to 16 on an artificial linkage map. At chromosome boundaries, a homolog is selected independently; the probability of crossover between adjacent loci is 0.06. These figures are parameters of a hypothetical genetic system, not empirically measured terrestrial recombination maps.
+
+In the absence of mutation, existing alleles are passed on; a heterozygous parent does not generate arbitrary intermediate alleles. Some traits exhibit partial dominance, while others are expressed additively. Consequently, two heterozygous parents can produce a 1:2:1 genotype distribution. Mutation alters individual alleles; major structural changes are controlled separately and occur less frequently than before (0.014 instead of 0.14 per reproductive event).
+
+Eight additional, independently segregating model loci carry recessive deleterious alleles. A single harmful copy has no effect, whereas two copies reduce genetic health by 0.09 per locus. Related animals do not incur a blanket penalty based on their family ID; however, they may pass on the same hidden alleles. Heterozygosity measures the proportion of distinct allele pairs across the 84 trait loci; it is not a general measure of fitness.
+
+Where sex roles are distinct, an inherited XX/XY-style model configuration determines the role. Hermaphroditism remains a heritable trait. This convention does not replicate the full range of natural sex-determination systems. Learned hunting behavior and experience with tools are not inherited as acquired germline mutations.
+
 ## Having trouble?
 
 For slower or incompatible graphics hardware, try `run_compatibility.bat`. If installation or startup fails, use `run_diagnostics.bat` and include the files from `logs` when reporting the problem.
