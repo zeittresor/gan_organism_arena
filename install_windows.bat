@@ -1,7 +1,7 @@
 @echo off
 setlocal EnableExtensions
 cd /d "%~dp0"
-set "APP_VERSION=1.0.0-alpha30"
+set "APP_VERSION=1.0.0-alpha37"
 set "RELEASE_DATE=2026-09-06"
 
 echo ============================================================
