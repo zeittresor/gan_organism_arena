@@ -1,6 +1,6 @@
 $ErrorActionPreference = 'Stop'
 $Root = Split-Path -Parent $PSScriptRoot
-$AppVersion = '1.0.0-alpha30'
+$AppVersion = '1.0.0-alpha37'
 $ReleaseDate = '2026-09-06'
 $GodotVersion = '4.7.2'
 $RuntimeDir = Join-Path $Root 'runtime\godot'

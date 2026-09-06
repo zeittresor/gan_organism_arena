@@ -1,5 +1,47 @@
 # Changelog
 
+## 1.0.0-alpha37 — 2026-09-06
+
+- Enable the supplied PNG terrain and organism textures by default while retaining the F10 switch for users who prefer simpler or faster materials.
+- Replace the water surface's isolated bright points with smooth, moving wave bands, broad ripples and soft crest highlights in the procedural shader.
+- Add a framed, categorized F10 settings panel with clearer spacing and a localized **Show wireframe world boundary** option. Hiding the guide geometry never changes world limits or collision/support calculations.
+- Keep the existing texture inheritance, generated fallback, population and aquatic-founder safeguards intact; no third-party asset was added in this release.
+
+## 1.0.0-alpha37 — 2026-09-06
+
+- Expand the coherent aquatic founder pool from 14 to 42 seed-driven forms (seven canonical topologies plus 35 zero-mutation crossover mixtures) while keeping the default starting population at ten. New worlds therefore sample a much broader baseline without flooding the simulation with extra organisms.
+
+## 1.0.0-alpha35 — 2026-09-06
+
+- Keep aquatic generation-0 founders visually coherent: standing alleles remain available in their diploid DNA, while costly coverings, horns, beaks, fangs, light organs, jelly tissue and stinging appendages are expressed only after inherited developmental change (or an explicitly advanced test genome). Ordinary growth still scales the body without counting as mutation.
+- Rework reproductive approach geometry around expressed reproductive anchors. Partners now select a common forward direction and fixed side-by-side docking targets, including each body’s local anchor offset, so approach steering no longer chases a head or rear.
+- Preserve the reduced mutation rate and generation-independent newborn complexity from alpha33, and keep the native parse, biology, navigation and lifecycle gates green.
+
+## 1.0.0-alpha34 — 2026-09-06
+
+- Add letal critical-trauma mortality. Predation damage is first offered to the existing energy-paid mitotic repair process; only unrepaired tissue damage at or above 85% causes `trauma_collapse` and enters the normal remains, scavenging and reef-substrate pipeline.
+- Add a regression check for physical collapse after unrepaired severe injury, while preserving recovery for organisms that can afford repair.
+
+## 1.0.0-alpha33 — 2026-09-06
+
+- Correct the life/aging boundary: generation number no longer grants newborns extra body complexity. Every offspring starts from its own embryo complexity and develops through condition, physiology and inherited developmental genes.
+- Reduce the per-locus de-novo point-mutation probability to a rarer, more biologically conservative baseline. Recombination and rare macro-mutations remain active, so meaningful novelty still emerges across generations without every child changing visibly.
+- Reset mutation provenance explicitly when constructing a fresh founder genome and add regression checks for mutation-free founders, embryo-stage startup and generation-independent newborn complexity.
+
+## 1.0.0-alpha32 — 2026-09-06
+
+- Add procedural acoustic allometry: organism calls now derive their base resonance from expressed body size, physical body-size hint, body clearance and structural loading from armor, shell and skin. Small bodies trend higher, large/dense bodies lower, with an audible safety range retained.
+- Add three native audio regression checks for size direction, structural loading and frequency bounds. Existing spatial calls, language-stage harmonics, volume controls, ambient audio and `M` mute behavior remain unchanged.
+
+## 1.0.0-alpha31 — 2026-09-06
+
+- Add finite natural lifespans plus explicit senescence, anoxia, desiccation and energy-depletion deaths. Aquatic bodies sink after a fresh interval, become edible carrion and skeleton/detritus, recycle nutrients, and may later act as inert reef substrate.
+- Replace head/tail chasing for external spawners with visible, finite egg clouds. Compatible external spawners fertilize clouds by physical contact without an artificial pregnancy; internal reproducers retain stable anatomical docking.
+- Add inherited composite phenotypes for translucent gelatinous bodies, nematocyst-like stinging tissue, fangs and emissive light organs. Major construction changes remain concentrated in descendants; adults can learn without continuously adding body complexity.
+- Generate and save deterministic 128×128 fallback maps for missing future tissues. The construction mirrors both axes for seamless edges, while distinct material keys receive distinct patterns.
+- Let large adapted grazers and scavengers lower a bounded flexible feeding region to floor food without enabling feeding through arbitrary terrain.
+- Add a native ecological-cycle regression gate covering death/remains, wrong-medium lethality, external spawn clouds, novel phenotypes, stable adult form, fallback textures and ground feeding.
+
 ## 1.0.0-alpha30 — 2026-09-06
 
 - Reduce default head inflation and excessive juvenile allometry. Region-specific inherited regulation produces distinct head, torso, limb and tail proportions from both parental homologs without editing germ-line DNA. Cognitive/behavioral predispositions remain inherited; acquired skills are learned during life. Mutations need not be beneficial.

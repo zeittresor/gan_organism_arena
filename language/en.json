@@ -63,6 +63,7 @@
     "follow_height": "Follow camera height above organism",
     "camera_noclip": "Allow camera noclip through terrain",
     "observer_presence": "Let organisms perceive the human observer",
+    "show_wireframe": "Show wireframe world boundary",
     "show_hud": "Show interface text during observation",
     "show_crosshair": "Show aiming crosshair",
     "habitat_level": "Habitat stage (5-9)",
@@ -89,6 +90,13 @@
     "gravity_scale": "Planetary gravity (× Earth)",
     "auto_reproduce": "Allow new reproduction",
     "textures_enabled": "Use optional PNG textures"
+  },
+  "settings_sections": {
+    "general": "General, language and integrations",
+    "population": "Population, ecology and evolution",
+    "world": "World, camera and display",
+    "audio": "Audio and organism communication",
+    "actions": "Actions, profiles and exports"
   },
   "actions": {
     "rebuild_visuals": "Rebuild organism bodies / shader resources",
@@ -289,6 +297,7 @@
     "follow_height": "Height of the following camera above its target.",
     "camera_noclip": "Allows the observer camera to pass through terrain and mountains. World boundaries still apply; turn it off for terrain-aware movement and following.",
     "observer_presence": "Adds a virtual adult human-like observer signal. Sensitive organisms can look at, approach or avoid the observer; it is never treated as food or a mate.",
+    "show_wireframe": "Shows or hides the transparent wireframe cube and sparse reference grid around the simulated world. Hiding it changes only the observer view; world limits and collisions remain active.",
     "show_hud": "Shows or hides status, selection and thought text during normal viewing. The settings and help panels remain available through F10 and F1.",
     "show_crosshair": "Shows or hides the centre aiming marker used for left-click organism selection. Hiding it does not disable selection or Tab navigation.",
     "camera_fov": "Camera field of view in degrees. Smaller values zoom in; larger values show more surroundings.",
@@ -316,7 +325,7 @@
     "evolution_overview": "Shows natural and clonal births, introduced founders, generations, rooted organisms, recent parentage and the first appearance of new body topologies in this run.",
     "export_evolution": "Saves evolutionary counters and up to 2,048 birth/death genealogy records as JSON in exports/evolution. Reports discarded history; this is not a reloadable world save.",
     "show_help": "Opens the full guide to controls, the living world, inheritance, developmental stages, every option and exports. Closing it returns to settings while the world remains paused.",
-    "textures_enabled": "Loads replaceable terrain and organism PNG files. Off by default. When enabled, every child receives a new pixel mixture made from the actual parent coat images; existing descendants retain their inherited pattern.",
+    "textures_enabled": "Loads replaceable terrain and organism PNG files. Enabled by default, but can be disabled for a simpler/faster material view. When enabled, every child receives a new pixel mixture made from the actual parent coat images; existing descendants retain their inherited pattern.",
     "reload_textures": "Reloads the replaceable PNG templates from the textures subfolders. Existing inherited organism coats stay unchanged; the terrain and newly created founders use the replacements.",
     "export_texture": "Writes the selected organism’s generated inherited coat pattern to exports/textures as a PNG file. Requires optional textures to be enabled.",
     "plant_evolution_bias": "Makes the rooted-plant niche easier or harder to discover. It lowers the inherited anchoring and stationary-food thresholds, but never roots aquatic founders on spawn.",

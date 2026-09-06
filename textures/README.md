@@ -1,6 +1,6 @@
 # Replaceable optional textures
 
-Enable **Use optional PNG textures** in F10 Settings. This option is off by default.
+PNG textures are enabled by default. Use **Use optional PNG textures** in F10 Settings to disable them for a simpler or faster material view.
 
 - Eight terrain maps cover habitat ground, silt, rock and organic soil plus height-blended deep seabed, wet shore, beach sand and grass.
 - Six organism maps cover skin, scales, fur, membrane, plates and mottling. Each founder starts with a weighted pair selected from its inherited surface traits and seed.

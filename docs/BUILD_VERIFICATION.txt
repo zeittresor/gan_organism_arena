@@ -1,12 +1,12 @@
-Alpha30-fix1: corrected project.godot version from alpha29 to alpha30.
+Alpha33 testable intermediate release.
 Installer static verification passed in PowerShell 7.4.6 on Linux.
-Release metadata preflight rejects the original version mismatch.
+Release metadata and payload hashes were checked from a fresh archive extraction.
 Full Windows installation was not executed on this host.
 
-GAN Organism Arena alpha30 — 2026-09-06
+GAN Organism Arena alpha33 — 2026-09-06
 Godot 4.7.2.stable.official.ed1daf0bf Linux headless.
-11824 named native checks, 0 failures; morphology/genome/language integration passed.
-58 GDScripts; 70 localized settings/actions in English, German, French.
+11849 named native checks, 0 failures; morphology/genome/language integration passed.
+60 GDScripts; 70 localized settings/actions in English, German, French.
 Native MCP roundtrip, native VKLP-only/both-protocol modes; 15 adapter tests passed.
 3-seed stability scenario: 5400 ticks, 450 simulation seconds.
 See TESTING.md for cases and platform limits.

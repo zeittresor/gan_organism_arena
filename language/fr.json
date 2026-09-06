@@ -63,6 +63,7 @@
     "follow_height": "Hauteur de camera au-dessus de l organisme",
     "camera_noclip": "Autoriser le noclip de la caméra dans le terrain",
     "observer_presence": "Permettre aux organismes de percevoir l’observateur humain",
+    "show_wireframe": "Afficher la limite du monde en fil de fer",
     "show_hud": "Afficher le texte d’interface pendant l’observation",
     "show_crosshair": "Afficher le viseur central",
     "habitat_level": "Niveau d habitat (5-9)",
@@ -89,6 +90,13 @@
     "gravity_scale": "Gravité planétaire (× Terre)",
     "auto_reproduce": "Autoriser de nouvelles reproductions",
     "textures_enabled": "Utiliser les textures PNG facultatives"
+  },
+  "settings_sections": {
+    "general": "Général, langue et intégrations",
+    "population": "Population, écologie et évolution",
+    "world": "Monde, caméra et affichage",
+    "audio": "Audio et communication des organismes",
+    "actions": "Actions, profils et exports"
   },
   "actions": {
     "rebuild_visuals": "Reconstruire les corps / ressources shader",
@@ -289,6 +297,7 @@
     "follow_height": "Hauteur de la caméra de suivi au-dessus de sa cible.",
     "camera_noclip": "Permet à la caméra de traverser le terrain et les montagnes. Les limites du monde restent actives ; désactivez cette option pour un déplacement et un suivi respectant le relief.",
     "observer_presence": "Ajoute le signal d’un observateur adulte humanoïde. Les organismes sensibles peuvent le regarder, s’en approcher ou l’éviter ; il n’est jamais une proie ni un partenaire.",
+    "show_wireframe": "Affiche ou masque le cube transparent en fil de fer et la grille de référence autour du monde simulé. Le masquage ne change que la vue ; les limites et collisions restent actives.",
     "show_hud": "Affiche ou masque les textes d’état, de sélection et de pensée pendant l’observation normale. Les options et l’aide restent accessibles avec F10 et F1.",
     "show_crosshair": "Affiche ou masque le repère central utilisé pour sélectionner par clic gauche. La sélection et la navigation Tab restent actives.",
     "camera_fov": "Champ de vision de la caméra en degrés. Une petite valeur rapproche, une grande montre davantage.",
@@ -316,7 +325,7 @@
     "evolution_overview": "Affiche naissances naturelles et clonales, fondateurs introduits, générations, organismes enracinés, parenté récente et premières apparitions de topologies dans cette simulation.",
     "export_evolution": "Enregistre les compteurs évolutifs et jusqu’à 2 048 fiches de naissance/décès en JSON dans exports/evolution. Indique les fiches supprimées ; ce n’est pas une sauvegarde rechargeable.",
     "show_help": "Ouvre le manuel complet des commandes, du monde vivant, de l’hérédité, des stades de développement, de toutes les options et des exports. Fermer revient aux options en conservant la pause.",
-    "textures_enabled": "Charge les PNG remplaçables du terrain et des corps. Désactivé par défaut. Chaque descendant reçoit une nouvelle image mélangée à partir des textures réellement utilisées par ses parents.",
+    "textures_enabled": "Charge les PNG remplaçables du terrain et des corps. Activé par défaut, mais désactivable pour un rendu plus simple et rapide. Chaque descendant reçoit une nouvelle image mélangée à partir des textures réellement utilisées par ses parents.",
     "reload_textures": "Recharge les modèles PNG des sous-dossiers de textures. Les motifs déjà hérités restent inchangés ; le terrain et les nouveaux fondateurs utilisent les remplacements.",
     "export_texture": "Enregistre dans exports/textures le motif corporel hérité de l’organisme sélectionné. Les textures facultatives doivent être activées.",
     "plant_evolution_bias": "Rend la niche végétale enracinée plus ou moins facile à découvrir. Abaisse les seuils héréditaires d’ancrage et d’alimentation stationnaire, sans jamais enraciner les fondateurs aquatiques au démarrage.",

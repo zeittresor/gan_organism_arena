@@ -63,6 +63,7 @@
     "follow_height": "Höhe der Verfolgerkamera über dem Organismus",
     "camera_noclip": "Kamera-Noclip durch Gelände erlauben",
     "observer_presence": "Wesen können den menschlichen Beobachter wahrnehmen",
+    "show_wireframe": "Drahtgitter-Weltgrenze anzeigen",
     "show_hud": "Benutzeroberflächentext bei Betrachtung anzeigen",
     "show_crosshair": "Fadenkreuz zum Zielen anzeigen",
     "habitat_level": "Habitat-Stufe (5-9)",
@@ -89,6 +90,13 @@
     "gravity_scale": "Planetengravitation (× Erde)",
     "auto_reproduce": "Neue Fortpflanzungen erlauben",
     "textures_enabled": "Optionale PNG-Texturen verwenden"
+  },
+  "settings_sections": {
+    "general": "Allgemein, Sprache und Schnittstellen",
+    "population": "Population, Ökologie und Evolution",
+    "world": "Welt, Kamera und Anzeige",
+    "audio": "Audio und Kommunikation der Wesen",
+    "actions": "Aktionen, Profile und Exporte"
   },
   "actions": {
     "rebuild_visuals": "Organismenkörper / Shader-Ressourcen neu aufbauen",
@@ -289,6 +297,7 @@
     "follow_height": "Höhe der verfolgenden Kamera über ihrem Ziel.",
     "camera_noclip": "Erlaubt der Beobachterkamera, Gelände und Berge zu durchdringen. Die Weltgrenzen bleiben aktiv; abschalten nutzt wieder terrain-sichere Bewegung und Verfolgung.",
     "observer_presence": "Fügt ein virtuelles erwachsenes, menschenähnliches Beobachtersignal hinzu. Empfindliche Wesen können den Beobachter ansehen, anfliegen oder meiden; er gilt nie als Nahrung oder Paarungspartner.",
+    "show_wireframe": "Blendet den transparenten Drahtgitterwürfel und das sparsame Referenzgitter um die simulierte Welt ein oder aus. Das Ausblenden betrifft nur die Ansicht; Weltgrenzen und Kollisionen bleiben aktiv.",
     "show_hud": "Blendet Status-, Auswahl- und Gedankentext während der normalen Betrachtung ein oder aus. Optionen und Hilfe bleiben über F10 und F1 erreichbar.",
     "show_crosshair": "Blendet das mittige Fadenkreuz für die Auswahl per Linksklick ein oder aus. Auswahl und Tab-Navigation bleiben trotzdem aktiv.",
     "camera_fov": "Kamerasichtfeld in Grad. Kleine Werte zoomen heran, große zeigen mehr Umgebung.",
@@ -316,7 +325,7 @@
     "evolution_overview": "Zeigt natürliche und klonale Geburten, eingesetzte Anfangswesen, Generationen, verwurzelte Organismen, jüngste Abstammungen und erstmals entstandene Körpergrundformen dieses Laufs.",
     "export_evolution": "Speichert Evolutionszähler und bis zu 2.048 Abstammungseinträge mit Geburts-/Todesdaten als JSON in exports/evolution. Verworfene Einträge werden ausgewiesen; kein ladbarer Weltspielstand.",
     "show_help": "Öffnet das ausführliche Handbuch zu Steuerung, Lebenswelt, Vererbung, Lebensstadien, allen Optionen und Exporten. Beim Schließen kehrst du zu den Optionen zurück; die Welt bleibt währenddessen pausiert.",
-    "textures_enabled": "Lädt austauschbare PNG-Dateien für Gelände und Körper. Standardmäßig aus. Jedes Jungtier erhält ein neues Pixel-Mischbild aus den tatsächlich verwendeten Elterntexturen; bestehende Nachkommen behalten ihr Erbmuster.",
+    "textures_enabled": "Lädt austauschbare PNG-Dateien für Gelände und Körper. Standardmäßig an, kann für eine einfachere/schnellere Materialansicht abgeschaltet werden. Jedes Jungtier erhält ein neues Pixel-Mischbild aus den tatsächlich verwendeten Elterntexturen; bestehende Nachkommen behalten ihr Erbmuster.",
     "reload_textures": "Lädt die austauschbaren PNG-Vorlagen aus den Textur-Unterordnern neu. Bereits vererbte Körpermuster bleiben bestehen; Gelände und neue Gründer verwenden die Ersetzungen.",
     "export_texture": "Speichert das erzeugte vererbte Körpermuster des ausgewählten Wesens als PNG unter exports/textures. Erfordert aktivierte optionale Texturen.",
     "plant_evolution_bias": "Macht die Entwicklung einer verwurzelten Pflanzennische leichter oder schwieriger. Senkt die vererbten Schwellen für Verankerung und ortsfeste Nahrung, verwurzelt aber keine aquatischen Gründer beim Start.",

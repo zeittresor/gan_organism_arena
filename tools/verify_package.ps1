@@ -1,6 +1,6 @@
 $ErrorActionPreference = 'Stop'
 $Root = Split-Path -Parent $PSScriptRoot
-$ExpectedVersion = '1.0.0-alpha30'
+$ExpectedVersion = '1.0.0-alpha37'
 $ExpectedDate = '2026-09-06'
 
 function Require-File([string]$RelativePath) {
@@ -33,6 +33,8 @@ $Required = @(
     'game\texture_assets.gd',
     'game\skin_pattern.gd',
     'game\texture_test.gd',
+    'game\audio_test.gd',
+    'game\ecological_cycle_test.gd',
     'game\organism_surface.gdshader',
     'game\terrain_surface.gdshader',
     'textures\terrain\ground.png',

@@ -1,16 +1,14 @@
-# Testing — 1.0.0-alpha30 (2026-09-06)
+# Testing — 1.0.0-alpha37 (2026-09-06)
 
-## Installer hotfix (alpha30-fix1)
+## Release focus
 
-The original alpha30 archive mistakenly retained `config/version="1.0.0-alpha29"` in `project.godot`. The Windows installer correctly rejected it before starting Godot. The corrected archive sets alpha30 and regenerates all package checksums.
-
-The unchanged `tools/verify_package.ps1` now passes under PowerShell 7.4.6 on Linux. The packaging workflow also runs `python tools/check_release.py` before writing the ZIP; a regression check confirms that the original alpha29/alpha30 mismatch is rejected. This does not substitute for testing the complete installer on Windows.
+Alpha37 keeps the 42-form coherent generation-0 aquatic pool while enabling the supplied textures by default, replacing point-like water highlights with continuous procedural wave bands, and adding a framed, categorized settings panel plus a world-wireframe visibility option. Alpha36's founder-expression and alpha35's side-by-side reproductive docking fixes remain enabled. Release metadata and payload hashes are regenerated together. This does not substitute for testing the complete installer on Windows.
 
 ## Native verification
 
 Executed the production GDScript with **Godot 4.7.2.stable.official.ed1daf0bf, Linux x86_64, headless**. This release is no longer verified solely through the Python translation harness.
 
-**11,824 named native checks passed**, plus the morphology/genome/language integration:
+**11,849 named native checks passed**, plus the morphology/genome/language integration:
 
 - Texture: 20 checks, 0 failures.
 - Application: 51 checks, 0 failures.
@@ -28,8 +26,12 @@ Executed the production GDScript with **Godot 4.7.2.stable.official.ed1daf0bf, L
 - Life Cycle: 122 checks, 0 failures.
 - Biology: 629 checks, 0 failures.
 - Experiment: 21 checks, 0 failures.
+- Ecological cycle: 19 checks, 0 failures.
+- Audio: 3 checks, 0 failures.
+- Aging/evolution boundary: 3 checks, 0 failures.
+- Trauma mortality: 1 check, 0 failures.
 
-The application regressions cover resumable checkpoints (DNA, gametes, embryo state, inherited pixel maps, RNG and nutrient positions), corrupted files and write failures, settings recovery, camera spawn/free-look/noclip, founder plant safeguards, finite scavenging and recycling, and bounded seabed features across all five habitats. Proportion regressions compare generated head width with supporting body width and exercise inherited head-size variation. Independently marked parents verify morphological, cognitive and behavioral inheritance and deterministic regional expression without changes to germ-line DNA.
+The application regressions cover resumable checkpoints (DNA, gametes, embryo state, inherited pixel maps, RNG and nutrient positions), corrupted files and write failures, settings recovery, camera spawn/free-look/noclip, founder plant safeguards, finite scavenging and recycling, and bounded seabed features across all five habitats. Proportion regressions compare generated head width with supporting body width and exercise inherited head-size variation. Independently marked parents verify morphological, cognitive and behavioral inheritance and deterministic regional expression without changes to germ-line DNA. The water surface remains a procedural shader; its continuous wave bands are visually verified on the target GPU.
 
 UI regressions instantiate the actual main application: ESC/cancel, pause ownership, blocked shortcuts, English/German/French help, texture toggles/reload, profile camera options, changed world dimensions, saving/loading, selection/follow restoration, invalid load and reset while paused.
 
@@ -37,7 +39,7 @@ UI regressions instantiate the actual main application: ESC/cancel, pause owners
 - Native VKLP-only gateway and simultaneous MCP+VKLP configuration: PASS. No remote claim submission is performed by these tests.
 - Python MCP/VKLP adapter/permission suite: 15 tests, PASS.
 - Seeded stability run: 3 seeds × 1,800 ticks, totaling 450 simulation seconds. Check finite body state, population floor/cap and remains limit. This is a stability test, not proof that a particular evolutionary outcome will occur.
-- Grammar/UI coverage: 58 GDScripts; 70 settings/actions with labels and explanatory tooltips in EN/DE/FR.
+- Grammar/UI coverage: 60 GDScripts; 70 settings/actions with labels and explanatory tooltips in EN/DE/FR.
 - Release archive: fresh extraction, ZIP CRC and each payload SHA-256. Personal configuration, screenshots, runtime sessions, generated logs and engine caches are excluded.
 
 ## Reproduce
