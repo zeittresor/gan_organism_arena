@@ -2,6 +2,16 @@
 
 A 3D artificial-life world for watching organisms feed, grow, reproduce and evolve. Start with ten aquatic organisms sampled from fourteen changing startup forms and observe what their descendants become as inherited traits and mutations meet the environment.
 
+<img width="1920" height="1080" alt="arena_00005315" src="https://github.com/user-attachments/assets/8a6a05de-04f1-4a63-859d-56cfaf299434" />
+
+<img width="1920" height="1080" alt="646812821-d911d339-64ae-4c53-91b3-40f50154e580" src="https://github.com/user-attachments/assets/84d1b1e0-61d1-401b-8b45-b4a22abfd290" />
+
+<img width="1920" height="1080" alt="646529127-c91da578-978a-4d93-91b4-570ef8703176" src="https://github.com/user-attachments/assets/07d91894-fd24-4f4f-b8da-2d0635cd3dcc" />
+
+<img width="1920" height="1080" alt="646812838-cd0b7163-48f2-4555-a4fb-e169a1b69580" src="https://github.com/user-attachments/assets/1a8a4cae-f704-4488-b284-263f90201830" />
+
+<img width="1920" height="1080" alt="646529057-bb9b0e14-66b8-4403-ab44-4ba09e8e1f62" src="https://github.com/user-attachments/assets/28618a0f-0c28-4542-a875-53412452eb23" />
+
 **Windows · Portable · 1.0.0-alpha30**  
 Interface and speech settings: English, German and French.
 
