@@ -1,9 +1,10 @@
 extends Node
 
-# No files, images or GPU textures are created until the option is enabled.
+# Textures are enabled by default, but remain fully optional and can be disabled in F10.
 # CPU images are kept on each living/embryonic genome, never in the event log.
 const SIZE: int = 128
 const MAX_FILE_BYTES: int = 1048576
+const GENERATED_DIRECTORY: String = "res://textures/generated"
 const SOURCES = {
     "ground": "res://textures/terrain/ground.png", "silt": "res://textures/terrain/silt.png",
     "rock": "res://textures/terrain/rock.png", "organic_ground": "res://textures/terrain/organic_ground.png",
@@ -35,7 +36,7 @@ var images_built: int = 0
 var load_error: String = ""
 
 func _ready() -> void:
-    set_enabled(bool(SettingsStore.get_value("textures_enabled", false)))
+    set_enabled(bool(SettingsStore.get_value("textures_enabled", true)))
 
 func set_enabled(value: bool) -> void:
     if not value:
@@ -54,7 +55,7 @@ func reload_sources() -> void:
     auxiliary_textures.clear()
     specialized_atlas = null
     for key in SOURCES:
-        sources[key] = _load_png(SOURCES[key])
+        sources[key] = _load_png(SOURCES[key], key)
     for key in ["ground", "silt", "rock", "organic_ground", "seabed", "shore", "sand", "grass"]:
         var image: Image = sources[key].duplicate()
         image.generate_mipmaps()
@@ -105,7 +106,7 @@ func specialized_body_texture() -> ImageTexture:
             load_error = "specialized texture atlas creation failed"
     return specialized_atlas
 
-func _load_png(path: String) -> Image:
+func _load_png(path: String, key: String = "missing") -> Image:
     var result = Image.new()
     var file = FileAccess.open(path, FileAccess.READ)
     var valid: bool = file != null
@@ -116,14 +117,67 @@ func _load_png(path: String) -> Image:
         valid = result.load(ProjectSettings.globalize_path(path)) == OK and not result.is_empty()
     if not valid:
         warnings.append(path)
-        AppLog.info("Optional texture unavailable; using neutral material: " + path)
-        result = Image.create_empty(SIZE, SIZE, false, Image.FORMAT_RGB8)
-        result.fill(Color.WHITE)
+        result = _load_or_create_fallback(key)
+        AppLog.info("Optional texture unavailable; using saved procedural fallback: " + path)
     else:
         result.clear_mipmaps()
         result.convert(Image.FORMAT_RGB8)
         result.resize(SIZE, SIZE, Image.INTERPOLATE_BILINEAR)
     return result
+
+func _load_or_create_fallback(key: String) -> Image:
+    var safe: String = ""
+    for character in key.to_lower():
+        safe += character if character in "abcdefghijklmnopqrstuvwxyz0123456789_-" else "_"
+    if safe.is_empty(): safe = "missing"
+    var folder: String = ProjectSettings.globalize_path(GENERATED_DIRECTORY)
+    DirAccess.make_dir_recursive_absolute(folder)
+    var stored: String = folder.path_join(safe + ".png")
+    var image = Image.new()
+    if FileAccess.file_exists(stored) and image.load(stored) == OK and image.get_width() == SIZE and image.get_height() == SIZE:
+        image.convert(Image.FORMAT_RGB8)
+        image.clear_mipmaps()
+        return image
+    image = procedural_fallback(key)
+    var saved: Error = image.save_png(stored)
+    if saved != OK:
+        # A read-only project can still render the generated pixels. Saving is
+        # attempted in the portable project, but never makes textures mandatory.
+        AppLog.warn("Could not save procedural fallback: " + stored)
+    return image
+
+static func procedural_fallback(key: String) -> Image:
+    # Build one random-looking quadrant and mirror it on both axes. Opposite
+    # edge pixels are therefore identical and tile without a discontinuity.
+    var rng = RandomNumberGenerator.new()
+    rng.seed = int(key.hash()) * 104729 + 7919
+    var phase_a: float = rng.randf_range(0.0, TAU)
+    var phase_b: float = rng.randf_range(0.0, TAU)
+    var frequency_a: float = rng.randf_range(1.4, 4.8)
+    var frequency_b: float = rng.randf_range(1.2, 4.2)
+    var tint = Color(rng.randf_range(0.38, 0.82), rng.randf_range(0.38, 0.82), rng.randf_range(0.38, 0.82))
+    var image = Image.create_empty(SIZE, SIZE, false, Image.FORMAT_RGB8)
+    for y in range(SIZE):
+        var sy: int = y if y < SIZE / 2 else SIZE - 1 - y
+        for x in range(SIZE):
+            var sx: int = x if x < SIZE / 2 else SIZE - 1 - x
+            var nx: float = float(sx) / float(SIZE / 2 - 1)
+            var ny: float = float(sy) / float(SIZE / 2 - 1)
+            var waves: float = sin(nx * TAU * frequency_a + phase_a) * 0.20
+            waves += cos(ny * TAU * frequency_b + phase_b) * 0.18
+            waves += sin((nx + ny) * TAU * 1.7 + phase_b) * 0.12
+            var grain: float = rng.randf_range(-0.055, 0.055)
+            var value: float = clampf(0.66 + waves + grain, 0.16, 1.0)
+            image.set_pixel(x, y, Color(tint.r * value, tint.g * value, tint.b * value))
+    # The per-pixel grain above differs across mirrored coordinates because RNG
+    # advances. Copy the first quadrant after generation to guarantee symmetry.
+    for y in range(SIZE / 2):
+        for x in range(SIZE / 2):
+            var pixel: Color = image.get_pixel(x, y)
+            image.set_pixel(SIZE - 1 - x, y, pixel)
+            image.set_pixel(x, SIZE - 1 - y, pixel)
+            image.set_pixel(SIZE - 1 - x, SIZE - 1 - y, pixel)
+    return image
 
 func resolve_image(pattern) -> Image:
     if not enabled: return null

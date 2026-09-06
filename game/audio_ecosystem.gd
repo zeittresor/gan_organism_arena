@@ -93,7 +93,13 @@ func _make_call_stream(org) -> AudioStreamWAV:
     var bytes = PackedByteArray()
     bytes.resize(samples * 2)
     var family: int = int(org.genome.family_id)
-    var base_freq: float = 120.0 + float((family * 47) % 260) + float(stage) * 18.0
+    var size_gene: float = clampf(float(org.genome.size_gene), 0.0, 1.0)
+    var physical_size: float = 1.0
+    if is_instance_valid(org.visual) and org.visual.has_method("get_body_size_hint"):
+        physical_size = maxf(0.1, float(org.visual.get_body_size_hint()))
+    var clearance: float = float(org.body_clearance()) if org.has_method("body_clearance") else 0.65
+    var structural_weight: float = 1.0 + float(org.genome.armor_drive) * 0.35 + float(org.genome.shell_drive) * 0.20 + float(org.genome.skin_thickness) * 0.08
+    var base_freq: float = acoustic_base_frequency(size_gene, physical_size, structural_weight, stage, family, clearance)
     var syllables: int = clampi(1 + int(stage / 2), 1, 5)
     for i in range(samples):
         var t: float = float(i) / float(rate)
@@ -113,6 +119,16 @@ func _make_call_stream(org) -> AudioStreamWAV:
     wav.stereo = false
     wav.data = bytes
     return wav
+
+static func acoustic_base_frequency(size_gene: float, physical_size: float, structural_weight: float, stage: int, family: int, clearance: float = 0.65) -> float:
+    # Resonance follows expressed morphology, not a species label alone. The
+    # genome supplies potential while the rendered body size and clearance
+    # capture the actually developed organism. Armor/shell/skin add acoustic
+    # loading; the result is bounded to remain audible on ordinary hardware.
+    var expressed_size: float = clampf(0.42 + clampf(size_gene, 0.0, 1.0) * 1.85 + clampf(physical_size, 0.1, 20.0) * 0.16 + clampf(clearance, 0.0, 12.0) * 0.08, 0.35, 5.4)
+    var scale: float = 1.0 / (expressed_size * maxf(1.0, structural_weight))
+    var base: float = (80.0 + float((family * 47) % 180)) * scale + float(stage) * 12.0
+    return clampf(base, 35.0, 1800.0)
 
 func shutdown() -> void:
     if is_instance_valid(ambient_player):

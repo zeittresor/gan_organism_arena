@@ -4,7 +4,7 @@ const Traits = preload("res://game/ecology_traits.gd")
 const Cycle = preload("res://game/life_cycle.gd")
 const Rig = preload("res://game/anatomical_rig.gd")
 const Support = preload("res://game/body_support.gd")
-enum Tissue { BODY, SKIN, SKELETON, NEURAL, SENSOR, FIN, ARMOR, LEAF, ROOT, WING, LEG, FEATHER, QUILL, SCALE, FUR, MUCUS, MEMBRANE, HORN, BEAK, BARK, GONAD, REPRO_DUCT, REPRO_OPENING, CLASPER, ORNAMENT, BROOD_SAC, COCOON, IRIS, PUPIL, FACET }
+enum Tissue { BODY, SKIN, SKELETON, NEURAL, SENSOR, FIN, ARMOR, LEAF, ROOT, WING, LEG, FEATHER, QUILL, SCALE, FUR, MUCUS, MEMBRANE, HORN, BEAK, BARK, GONAD, REPRO_DUCT, REPRO_OPENING, CLASPER, ORNAMENT, BROOD_SAC, COCOON, IRIS, PUPIL, FACET, GEL, NEMATOCYST, LIGHT_ORGAN, FANG }
 var lowest_point: float = -0.5
 var _phenotype: String = ""
 var _animation_time: float = 0.0
@@ -80,6 +80,7 @@ func _create_render_resources() -> void:
     sphere.rings = 4
     var mat = StandardMaterial3D.new()
     mat.vertex_color_use_as_albedo = true
+    mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
     mat.roughness = 0.62
     mat.metallic = 0.03
     sphere.material = mat
@@ -149,6 +150,7 @@ func _texture_weight(tissue: int) -> float:
     return 1.0
 
 func _texture_category(tissue: int) -> int:
+    if tissue == Tissue.LIGHT_ORGAN: return 15
     if tissue == Tissue.SKELETON: return 1
     if tissue in [Tissue.NEURAL, Tissue.SENSOR]: return 2
     if tissue in [Tissue.IRIS, Tissue.PUPIL, Tissue.FACET]: return 3
@@ -162,8 +164,8 @@ func _texture_category(tissue: int) -> int:
     if tissue == Tissue.LEG: return 11
     if tissue in [Tissue.ARMOR, Tissue.SCALE, Tissue.COCOON]: return 12
     if tissue in [Tissue.GONAD, Tissue.REPRO_DUCT, Tissue.REPRO_OPENING, Tissue.CLASPER, Tissue.BROOD_SAC]: return 13
-    if tissue == Tissue.ORNAMENT: return 14
-    if tissue in [Tissue.BODY, Tissue.SKIN, Tissue.FUR, Tissue.MUCUS]: return 0
+    if tissue in [Tissue.ORNAMENT, Tissue.NEMATOCYST, Tissue.FANG]: return 14
+    if tissue in [Tissue.BODY, Tissue.SKIN, Tissue.FUR, Tissue.MUCUS, Tissue.GEL]: return 0
     return 15
 
 func _texture_variation(cell_index: int) -> Vector2:
@@ -216,6 +218,17 @@ func rebuild(force = false) -> void:
 func _develop_body(complexity: float) -> void:
     var g = owner_life.genome
     var growth: float = log(1.0 + complexity)
+    # The initial population represents a coherent aquatic ancestor.  Its
+    # random alleles provide standing variation, but they are not expressed as
+    # fully developed horns, coats, wings or novel body plans on frame one.
+    # Those costly innovations become visible in descendants after inheritance
+    # and selection, which keeps mutation distinct from ordinary growth.
+    # Only an explicitly advanced genome (used by later descendants and
+    # deterministic morphology probes) bypasses this founder presentation
+    # gate. Random standing alleles alone must not create a finished mutant on
+    # the first frame.
+    var founder_exception: bool = complexity > 2.5
+    var founder_baseline: bool = bool(g.aquatic_ancestry) and int(g.generation) == 0 and int(g.aquatic_steps) == 0 and not founder_exception
     var plan: int = int(g.body_plan)
     var budget: int = visual_cap
     reproductive_anchor_index = -1
@@ -241,14 +254,15 @@ func _develop_body(complexity: float) -> void:
             6: _develop_cephalopod(g, growth)
             _: _develop_serpentine(g, growth)
     visual_cap = budget if owner_life.rooted else maxi(32, int(budget * 0.78))
-    if not owner_life.rooted and Cycle.locomotor_maturity(owner_life):
+    if not founder_baseline and not owner_life.rooted and Cycle.locomotor_maturity(owner_life):
         _add_adaptive_structures(g, growth)
+        _add_novel_adaptations(g, growth)
     visual_cap = maxi(body_cells.size(), budget - maxi(8, int(budget * 0.12)))
     if life_stage not in ["larva", "pupa"]:
         _add_reproductive_structures(g)
     visual_cap = budget
     if not owner_life.rooted and life_stage != "pupa":
-        _add_body_coverings(g, growth)
+        _add_body_coverings(g, growth, founder_baseline)
     var size_scale: float = Traits.body_scale(g) * Cycle.size_factor(owner_life)
     lowest_point = 0.0
     for cell in body_cells:
@@ -315,7 +329,7 @@ func _build_rig() -> void:
         anatomy_counts[cell["joint_mode"]] += 1
         if cell["joint"] and float(cell["joint_muscle"]) > 0.0: anatomy_counts["active"] += 1
         var tissue: int = int(cell["t"])
-        if tissue in [Tissue.BODY, Tissue.SKIN, Tissue.ARMOR, Tissue.COCOON, Tissue.LEG, Tissue.ROOT, Tissue.BARK]:
+        if tissue in [Tissue.BODY, Tissue.SKIN, Tissue.ARMOR, Tissue.COCOON, Tissue.LEG, Tissue.ROOT, Tissue.BARK, Tissue.GEL]:
             collision_cells.append(i)
     if collision_cells.is_empty() and not body_cells.is_empty(): collision_cells.append(0)
     rear_anchor_index = _nearest_anchor(rear_anchor_local, body_cells.size())
@@ -645,7 +659,41 @@ func _add_adaptive_structures(g, growth: float) -> void:
         _add_chain(rear, rear + Vector3(fan, fan * 0.65, fan * 0.18), 3, Tissue.FIN, size * 0.10)
         _add_chain(rear, rear + Vector3(-fan, fan * 0.65, fan * 0.18), 3, Tissue.FIN, size * 0.10)
 
-func _add_body_coverings(g, growth: float) -> void:
+func _add_novel_adaptations(g, growth: float) -> void:
+    var gel_score: float = Traits.gelatinous(g)
+    var center: Vector3 = focus_anchor_local.lerp(rear_anchor_local, 0.46)
+    var size: float = maxf(0.35, body_size_hint * 0.16)
+    if gel_score > 0.70 and int(g.body_plan) in [2, 4, 6]:
+        for cell in body_cells:
+            if int(cell["t"]) == Tissue.BODY:
+                cell["t"] = Tissue.GEL
+        # A soft bell and attached tentacles express a jelly-like construction;
+        # it is reached through several inherited traits, not a named species.
+        _add_cell(center + Vector3.UP * size * 0.20, Tissue.GEL, size * (0.75 + gel_score * 0.55), Vector3(1.5, 0.42, 1.5))
+        if Traits.nematocyst_score(g) > 0.72:
+            var arms: int = clampi(3 + int(float(g.branch_drive) * 5.0), 3, 8)
+            for i in range(arms):
+                var angle: float = TAU * float(i) / float(arms)
+                var root: Vector3 = center + Vector3(cos(angle), -0.2, sin(angle)) * size * 0.55
+                var tip: Vector3 = root + Vector3(cos(angle) * size * 0.45, -size * (1.2 + float(g.limb_length)), sin(angle) * size * 0.45)
+                _add_chain(root, tip, 4, Tissue.NEMATOCYST, size * 0.065)
+    if Traits.fang_score(g) > 0.72 and growth > 1.2:
+        var mouth: Vector3 = focus_anchor_local + Vector3(0.0, -size * 0.12, -size * 0.48)
+        for side_value in [-1.0, 1.0]:
+            var fang: Vector3 = mouth + Vector3(side_value * size * 0.24, -size * 0.12, -size * 0.18)
+            _add_cell(fang, Tissue.FANG, size * 0.15, Vector3(0.35, 1.35, 0.35))
+            body_cells.back()["parent"] = _nearest_anchor(focus_anchor_local, body_cells.size() - 1)
+    var light_score: float = Traits.bioluminescence(g)
+    if light_score > 0.74 and growth > 1.0:
+        var organs: int = clampi(2 + int(float(g.pattern_drive) * 4.0), 2, 6)
+        for i in range(organs):
+            var along: float = float(i + 1) / float(organs + 1)
+            var point: Vector3 = focus_anchor_local.lerp(rear_anchor_local, along)
+            point += Vector3((1.0 if i % 2 == 0 else -1.0) * size * 0.32, size * 0.30, 0.0)
+            _add_cell(point, Tissue.LIGHT_ORGAN, size * (0.08 + light_score * 0.07))
+            body_cells.back()["parent"] = _nearest_anchor(point, body_cells.size() - 1)
+
+func _add_body_coverings(g, growth: float, founder_baseline: bool = false) -> void:
     var samples: Array = []
     var wings: Array = []
     # Modify the outer soft tissue itself, avoiding a detached shell around the body.
@@ -659,6 +707,11 @@ func _add_body_coverings(g, growth: float) -> void:
             cell["sample_index"] = body_cells.find(cell)
             wings.append(cell.duplicate())
     if samples.is_empty():
+        return
+    if founder_baseline:
+        # A founder still has ordinary skin, but no de-novo adult coat or
+        # cranial ornament.  The same alleles remain in the diploid genome and
+        # can recombine/mutate in offspring.
         return
     var kinds: Array[int] = []
     if g.feather_cover > 0.45: kinds.append(Tissue.FEATHER)
@@ -980,6 +1033,10 @@ func _cell_color(tissue: int) -> Color:
         if tissue == Tissue.ORNAMENT: return base.lightened(0.48)
         if tissue == Tissue.BROOD_SAC: return base.lightened(0.18)
         if tissue == Tissue.COCOON: return Color(0.45, 0.39, 0.22)
+        if tissue == Tissue.GEL: return Color(base.r * 0.55 + 0.35, base.g * 0.55 + 0.38, base.b * 0.55 + 0.42, 0.38)
+        if tissue == Tissue.NEMATOCYST: return Color(0.88, 0.42, 0.72, 0.72)
+        if tissue == Tissue.LIGHT_ORGAN: return Color(0.25, 0.95, 1.0, 1.0)
+        if tissue == Tissue.FANG: return Color(0.94, 0.91, 0.72)
     match view_mode:
         "cell":
             match tissue:

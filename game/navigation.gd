@@ -16,7 +16,19 @@ static func mouth_radius(org) -> float:
 static func can_feed(org, point: Vector3) -> bool:
     # Food has a physical location. Long bodies eat at the head, not the origin.
     var radius: float = mouth_radius(org)
-    return mouth_position(org).distance_squared_to(point) <= radius * radius
+    var mouth: Vector3 = mouth_position(org)
+    if mouth.distance_squared_to(point) <= radius * radius: return true
+    if org.habitat == null: return false
+    # Large grazers/scavengers can lower or extend a soft feeding region while
+    # the trunk remains supported above the floor. This is a bounded vertical
+    # reach, not feeding through arbitrary terrain or at the body origin.
+    var floor_y: float = org.habitat.floor_at(point)
+    if point.y > floor_y + 0.85 or point.y > mouth.y: return false
+    var horizontal: Vector2 = Vector2(mouth.x - point.x, mouth.z - point.z)
+    var feeding_adaptation: float = clampf(0.15 + org.genome.reach_drive * 0.65 + org.genome.grazer_drive * 0.25, 0.15, 1.05)
+    var supported_mouth_height: float = maxf(org.body_clearance(), mouth.y - floor_y)
+    var flexible_reach: float = radius + supported_mouth_height * feeding_adaptation
+    return horizontal.length() <= radius * 0.90 and mouth.y - point.y <= flexible_reach
 
 static func land_capable(org) -> bool:
     # Aquatic founders and their first generations remain in the water. The

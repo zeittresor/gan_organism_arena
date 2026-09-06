@@ -35,6 +35,7 @@ var evolution_text: RichTextLabel
 var hud_hidden: bool = false
 var _profile_saving: bool = false
 var _setting_rows: Dictionary = {}
+var _section_rows: Array[Dictionary] = []
 
 func _ready() -> void:
     process_mode = Node.PROCESS_MODE_ALWAYS
@@ -91,26 +92,43 @@ func _build_hud() -> void:
 func _build_settings() -> void:
     settings_panel = PanelContainer.new()
     settings_panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
-    settings_panel.size = Vector2(850, 680)
+    settings_panel.size = Vector2(930, 700)
     settings_panel.position -= settings_panel.size * 0.5
     settings_panel.visible = false
+    var panel_style := StyleBoxFlat.new()
+    panel_style.bg_color = Color(0.025, 0.065, 0.095, 0.97)
+    panel_style.border_color = Color(0.28, 0.67, 0.78, 0.82)
+    panel_style.set_border_width_all(2)
+    panel_style.set_corner_radius_all(14)
+    panel_style.shadow_color = Color(0.0, 0.0, 0.0, 0.48)
+    panel_style.shadow_size = 18
+    panel_style.shadow_offset = Vector2(0, 8)
+    panel_style.content_margin_left = 22
+    panel_style.content_margin_right = 22
+    panel_style.content_margin_top = 18
+    panel_style.content_margin_bottom = 18
+    settings_panel.add_theme_stylebox_override("panel", panel_style)
     add_child(settings_panel)
     var outer = VBoxContainer.new()
+    outer.add_theme_constant_override("separation", 8)
     settings_panel.add_child(outer)
     var title = Label.new()
     title.name = "Title"
     title.add_theme_font_size_override("font_size", 26)
+    title.add_theme_color_override("font_color", Color(0.70, 0.92, 0.98))
     outer.add_child(title)
     var scroll = ScrollContainer.new()
-    scroll.custom_minimum_size = Vector2(820, 555)
+    scroll.custom_minimum_size = Vector2(880, 575)
     scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
     outer.add_child(scroll)
     settings_box = VBoxContainer.new()
     settings_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    settings_box.add_theme_constant_override("separation", 5)
     scroll.add_child(settings_box)
 
     _add_action_button("show_help")
 
+    _add_section("general")
     _add_option("language", L10n.available_languages(), str(SettingsStore.get_value("language", "en")))
     _add_option("speech_language", ["follow", "en", "de", "fr"], str(SettingsStore.get_value("speech_language", "follow")))
     _add_option("tts_voice", ["default"], str(SettingsStore.get_value("tts_voice", "default")))
@@ -119,9 +137,11 @@ func _build_settings() -> void:
     _add_toggle("vklp_write_enabled", bool(SettingsStore.get_value("vklp_write_enabled", false)))
     _add_text("vklp_url", str(SettingsStore.get_value("vklp_url", "http://127.0.0.1:8000")))
     _add_option("renderer", ["forward_plus", "mobile", "compatibility"], str(SettingsStore.get_value("renderer", "forward_plus")))
-    _add_toggle("textures_enabled", bool(SettingsStore.get_value("textures_enabled", false)))
+    _add_toggle("textures_enabled", bool(SettingsStore.get_value("textures_enabled", true)))
     _add_action_button("reload_textures")
     _add_action_button("export_texture")
+
+    _add_section("population")
     _add_toggle("auto_reseed", bool(SettingsStore.get_value("auto_reseed", true)))
     _add_slider("minimum_population", 1, 80, 1, float(SettingsStore.get_value("minimum_population", 5)))
     _add_slider("plant_evolution_bias", 0.0, 1.0, 0.05, float(SettingsStore.get_value("plant_evolution_bias", 0.35)))
@@ -151,14 +171,19 @@ func _build_settings() -> void:
     _add_slider("group_strength", 0.0, 2.0, 0.05, float(SettingsStore.get_value("group_strength", 0.55)))
     _add_slider("predation_strength", 0.0, 2.0, 0.05, float(SettingsStore.get_value("predation_strength", 0.45)))
     _add_slider("hierarchy_strength", 0.0, 2.0, 0.05, float(SettingsStore.get_value("hierarchy_strength", 0.35)))
+
+    _add_section("world")
     _add_slider("follow_distance", 2.0, 20.0, 0.5, float(SettingsStore.get_value("follow_distance", 6.0)))
     _add_slider("follow_height", 0.0, 8.0, 0.25, float(SettingsStore.get_value("follow_height", 1.6)))
     _add_toggle("camera_noclip", bool(SettingsStore.get_value("camera_noclip", false)))
     _add_toggle("observer_presence", bool(SettingsStore.get_value("observer_presence", false)))
+    _add_toggle("show_wireframe", bool(SettingsStore.get_value("show_wireframe", true)))
     _add_toggle("show_hud", bool(SettingsStore.get_value("show_hud", true)))
     _add_toggle("show_crosshair", bool(SettingsStore.get_value("show_crosshair", true)))
     _add_slider("camera_fov", 28.0, 105.0, 1.0, float(SettingsStore.get_value("camera_fov", 78.0)))
     _add_slider("zoom_step", 1.0, 12.0, 0.5, float(SettingsStore.get_value("zoom_step", 4.0)))
+
+    _add_section("audio")
     _add_toggle("audio_enabled", bool(SettingsStore.get_value("audio_enabled", true)))
     _add_toggle("ambient_audio", bool(SettingsStore.get_value("ambient_audio", true)))
     _add_toggle("organism_audio", bool(SettingsStore.get_value("organism_audio", true)))
@@ -168,6 +193,7 @@ func _build_settings() -> void:
     _add_slider("thought_interval", 2.0, 25.0, 0.5, float(SettingsStore.get_value("thought_interval", 7.0)))
     _add_slider("max_history_events", 4, 96, 4, float(SettingsStore.get_value("max_history_events", 32)))
 
+    _add_section("actions")
     _add_action_button("save_world")
     _add_action_button("load_world")
     _add_action_button("save_settings")
@@ -182,6 +208,29 @@ func _build_settings() -> void:
     _add_action_button("reset_world")
     _add_action_button("close_settings")
     refresh_language()
+
+func _add_section(key: String) -> void:
+    var section = PanelContainer.new()
+    section.name = "Section_" + key
+    section.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    var style := StyleBoxFlat.new()
+    style.bg_color = Color(0.08, 0.20, 0.25, 0.72)
+    style.border_color = Color(0.22, 0.48, 0.54, 0.76)
+    style.border_width_bottom = 1
+    style.set_corner_radius_all(7)
+    style.content_margin_left = 12
+    style.content_margin_right = 12
+    style.content_margin_top = 6
+    style.content_margin_bottom = 6
+    section.add_theme_stylebox_override("panel", style)
+    var label := Label.new()
+    label.name = "SectionLabel"
+    label.add_theme_font_size_override("font_size", 16)
+    label.add_theme_color_override("font_color", Color(0.62, 0.88, 0.92))
+    label.text = L10n.text("settings_sections." + key, key.replace("_", " ").capitalize())
+    section.add_child(label)
+    settings_box.add_child(section)
+    _section_rows.append({"key": key, "label": label})
 
 func _build_help() -> void:
     help_panel = PanelContainer.new()
@@ -294,9 +343,10 @@ func _make_row(key: String) -> HBoxContainer:
     var row = HBoxContainer.new()
     row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     var label = Label.new()
-    label.custom_minimum_size = Vector2(300, 34)
+    label.custom_minimum_size = Vector2(360, 34)
     label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     label.name = "Label"
+    label.add_theme_color_override("font_color", Color(0.84, 0.91, 0.93))
     row.add_child(label)
     settings_box.add_child(row)
     return row
@@ -477,6 +527,11 @@ func refresh_language() -> void:
         var title = settings_panel.find_child("Title", true, false) as Label
         if title:
             title.text = L10n.text("ui.settings_title", "Settings")
+        for section in _section_rows:
+            var section_label = section.get("label") as Label
+            if section_label:
+                var section_key: String = str(section.get("key", ""))
+                section_label.text = L10n.text("settings_sections." + section_key, section_key.replace("_", " ").capitalize())
         for key in _setting_rows:
             var row: Dictionary = _setting_rows[key]
             var label = row.get("label") as Label

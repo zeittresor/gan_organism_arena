@@ -13,7 +13,7 @@ const WorldSave = preload("res://game/world_save.gd")
 const Cycle = preload("res://game/life_cycle.gd")
 
 const APP_NAME = "GAN Organism Arena"
-const VERSION = "1.0.0-alpha30"
+const VERSION = "1.0.0-alpha37"
 const RELEASE_DATE = "2026-09-06"
 
 var ai_gateway = null
@@ -541,6 +541,9 @@ func _on_setting_changed(key: String, value) -> void:
         "show_hud", "show_crosshair":
             if is_instance_valid(ui):
                 ui.refresh_visibility()
+        "show_wireframe":
+            if is_instance_valid(habitat_visual):
+                habitat_visual.set_wireframe_visible(bool(value))
         "visual_cell_cap":
             sim_world.set_visual_cap(int(value))
         "contact_quality":

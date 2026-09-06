@@ -12,12 +12,26 @@ func _finish(code: int) -> void:
     get_tree().quit(code)
 
 func _run() -> void:
+    var cycle_test = preload("res://game/ecological_cycle_test.gd").new()
+    add_child(cycle_test)
+    var cycle_ok: bool = cycle_test.run_all()
+    cycle_test.queue_free()
+    if not cycle_ok:
+        _finish(39)
+        return
     var texture_test = preload("res://game/texture_test.gd").new()
     add_child(texture_test)
     var texture_ok: bool = texture_test.run_all()
     texture_test.queue_free()
     if not texture_ok:
         _finish(36)
+        return
+    var audio_test = preload("res://game/audio_test.gd").new()
+    add_child(audio_test)
+    var audio_ok: bool = audio_test.run_all()
+    audio_test.queue_free()
+    if not audio_ok:
+        _finish(40)
         return
     var application_test = preload("res://game/application_test.gd").new()
     add_child(application_test)

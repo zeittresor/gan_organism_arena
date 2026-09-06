@@ -196,7 +196,10 @@ func run_all() -> bool:
     var plant_emerged: bool = false
     var evolution_rng = RandomNumberGenerator.new()
     evolution_rng.seed = 230923
-    for generation in range(180):
+    # The production point-mutation probability is intentionally conservative;
+    # allow a longer evolutionary horizon in this deterministic gate rather
+    # than making ordinary offspring unrealistically mutationally noisy.
+    for generation in range(600):
         founder_g = founder_g.mutated(evolution_rng, 0.14, 0.014)
         if Traits.sessile(founder_g):
             plant_emerged = true

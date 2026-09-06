@@ -8,6 +8,7 @@ const Physiology = preload("res://game/physiology.gd")
 const Traits = preload("res://game/ecology_traits.gd")
 var pairs: Array = []
 var broods: Array = []
+var spawn_clouds: Array = []
 var conceptions: int = 0
 var mating_events: int = 0
 var losses: int = 0
@@ -23,6 +24,8 @@ func reserved_count() -> int:
     var count: int = 0
     for brood in broods:
         count += brood["genomes"].size()
+    for cloud in spawn_clouds:
+        count += cloud.get("eggs", []).size()
     return count
 
 func compatibility(a, b) -> float:
@@ -56,8 +59,7 @@ func contact(a, b) -> bool:
     # plans), while their ventral/mid-body regions are still correctly paired.
     # A head-to-head touch normally leaves the reproductive anchors much
     # farther apart than this center-relative envelope.
-    var body_length: float = a.visual.get_body_size_hint() + b.visual.get_body_size_hint() if is_instance_valid(a.visual) and is_instance_valid(b.visual) else 6.0
-    var reach: float = clampf(maxf(anatomical_reach, center_gap * 1.45 + 0.35), 0.75, maxf(4.5, body_length * 2.0))
+    var reach: float = clampf(anatomical_reach, 0.75, 5.5)
     return anchor_a.distance_to(anchor_b) <= reach
 
 func _reproductive_anchor_world(org) -> Vector3:
@@ -66,27 +68,53 @@ func _reproductive_anchor_world(org) -> Vector3:
     return org.global_position
 
 func _prepare_docking(pair: Dictionary, a, b, model) -> void:
-    if pair.has("axis") and pair.has("site") and pair.has("facing") and pair.has("spacing"): return
-    var axis: Vector3 = b.global_position - a.global_position
-    axis.y = 0.0
+    if pair.has("axis") and pair.has("site") and pair.has("facing") and pair.has("spacing") and pair.has("target_a") and pair.has("target_b"): return
+    # Choose a common forward direction from the bodies, then place the pair
+    # side-by-side on its perpendicular axis.  Using the line between their
+    # current centres made a head/tail approach turn into rear-following.
+    var forward_a: Vector3 = (-a.global_transform.basis.z)
+    var forward_b: Vector3 = (-b.global_transform.basis.z)
+    forward_a.y = 0.0
+    forward_b.y = 0.0
+    if forward_a.length_squared() < 0.01: forward_a = Vector3.FORWARD
+    if forward_b.length_squared() < 0.01: forward_b = forward_a
+    forward_a = forward_a.normalized()
+    forward_b = forward_b.normalized()
+    if forward_a.dot(forward_b) < 0.0: forward_b = -forward_b
+    var facing: Vector3 = (forward_a + forward_b).normalized()
+    if facing.length_squared() < 0.01: facing = forward_a
+    var axis: Vector3 = facing.cross(Vector3.UP).normalized()
     if axis.length_squared() < 0.01:
         var angle: float = float(posmod(a.organism_id * 37 + b.organism_id * 17, 360)) * PI / 180.0
         axis = Vector3(cos(angle), 0.0, sin(angle))
-    axis = axis.normalized()
-    var facing: Vector3 = Vector3.UP.cross(axis).normalized()
-    if posmod(a.organism_id + b.organism_id, 2) == 1: facing = -facing
+    if (b.global_position - a.global_position).dot(axis) < 0.0: axis = -axis
     pair["axis"] = axis
     pair["facing"] = facing
-    pair["site"] = shared_site(a, b, model)
-    var body_length: float = a.visual.get_body_size_hint() + b.visual.get_body_size_hint() if is_instance_valid(a.visual) and is_instance_valid(b.visual) else 4.0
-    pair["spacing"] = clampf(body_length * 0.62, 0.75, 8.0)
+    var anchor_a: Vector3 = _reproductive_anchor_world(a)
+    var anchor_b: Vector3 = _reproductive_anchor_world(b)
+    var anatomical_midpoint: Vector3 = (anchor_a + anchor_b) * 0.5
+    pair["site"] = shared_site(a, b, model, anatomical_midpoint)
+    # Side separation follows body thickness, not full length. Using length here
+    # made long organisms meet nose-to-tail and push each other indefinitely.
+    pair["spacing"] = clampf((a.body_clearance() + b.body_clearance()) * 0.78, 0.75, 4.5)
+    var docking_basis: Basis = _docking_basis(facing)
+    var local_a: Vector3 = a.visual.reproductive_anchor() if is_instance_valid(a.visual) and a.visual.has_method("reproductive_anchor") else Vector3.ZERO
+    var local_b: Vector3 = b.visual.reproductive_anchor() if is_instance_valid(b.visual) and b.visual.has_method("reproductive_anchor") else Vector3.ZERO
+    pair["target_a"] = pair["site"] - axis * pair["spacing"] * 0.5 - docking_basis * local_a
+    pair["target_b"] = pair["site"] + axis * pair["spacing"] * 0.5 - docking_basis * local_b
+
+func _docking_basis(facing: Vector3) -> Basis:
+    var forward: Vector3 = facing
+    forward.y = 0.0
+    if forward.length_squared() < 0.01: forward = Vector3.FORWARD
+    forward = forward.normalized()
+    var right: Vector3 = forward.cross(Vector3.UP).normalized()
+    return Basis(right, Vector3.UP, -forward)
 
 func _dock_pair(pair: Dictionary, a, b, dt: float, strength: float) -> void:
     var axis: Vector3 = pair["axis"]
-    var site: Vector3 = pair["site"]
-    var spacing: float = pair["spacing"]
-    var target_a: Vector3 = site - axis * spacing * 0.5
-    var target_b: Vector3 = site + axis * spacing * 0.5
+    var target_a: Vector3 = pair["target_a"]
+    var target_b: Vector3 = pair["target_b"]
     var distance_a: float = a.global_position.distance_to(target_a)
     var distance_b: float = b.global_position.distance_to(target_b)
     a.courtship_facing = pair["facing"]
@@ -102,17 +130,31 @@ func _dock_pair(pair: Dictionary, a, b, dt: float, strength: float) -> void:
     else:
         b.desired_velocity = Vector3.ZERO
 
-func shared_site(a, b, model) -> Vector3:
-    var midpoint: Vector3 = (a.global_position + b.global_position) * 0.5
+func shared_site(a, b, model, anatomical_midpoint: Vector3 = Vector3.INF) -> Vector3:
+    var midpoint: Vector3 = anatomical_midpoint if anatomical_midpoint != Vector3.INF else (a.global_position + b.global_position) * 0.5
     if Cycle.mode(a) == "propagule": return midpoint
     if Cycle.water_breathing(a) >= 0.42 and Cycle.water_breathing(b) >= 0.42:
-        return model.nearest_medium(midpoint, true, maxf(a.body_clearance(), b.body_clearance()))
+        return _nearest_medium(model, midpoint, true, maxf(a.body_clearance(), b.body_clearance()))
     if Cycle.air_breathing(a) >= 0.42 and Cycle.air_breathing(b) >= 0.42:
-        return model.nearest_medium(midpoint, false, maxf(a.body_clearance(), b.body_clearance()))
+        return _nearest_medium(model, midpoint, false, maxf(a.body_clearance(), b.body_clearance()))
     # Close shoreline encounters can use breath reserves, but coupling still
     # requires contact, a matching fertilization route and sufficient oxygen.
     midpoint.y = model.waterline
     return midpoint
+
+func _nearest_medium(model, point: Vector3, submerged: bool, clearance: float) -> Vector3:
+    # Small deterministic test terrains intentionally expose only floor_at and
+    # waterline. Keep docking usable there instead of emitting runtime errors.
+    if model != null and model.has_method("nearest_medium"):
+        return model.nearest_medium(point, submerged, clearance)
+    var result: Vector3 = point
+    var floor_y: float = model.floor_at(point) if model != null and model.has_method("floor_at") else point.y
+    var waterline: float = float(model.waterline) if model != null else point.y
+    if submerged:
+        result.y = minf(waterline - clearance, maxf(floor_y + clearance, point.y))
+    else:
+        result.y = maxf(floor_y + clearance, waterline + clearance)
+    return result
 
 func available_slots(world) -> int:
     return maxi(0, int(world.population_cap()) - world.organisms.size() - reserved_count())
@@ -138,6 +180,7 @@ func find_mate(world, parent):
 
 func step(world, dt: float, allow_new: bool) -> void:
     _develop_broods(world, dt)
+    _advance_spawn_clouds(world, dt)
     _parental_care(world, dt)
     for i in range(pairs.size() - 1, -1, -1):
         var pair: Dictionary = pairs[i]
@@ -156,6 +199,21 @@ func step(world, dt: float, allow_new: bool) -> void:
         var touching: bool = contact(a, b)
         var external: bool = Cycle.mode(a) == "spawn"
         if external and (not a.in_water or not b.in_water): touching = false
+        if external:
+            if touching:
+                var egg_parent = a if Cycle.produces_eggs(a) and a.egg_reserve >= 0.26 else b
+                if _release_spawn_cloud(world, egg_parent):
+                    a.reproduction_state = "spawning"
+                    b.reproduction_state = "spawning"
+                    a.reproduction_event_timer = 2.0
+                    b.reproduction_event_timer = 2.0
+                    _release_pair(a, b)
+                    pairs.remove_at(i)
+                    continue
+            _dock_pair(pair, a, b, dt, world.courtship_strength())
+            a.reproduction_state = "courtship"
+            b.reproduction_state = "courtship"
+            continue
         if touching:
             pair["contact"] += dt
             a.desired_velocity = Vector3.ZERO
@@ -205,7 +263,7 @@ func step(world, dt: float, allow_new: bool) -> void:
             parent.mate_search_timer = 0.8 + float(parent.organism_id % 4) * 0.1
         if partner != null:
             parent.behavior_state = "seek_mate"
-            parent.steer_towards(partner.global_position, 1.0, 0.85)
+            parent.steer_towards(_courtship_approach(parent, partner, world.habitat), 1.0, 0.85)
         if world.rng.randf() > parent.reproduction_probability(dt): continue
         if partner != null and world.rng.randf() <= world.sexual_attempt_rate():
             parent.pair_target_id = partner.organism_id
@@ -214,6 +272,82 @@ func step(world, dt: float, allow_new: bool) -> void:
             mating_events += 1
         elif parent.genome.asexual_drive > 0.78:
             _conceive(world, parent, null)
+
+func _courtship_approach(parent, partner, model) -> Vector3:
+    var pair: Dictionary = {}
+    _prepare_docking(pair, parent, partner, model)
+    # The helper is built with `parent` as side A, so its target already
+    # contains the correct anatomical offset and side-of-pair sign.
+    return pair["target_a"]
+
+func _release_spawn_cloud(world, parent) -> bool:
+    if parent == null or not parent.alive or not parent.in_water or Cycle.mode(parent) != "spawn" or not Cycle.produces_eggs(parent): return false
+    if parent.egg_reserve < 0.26 or available_slots(world) <= 0: return false
+    CellCycle.sync_gametes(parent)
+    var count: int = mini(1 + int(parent.genome.brood_size * 2.5), mini(available_slots(world), parent.egg_genomes.size()))
+    count = mini(count, int(parent.egg_reserve / 0.26))
+    if count <= 0: return false
+    var eggs: Array = []
+    for i in range(count): eggs.append(parent.egg_genomes.pop_front())
+    var payment: float = 0.26 * count
+    parent.egg_reserve -= payment
+    parent.mate_cooldown = world.mate_delay()
+    var marker = _make_marker(world, parent.global_position, "spawn")
+    spawn_clouds.append({"eggs": eggs, "maternal_genome": parent.genome, "a": parent.organism_id, "age": 0.0,
+        "position": parent.global_position, "energy": payment * 0.85, "protection": parent.genome.egg_protection, "marker": marker})
+    world.record_event("spawn_release", {"mother": parent.organism_id, "eggs": count, "position": parent.global_position})
+    parent._remember("released external eggs")
+    return true
+
+func _advance_spawn_clouds(world, dt: float) -> void:
+    for i in range(spawn_clouds.size() - 1, -1, -1):
+        var cloud: Dictionary = spawn_clouds[i]
+        cloud["age"] = float(cloud.get("age", 0.0)) + dt
+        var p: Vector3 = cloud["position"]
+        p.y = maxf(world.habitat.floor_at(p) + 0.30, p.y - dt * 0.04)
+        cloud["position"] = p
+        if is_instance_valid(cloud.get("marker")): cloud["marker"].global_position = p
+        var fertilized: bool = false
+        for donor in world.organisms:
+            if not donor.alive or donor.organism_id == int(cloud["a"]) or not donor.in_water or Cycle.mode(donor) != "spawn": continue
+            if not Cycle.produces_sperm(donor) or donor.sperm_reserve < 0.055 or not donor.can_reproduce(): continue
+            if donor.global_position.distance_to(p) > 1.0 + donor.genome.reach_drive: continue
+            var maternal_genome = cloud["maternal_genome"]
+            var compatibility_score: float = Cycle.genetic_compatibility(maternal_genome, donor.genome)
+            if compatibility_score < 0.48: continue
+            CellCycle.sync_gametes(donor)
+            var count: int = mini(cloud["eggs"].size(), mini(donor.sperm_genomes.size(), int(donor.sperm_reserve / 0.055)))
+            if count <= 0: continue
+            var genomes: Array = []
+            var family: int = maternal_genome.family_id
+            if donor.genome.family_id != family:
+                family = world.next_family
+                world.next_family += 1
+            for egg_index in range(count):
+                var sperm: Dictionary = donor.sperm_genomes.pop_front()
+                var child = maternal_genome.fertilize(donor.genome, cloud["eggs"][egg_index], sperm, world.rng, world.mutation_strength(), world.macro_rate(), family)
+                child.fertility_factor *= clampf((compatibility_score - 0.25) / 0.50, 0.0, 1.0)
+                genomes.append(child)
+            donor.sperm_reserve -= 0.055 * count
+            donor.mate_cooldown = world.mate_delay()
+            var marker = cloud["marker"]
+            broods.append({"genomes": genomes, "a": int(cloud["a"]), "b": donor.organism_id,
+                "route": "spawn", "cell_division": "mitosis", "somatic_ploidy": 2, "age": 0.0, "development": 0.0, "stage": "cleavage", "duration": Cycle.embryo_duration(maternal_genome), "internal": false,
+                "energy": float(cloud["energy"]) + 0.055 * count * 0.85, "health": 1.0, "position": p, "wet": true,
+                "protection": float(cloud["protection"]), "nourishment": maternal_genome.maternal_nourishment, "marker": marker,
+                "hybrid": true, "viability": compatibility_score})
+            conceptions += count
+            world.record_event("conception", {"mother": int(cloud["a"]), "father": donor.organism_id, "route": "broadcast_spawn", "embryos": count, "compatibility": compatibility_score})
+            donor._remember("fertilized external spawn")
+            fertilized = true
+            break
+        if fertilized:
+            spawn_clouds.remove_at(i)
+        elif float(cloud["age"]) > 28.0 or not world.habitat.is_water(p):
+            losses += cloud["eggs"].size()
+            world.record_event("spawn_loss", {"mother": int(cloud["a"]), "eggs": cloud["eggs"].size()})
+            if is_instance_valid(cloud.get("marker")): cloud["marker"].queue_free()
+            spawn_clouds.remove_at(i)
 
 func _release_pair(a, b) -> void:
     for org in [a, b]:

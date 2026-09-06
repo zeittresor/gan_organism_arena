@@ -2,6 +2,7 @@ extends Node3D
 
 var water_material: ShaderMaterial
 var world_time: float = 0.0
+var wireframe_visible: bool = true
 
 func set_world_time(seconds: float) -> void:
     world_time = seconds
@@ -43,9 +44,19 @@ func apply_textures() -> void:
             material.albedo_texture = TextureAssets.terrain_texture_named("rock") if TextureAssets.enabled else null
 
 func _ready() -> void:
+    if has_node("/root/SettingsStore"):
+        wireframe_visible = bool(SettingsStore.get_value("show_wireframe", true))
     geometry_root = Node3D.new()
     geometry_root.name = "HabitatGeometry"
     add_child(geometry_root)
+
+func set_wireframe_visible(value: bool) -> void:
+    wireframe_visible = value
+    if not is_instance_valid(geometry_root):
+        return
+    var bounds := geometry_root.get_node_or_null("WorldWireframe")
+    if bounds:
+        bounds.visible = wireframe_visible
 
 func configure(level: int, size: float) -> void:
     habitat_level = clampi(level, 5, 9)
@@ -97,12 +108,14 @@ func _build_bounds(half: float) -> void:
         mesh.surface_add_vertex(Vector3(half, ground_y, t))
     mesh.surface_end()
     var instance = MeshInstance3D.new()
+    instance.name = "WorldWireframe"
     instance.mesh = mesh
     var mat = StandardMaterial3D.new()
     mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
     mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
     mat.vertex_color_use_as_albedo = true
     instance.material_override = mat
+    instance.visible = wireframe_visible
     geometry_root.add_child(instance)
 
 func _build_terrain() -> void:
@@ -233,11 +246,23 @@ func _upload_reef_transforms(remains: Array) -> void:
         var body_size: float = clampf(float(item.get("size", 0.5)), 0.15, 2.3)
         # Inert remains shrink as soft tissue is eaten/decays. They do not
         # spontaneously become living coral. Skeletal residue persists below.
+        var stage: String = str(item.get("stage", "detritus"))
+        var reef_growth: float = clampf(float(item.get("reef_growth", 0.0)), 0.0, 1.0)
         var height: float = 0.08 + body_size * (0.10 * mineral + 0.15 * biomass)
         var radius: float = 0.3 + body_size * 0.35
+        var shape: Vector3 = Vector3(radius, height, radius)
+        if stage in ["corpse", "carrion"]:
+            shape = Vector3(radius * 1.45, maxf(0.12, height * 0.70), radius * 0.72)
+        elif stage == "skeleton":
+            shape = Vector3(radius * 1.60, maxf(0.06, height * 0.42), radius * 0.30)
+        elif stage == "reef_substrate":
+            shape = Vector3(radius * (0.65 + reef_growth * 0.55), maxf(0.18, height + reef_growth * body_size), radius * (0.65 + reef_growth * 0.55))
         p.y = maxf(floor_y + height * 0.5, p.y)
-        transforms.append(Transform3D(Basis.IDENTITY.scaled(Vector3(radius, height, radius)), p))
-        colors.append(Color(0.62, 0.57, 0.45).lerp(Color(0.40, 0.21, 0.16), clampf(biomass, 0.0, 1.0)))
+        transforms.append(Transform3D(Basis.IDENTITY.scaled(shape), p))
+        var color: Color = Color(0.62, 0.57, 0.45).lerp(Color(0.40, 0.21, 0.16), clampf(biomass, 0.0, 1.0))
+        if stage == "skeleton": color = Color(0.82, 0.79, 0.64)
+        elif stage == "reef_substrate": color = Color(0.72, 0.34, 0.42).lerp(Color(0.34, 0.52, 0.45), reef_growth)
+        colors.append(color)
     var multi: MultiMesh = reef_instance.multimesh
     multi.visible_instance_count = transforms.size()
     for i in range(transforms.size()):

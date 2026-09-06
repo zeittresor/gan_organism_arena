@@ -84,6 +84,24 @@ static func covering_cost(g) -> float:
 static func covering_protection(g) -> float:
     return float(g.skin_thickness) * 0.08 + float(g.scale_cover) * 0.16 + float(g.horn_drive) * float(g.support_drive) * 0.08
 
+static func gelatinous(g) -> float:
+    # A distributed phenotype: no single "jelly gene" directly creates a
+    # finished body. Soft support, membrane and mucus traits must coincide.
+    var soft_support: float = 1.0 - float(g.support_drive)
+    var hard_cover: float = maxf(float(g.armor_drive), maxf(float(g.shell_drive), float(g.scale_cover)))
+    return clampf(float(g.mucus_cover) * 0.36 + float(g.membrane_cover) * 0.30 + soft_support * 0.22 + (1.0 - hard_cover) * 0.12, 0.0, 1.0)
+
+static func bioluminescence(g) -> float:
+    # Pigment, patterning, secretion and sensory regulation jointly approximate
+    # an inherited light-organ pathway. It remains a fictional phenotype score.
+    return clampf(float(g.pattern_drive) * 0.30 + float(g.pigment_value) * 0.22 + float(g.mucus_cover) * 0.18 + float(g.sensory_drive) * 0.16 + float(g.camouflage) * 0.14, 0.0, 1.0)
+
+static func fang_score(g) -> float:
+    return clampf(float(g.predator_drive) * 0.48 + float(g.aggression) * 0.24 + maxf(float(g.beak_drive), float(g.horn_drive)) * 0.28, 0.0, 1.0)
+
+static func nematocyst_score(g) -> float:
+    return clampf(gelatinous(g) * 0.55 + float(g.predator_drive) * 0.25 + float(g.ambush_drive) * 0.20, 0.0, 1.0)
+
 static func thermal_cost(g, wet: bool, temperature: float) -> float:
     var coat: float = insulation(g, wet)
     var cold: float = maxf(0.0, 17.0 - temperature) / 22.0

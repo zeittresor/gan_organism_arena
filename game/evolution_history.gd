@@ -17,6 +17,7 @@ func record(kind: String, details: Dictionary, step: int, time: float) -> void:
             by_id[deceased_id]["alive"] = false
             by_id[deceased_id]["death_step"] = step
             by_id[deceased_id]["death_time"] = time
+            by_id[deceased_id]["death_cause"] = str(details.get("cause", "unknown"))
         return
     if kind not in ["founder_injection", "birth"]: return
     var entry: Dictionary = details.get("lineage", {}).duplicate(true)
@@ -43,6 +44,7 @@ func record(kind: String, details: Dictionary, step: int, time: float) -> void:
     entry["alive"] = true
     entry["death_step"] = -1
     entry["death_time"] = -1.0
+    entry["death_cause"] = ""
     var plan: String = str(entry["plan"])
     entry["new_topology"] = natural and not first_forms.has(plan)
     if not first_forms.has(plan):

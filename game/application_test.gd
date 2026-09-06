@@ -71,6 +71,7 @@ func run_all() -> bool:
     world._register_remains(parent)
     world.nutrient_field.reserves[0] = 0.0
     var biomass: float = world.remains[0]["biomass"]
+    world.remains[0]["age"] = 9.0
     world._age_remains(2.0)
     check(world.remains[0]["biomass"] < biomass, "finite detritus decays")
     check(world.recycled_energy > 0.0 and world.recycled_energy <= biomass - world.remains[0]["biomass"], "decomposition returns only paid biomass")
@@ -98,7 +99,7 @@ func run_all() -> bool:
         var trunk_width: float = 0.0
         for i in range(body.visual.body_cells.size()):
             var part: Dictionary = body.visual.body_cells[i]
-            if i != body.visual.focus_anchor_index and int(part["t"]) in [0, 1, 6]:
+            if i != body.visual.focus_anchor_index and int(part["t"]) in [0, 1, 6, 30]:
                 trunk_width = maxf(trunk_width, float(part["r"]) * part["s"].x)
         check(head_width <= trunk_width * 1.15, "head supported plan=%d head=%.4f trunk=%.4f tissue=%d" % [plan, head_width, trunk_width, head_cell["t"]])
         g.head_drive = 0.0

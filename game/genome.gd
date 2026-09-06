@@ -122,6 +122,10 @@ func randomize_from(rng: RandomNumberGenerator, p_family_id: int, forced_plan: i
     seed = int(rng.randi())
     family_id = p_family_id
     generation = 0
+    mutation_events = 0
+    macro_mutation_events = 0
+    mutation_log.clear()
+    crossover_events = 0
     body_plan = forced_plan % PLAN_COUNT if forced_plan >= 0 else rng.randi_range(0, PLAN_COUNT - 1)
     body_plan_code = _code_for_plan(body_plan)
     hue = rng.randf()
@@ -282,7 +286,7 @@ func meiotic_products(rng: RandomNumberGenerator, strength: float = 0.0) -> Arra
             products[b]["switches"] += 1
         for i in range(4):
             var value: float = float(alleles[locus][chromatids[i]])
-            if strength > 0.0 and rng.randf() < 0.015 + mutability * 0.10:
+            if strength > 0.0 and rng.randf() < 0.003 + mutability * 0.018:
                 var previous: float = value
                 value = _mutate_value(locus, value, rng, strength)
                 if value != previous:
@@ -324,7 +328,7 @@ func mutated(rng: RandomNumberGenerator, strength: float = 0.14, macro_rate: flo
     g.skin_pattern = skin_pattern.offspring()
     for locus in _continuous_gene_names():
         for side in range(2):
-            if strength > 0.0 and rng.randf() < 0.015 + mutability * 0.10:
+            if strength > 0.0 and rng.randf() < 0.003 + mutability * 0.018:
                 g._change_allele(locus, side, _mutate_value(locus, float(g.alleles[locus][side]), rng, strength), "small")
     for load_index in range(g.recessive_load.size()):
         for side in range(2):

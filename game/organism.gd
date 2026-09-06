@@ -5,6 +5,7 @@ const ThoughtLanguage = preload("res://game/thought_language.gd")
 const Contact = preload("res://game/body_contact.gd")
 const Navigation = preload("res://game/navigation.gd")
 const Locomotion = preload("res://game/locomotion.gd")
+const TRAUMA_COLLAPSE_THRESHOLD: float = 0.85
 var contact_quality: int = 100
 var heading_yaw: float = 0.0
 var heading_pitch: float = 0.0
@@ -73,6 +74,9 @@ var thought_counter = 0
 var last_thought_index: int = 0
 var last_thought_state: String = "observe"
 var alive = true
+var death_cause: String = ""
+var anoxia_seconds: float = 0.0
+var desiccation_seconds: float = 0.0
 var selected = false
 var family_name = ""
 var event_history: Array[String] = []
@@ -172,7 +176,11 @@ func initialize(p_id: int, p_genome, spawn: Vector3, visual_cap: int, view_mode:
     position = spawn
     family_name = "F%03d" % genome.family_id
     energy = 0.58 + genome.metabolism * 0.28
-    complexity = maxf(0.5, float(genome.generation) * 0.35)
+    # Generation is ancestry, not an age or a free body-complexity bonus. A
+    # newborn in generation 20 must still develop from its own embryo stage;
+    # otherwise every later generation spawned with visible "mutations" before
+    # it has grown at all.
+    complexity = 0.5
     intelligence = 0.05 + genome.neural_drive * 0.08
     development_stability = float(genome.viability_score()) if genome.has_method("viability_score") else 1.0
     social_rank = clampf(float(genome.dominance_drive) * 0.65 + float(genome.aggression) * 0.20 + development_stability * 0.15, 0.0, 1.0)
@@ -240,15 +248,29 @@ func think_step(dt: float, nutrient_pos: Vector3, social_vector: Vector3, threat
     Physiology.advance(self, dt)
     experience += dt * (0.035 + curiosity_state * 0.022 + social_state * 0.012)
 
-    # Open-ended state: no semantic maximum. Visual cost stays bounded separately.
+    # Somatic construction stops after maturity. Adult learning may continue,
+    # but it cannot rewrite germ-line DNA or grow a new inherited body plan.
     var survival_factor: float = (0.32 + energy * 0.70 + float(genome.curiosity) * 0.16) * lerpf(0.25, 1.0, development_stability)
-    complexity += dt * evolution_rate * survival_factor * (0.14 + log(1.0 + age_seconds) * 0.018)
+    if development_progress < 1.0:
+        complexity += dt * evolution_rate * survival_factor * (0.14 + log(1.0 + age_seconds) * 0.018)
     intelligence += dt * evolution_rate * (0.0007 + genome.neural_drive * 0.00135 + genome.sensory_drive * 0.00055 + experience * 0.0000025) * lerpf(0.30, 1.0, development_stability)
     intelligence = maxf(0.0, intelligence)
     language_stage = _language_stage()
     if energy <= 0.0001:
-        alive = false
-        _remember("energy collapse")
+        mark_dead("energy_collapse")
+
+func natural_lifespan() -> float:
+    # Compressed simulation time: inherited longevity and support delay ageing,
+    # but every organism still has a finite physiological span.
+    return 300.0 + float(genome.longevity) * 720.0 + float(genome.support_drive) * 120.0
+
+func mark_dead(cause: String) -> void:
+    if not alive: return
+    alive = false
+    death_cause = cause
+    velocity = Vector3.ZERO
+    desired_velocity = Vector3.ZERO
+    _remember("death: " + cause)
 
 func motion_step(delta: float, world_half_extent: float) -> void:
     if not alive:
@@ -317,7 +339,7 @@ func apply_environment(dt: float, model) -> void:
     # Keep aquatic ancestors physically submerged until their lineage has had
     # several generations to evolve land respiration and support. This also
     # repairs stale positions after a steep habitat rebuild.
-    if bool(genome.aquatic_ancestry) and int(genome.aquatic_steps) < 3 and not model.is_water(global_position):
+    if age_seconds < 3.0 and bool(genome.aquatic_ancestry) and int(genome.aquatic_steps) < 3 and not model.is_water(global_position):
         global_position = model.nearest_medium(global_position, true, body_clearance() + 0.5)
         velocity.y = minf(velocity.y, 0.0)
     var depth: float = model.waterline - global_position.y
@@ -361,6 +383,8 @@ func apply_environment(dt: float, model) -> void:
     var drying: float = maxf(0.0, 0.30 - moisture) * float(genome.skin_breathing)
     habitat_stress = clampf((1.0 - oxygen) * 0.80 + drying, 0.0, 1.0)
     energy = maxf(0.0, energy - dt * (maxf(0.0, 0.20 - oxygen) * 0.16 + drying * 0.025 + parasite_load * 0.003))
+    anoxia_seconds = maxf(0.0, anoxia_seconds + dt if oxygen <= 0.015 else anoxia_seconds - dt * 2.0)
+    desiccation_seconds = maxf(0.0, desiccation_seconds + dt if moisture <= 0.015 else desiccation_seconds - dt * 1.5)
     stamina = clampf(stamina + dt * (0.07 - exertion * (0.90 if airborne else 0.25)), 0.0, 1.0)
     if rooted:
         velocity = Vector3.ZERO
@@ -368,9 +392,19 @@ func apply_environment(dt: float, model) -> void:
         cruise_altitude = minf(maxf(floor_y + body_clearance() + 3.0, model.waterline + 3.5), model.ceiling_y - body_clearance())
     elif grounded and not in_water and burst_time <= 0.0:
         velocity.y = maxf(0.0, velocity.y)
-    if energy <= 0.0001:
-        alive = false
-        _remember("respiration or energy collapse")
+    if age_seconds >= natural_lifespan():
+        mark_dead("senescence")
+    elif anoxia_seconds >= 6.0 + float(genome.breath_storage) * 8.0:
+        mark_dead("anoxia")
+    elif desiccation_seconds >= 10.0 + (1.0 - float(genome.moisture_need)) * 12.0:
+        mark_dead("desiccation")
+    elif tissue_damage >= TRAUMA_COLLAPSE_THRESHOLD:
+        # Physiology.advance repairs damage before this mortality gate. A
+        # well-fed organism therefore gets a recovery chance; unrepaired
+        # critical trauma enters the normal remains/scavenging pipeline.
+        mark_dead("trauma_collapse")
+    elif energy <= 0.0001:
+        mark_dead("respiration_or_energy_collapse")
 
 # Compatibility entry point for previous self-tests.
 func apply_habitat(dt: float, habitat_level: int, waterline: float, ground_y: float, world_half_extent: float) -> void:
@@ -422,6 +456,10 @@ func ecology_labels() -> Array[String]:
     if genome.cleaning_drive > 0.66: labels.append("cleaner")
     if genome.parasite_drive > 0.72: labels.append("parasite")
     if genome.shyness > 0.62: labels.append("shy")
+    if Traits.gelatinous(genome) > 0.70: labels.append("gelatinous")
+    if Traits.nematocyst_score(genome) > 0.72: labels.append("stinging_cells")
+    if Traits.bioluminescence(genome) > 0.74: labels.append("bioluminescent")
+    if Traits.fang_score(genome) > 0.72: labels.append("fangs")
     if not rooted:
         if genome.skin_thickness > 0.30: labels.append("skin")
         if genome.feather_cover > 0.45: labels.append("feathers")
