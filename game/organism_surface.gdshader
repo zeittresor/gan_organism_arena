@@ -1,5 +1,5 @@
 shader_type spatial;
-render_mode diffuse_burley, specular_schlick_ggx;
+render_mode diffuse_burley, specular_schlick_ggx, depth_prepass_alpha;
 
 uniform sampler2D coat : source_color, filter_linear_mipmap, repeat_enable;
 uniform sampler2D specialized : source_color, filter_linear, repeat_disable;
@@ -8,6 +8,7 @@ varying float coat_weight;
 varying vec3 tissue_color;
 varying vec2 coat_variant;
 varying float tissue_kind;
+varying float tissue_alpha;
 
 vec2 varied_uv(vec2 uv, vec2 variation) {
     vec2 centered = uv - vec2(0.5);
@@ -32,6 +33,7 @@ void vertex() {
     coat_variant = INSTANCE_CUSTOM.gb;
     tissue_kind = INSTANCE_CUSTOM.a;
     tissue_color = COLOR.rgb;
+    tissue_alpha = COLOR.a;
 }
 
 void fragment() {
@@ -46,4 +48,7 @@ void fragment() {
     ALBEDO = tissue_color * mix(vec3(1.0), pattern, max(coat_weight, has_specialized_surface));
     ROUGHNESS = coat_roughness;
     METALLIC = 0.03;
+    ALPHA = tissue_alpha;
+    float light_organ = step(14.5, slot);
+    EMISSION = tissue_color * light_organ * 2.4;
 }
