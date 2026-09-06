@@ -40,7 +40,7 @@ func apply_textures() -> void:
                 material.set_shader_parameter("sand_map", terrain_maps[2])
                 material.set_shader_parameter("grass_map", terrain_maps[3])
         elif material is StandardMaterial3D:
-            material.albedo_texture = terrain_texture
+            material.albedo_texture = TextureAssets.terrain_texture_named("rock") if TextureAssets.enabled else null
 
 func _ready() -> void:
     geometry_root = Node3D.new()
@@ -167,8 +167,6 @@ func _build_reef_features() -> void:
     # while dead-organism remains are added to the same mesh over time.
     reef_transforms.clear()
     reef_instance = null
-    if habitat_level < 7:
-        return
     var rng = RandomNumberGenerator.new()
     rng.seed = 99831 + habitat_level * 17
     var mesh = CylinderMesh.new()
@@ -178,9 +176,11 @@ func _build_reef_features() -> void:
     mesh.radial_segments = 6
     mesh.rings = 2
     var material = StandardMaterial3D.new()
-    material.albedo_color = Color(0.78, 0.34, 0.38)
+    material.albedo_color = Color.WHITE
+    material.vertex_color_use_as_albedo = true
     material.roughness = 0.90
     mesh.material = material
+    terrain_materials.append(material)
     for i in range(56):
         var p = Vector3(rng.randf_range(-0.90, 0.90) * model.half_extent, 0.0, rng.randf_range(-0.90, 0.90) * model.half_extent)
         var floor_y: float = model.floor_at(p)
@@ -191,12 +191,16 @@ func _build_reef_features() -> void:
             var offset = Vector3(rng.randf_range(-0.9, 0.9), 0.0, rng.randf_range(-0.9, 0.9))
             var height: float = rng.randf_range(0.45, 1.8)
             var radius: float = rng.randf_range(0.45, 1.25)
-            var base = Vector3(p.x + offset.x, floor_y + height * 0.5, p.z + offset.z)
+            var base = p + offset
+            base.y = model.floor_at(base)
+            if base.y + height >= model.waterline: continue
+            base.y += height * 0.5
             reef_transforms.append(Transform3D(Basis.IDENTITY.scaled(Vector3(radius, height, radius)), base))
     reef_instance = MultiMeshInstance3D.new()
     reef_instance.name = "CoralAndMineralReefs"
     var multi = MultiMesh.new()
     multi.transform_format = MultiMesh.TRANSFORM_3D
+    multi.use_colors = true
     multi.mesh = mesh
     multi.instance_count = REEF_CAPACITY
     reef_instance.multimesh = multi
@@ -212,28 +216,33 @@ func _upload_reef_transforms(remains: Array) -> void:
     if not is_instance_valid(reef_instance) or reef_instance.multimesh == null:
         return
     var transforms: Array[Transform3D] = reef_transforms.duplicate()
+    var colors: Array[Color] = []
+    for i in range(transforms.size()): colors.append(Color(0.78, 0.34, 0.38))
     for i in range(remains.size()):
         if transforms.size() >= REEF_CAPACITY:
             break
         var item: Dictionary = remains[i]
-        if not bool(item.get("aquatic", false)):
-            continue
         var values: Array = item.get("position", [])
         if values.size() < 3:
             continue
         var p = Vector3(float(values[0]), float(values[1]), float(values[2]))
         var floor_y: float = model.floor_at(p)
-        var age: float = maxf(0.0, float(item.get("age", 0.0)))
-        var growth: float = clampf(age / 90.0, 0.22, 1.55)
+        var mineral: float = clampf(float(item.get("mineral", 0.0)), 0.0, 1.0)
+        var biomass: float = clampf(float(item.get("biomass", 0.0)), 0.0, 3.0)
+        if mineral < 0.05 and biomass < 0.005: continue
         var body_size: float = clampf(float(item.get("size", 0.5)), 0.15, 2.3)
-        var height: float = clampf((0.32 + body_size * 0.42) * growth, 0.18, 2.8)
-        var radius: float = clampf(0.30 + body_size * 0.14, 0.22, 0.72)
-        p.y = floor_y + height * 0.5
+        # Inert remains shrink as soft tissue is eaten/decays. They do not
+        # spontaneously become living coral. Skeletal residue persists below.
+        var height: float = 0.08 + body_size * (0.10 * mineral + 0.15 * biomass)
+        var radius: float = 0.3 + body_size * 0.35
+        p.y = maxf(floor_y + height * 0.5, p.y)
         transforms.append(Transform3D(Basis.IDENTITY.scaled(Vector3(radius, height, radius)), p))
+        colors.append(Color(0.62, 0.57, 0.45).lerp(Color(0.40, 0.21, 0.16), clampf(biomass, 0.0, 1.0)))
     var multi: MultiMesh = reef_instance.multimesh
-    for i in range(REEF_CAPACITY):
-        var transform = transforms[i] if i < transforms.size() else Transform3D(Basis.IDENTITY.scaled(Vector3(0.001, 0.001, 0.001)), Vector3(0.0, -10000.0, 0.0))
-        multi.set_instance_transform(i, transform)
+    multi.visible_instance_count = transforms.size()
+    for i in range(transforms.size()):
+        multi.set_instance_transform(i, transforms[i])
+        multi.set_instance_color(i, colors[i])
 
 func _build_water_surface(half: float) -> void:
     var plane = MeshInstance3D.new()

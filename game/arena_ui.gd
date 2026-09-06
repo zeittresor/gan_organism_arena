@@ -4,6 +4,10 @@ signal setting_changed(key: String, value)
 signal action_requested(action: String)
 signal panels_changed(open: bool)
 signal quit_requested(action: String)
+signal world_file_selected(path: String, saving: bool)
+var world_dialog: FileDialog
+var file_result: AcceptDialog
+var _world_saving: bool = false
 
 var hud: Label
 var thought: Label
@@ -39,6 +43,7 @@ func _ready() -> void:
     _build_help()
     _build_exit_dialog()
     _build_profile_dialog()
+    _build_world_dialog()
     _build_evolution_dialog()
     get_viewport().size_changed.connect(_layout_hud)
     _layout_hud()
@@ -163,6 +168,8 @@ func _build_settings() -> void:
     _add_slider("thought_interval", 2.0, 25.0, 0.5, float(SettingsStore.get_value("thought_interval", 7.0)))
     _add_slider("max_history_events", 4, 96, 4, float(SettingsStore.get_value("max_history_events", 32)))
 
+    _add_action_button("save_world")
+    _add_action_button("load_world")
     _add_action_button("save_settings")
     _add_action_button("load_settings")
     _add_action_button("test_speech")
@@ -398,6 +405,8 @@ func show_exit_dialog() -> void:
     exit_open = true
     exit_panel.visible = true
     refresh_language()
+    var cancel = exit_panel.find_child("exit_cancel", true, false) as Button
+    if cancel: cancel.grab_focus()
     panels_changed.emit(true)
 
 func close_exit_dialog(restore_previous: bool = false) -> void:
@@ -616,3 +625,26 @@ func _profile_selected(path: String) -> void:
     for key in changed: setting_changed.emit(key, values[key])
     sync_settings()
     set_thought(L10n.text("ui.profile_loaded"))
+
+func _build_world_dialog() -> void:
+    world_dialog = FileDialog.new()
+    world_dialog.access = FileDialog.ACCESS_FILESYSTEM
+    world_dialog.filters = PackedStringArray(["*.arena ; Arena world checkpoint"])
+    world_dialog.file_selected.connect(func(path: String): world_file_selected.emit(path, _world_saving))
+    add_child(world_dialog)
+    file_result = AcceptDialog.new()
+    add_child(file_result)
+
+func show_world_dialog(saving: bool) -> void:
+    _world_saving = saving
+    world_dialog.file_mode = FileDialog.FILE_MODE_SAVE_FILE if saving else FileDialog.FILE_MODE_OPEN_FILE
+    var folder: String = ProjectSettings.globalize_path("res://exports/world_saves")
+    DirAccess.make_dir_recursive_absolute(folder)
+    world_dialog.current_dir = folder
+    world_dialog.current_file = "world_%d.arena" % int(Time.get_unix_time_from_system()) if saving else ""
+    world_dialog.title = L10n.text("actions.save_world" if saving else "actions.load_world")
+    world_dialog.popup_centered_ratio(0.75)
+
+func show_file_result(success: bool, message: String) -> void:
+    file_result.dialog_text = L10n.text(message if success else "ui.world_file_failed")
+    file_result.popup_centered(Vector2i(520, 140))

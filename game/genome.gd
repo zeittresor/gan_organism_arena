@@ -602,3 +602,23 @@ func dna_document() -> Dictionary:
 
 func sensory_gene_names() -> Array[String]:
     return ["eye_focus", "compound_eye_drive", "antenna_drive", "affective_plasticity"]
+
+func regional_expression(locus: String, region: int) -> float:
+    # A tissue-local regulatory readout, kept separate from the germ-line DNA.
+    # Both homologs contribute; inherited regulators alter their relative
+    # expression by region. Rebuilding a mesh consumes no mutation RNG.
+    var baseline: float = float(get(locus))
+    var pair: Array = alleles.get(locus, [])
+    if pair.size() != 2 or absf(baseline - float(expressed_baseline.get(locus, baseline))) > 0.000001:
+        return baseline
+    var first: float = float(pair[0])
+    var second: float = float(pair[1])
+    var regulation: float = sin((pattern_drive * 0.73 + symmetry * 0.27 + float(region) * 0.31) * TAU)
+    var expressed: float = baseline + (first - second) * regulation * 0.22
+    return clampf(expressed, minf(first, second), maxf(first, second))
+
+func regional_profile() -> Dictionary:
+    return {"head": regional_expression("head_drive", 0), "trunk_width": regional_expression("body_width", 1),
+        "trunk_length": regional_expression("elongation", 1), "limb_length": regional_expression("limb_length", 2),
+        "limb_thickness": regional_expression("limb_thickness", 2), "tail": regional_expression("tail_drive", 3),
+        "description": "tissue-local inherited potential; development, energy and support determine expressed anatomy"}

@@ -8,13 +8,13 @@ const TTSScript = preload("res://game/tts_windows.gd")
 const OBJExporterScript = preload("res://game/obj_exporter.gd")
 const HabitatVisualScript = preload("res://game/habitat_visual.gd")
 const AudioEcosystemScript = preload("res://game/audio_ecosystem.gd")
-const ExperimentAPIScript = preload("res://game/experiment_api.gd")
+const WorldSave = preload("res://game/world_save.gd")
 
 const Cycle = preload("res://game/life_cycle.gd")
 
 const APP_NAME = "GAN Organism Arena"
-const VERSION = "1.0.0-alpha29"
-const RELEASE_DATE = "2026-09-05"
+const VERSION = "1.0.0-alpha30"
+const RELEASE_DATE = "2026-09-06"
 
 var ai_gateway = null
 var sim_world = null
@@ -44,6 +44,7 @@ var last_world_snapshot_path: String = ""
 var reef_visual_timer: float = 0.0
 
 func _ready() -> void:
+    get_tree().auto_accept_quit = false
     _rng.randomize()
     AppLog.info("Starting %s v%s (%s)" % [APP_NAME, VERSION, RELEASE_DATE])
     AppLog.info("Godot: %s | OS: %s | renderer setting: %s" % [Engine.get_version_info().get("string", "unknown"), OS.get_name(), str(SettingsStore.get_value("renderer", "forward_plus"))])
@@ -58,6 +59,10 @@ func _ready() -> void:
     _create_audio()
     _apply_light_mode(str(SettingsStore.get_value("light_mode", "auto_sun")))
     _start_optional_ai()
+
+func _notification(what: int) -> void:
+    if what == NOTIFICATION_WM_CLOSE_REQUEST and is_instance_valid(ui):
+        ui.show_exit_dialog()
 
 func _create_habitat() -> void:
     habitat_visual = HabitatVisualScript.new()
@@ -139,6 +144,7 @@ func _create_ui() -> void:
     ui.action_requested.connect(_on_action_requested)
     ui.panels_changed.connect(_on_panels_changed)
     ui.quit_requested.connect(_on_quit_requested)
+    ui.world_file_selected.connect(_world_file_selected)
     _refresh_selection_text()
 
 func _build_environment() -> void:
@@ -269,6 +275,14 @@ func _process(delta: float) -> void:
         AppLog.info("perf_detail motion_ms=%.3f biology_ms=%.3f contacts_ms=%.3f peak_world_ms=%.3f frame_ms=%.3f draw_calls=%d primitives=%d ground_detail=%d ground_fast=%d ground_cached=%d envelopes=%d uploads=%d skipped_uploads=%d contact_quality=%d" % [p["motion_ms"], p["biology_ms"], p["contacts_ms"], p["peak_world_ms"], Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0, int(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)), int(Performance.get_monitor(Performance.RENDER_TOTAL_PRIMITIVES_IN_FRAME)), p["ground_detail"], p["ground_fast"], p["ground_cached"], p["envelopes"], p["render_uploads"], p["skipped_uploads"], p["quality"]])
 
 func _unhandled_input(event: InputEvent) -> void:
+    # A menu owns keyboard input; editing an option must not change the world.
+    if ui.exit_open:
+        if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE:
+            ui.close_exit_dialog(true)
+            get_viewport().set_input_as_handled()
+        return
+    if (ui.settings_open or ui.help_open) and event is InputEventKey and event.keycode not in [KEY_ESCAPE, KEY_F1, KEY_F10, KEY_F12]:
+        return
     if event is InputEventKey and event.pressed and not event.echo:
         match event.keycode:
             KEY_F10:
@@ -494,7 +508,13 @@ func _on_setting_changed(key: String, value) -> void:
         "auto_reseed", "minimum_population", "organism_cap":
             if is_instance_valid(sim_world):
                 sim_world.refresh_population_floor()
+        "move_speed":
+            swim_camera.move_speed = float(value)
+        "mouse_sensitivity":
+            swim_camera.mouse_sensitivity = float(value)
         "world_size":
+            base_world_size = float(value)
+            manual_world_delta = 0.0
             _apply_habitat_level(int(SettingsStore.get_value("habitat_level", 7)))
         "fullscreen":
             _apply_window_mode()
@@ -539,6 +559,8 @@ func _on_setting_changed(key: String, value) -> void:
 
 func _on_action_requested(action: String) -> void:
     match action:
+        "save_world", "load_world":
+            ui.show_world_dialog(action == "save_world")
         "save_settings":
             ui.show_profile_dialog(true)
         "load_settings":
@@ -597,64 +619,87 @@ func _on_action_requested(action: String) -> void:
 
 func _on_quit_requested(action: String) -> void:
     if action == "save_quit":
-        var path: String = _save_world_snapshot()
+        var folder: String = ProjectSettings.globalize_path("res://exports/world_saves")
+        DirAccess.make_dir_recursive_absolute(folder)
+        var path: String = folder.path_join("world_%d_%d.arena" % [int(Time.get_unix_time_from_system()), Time.get_ticks_usec()])
+        if not _save_world(path): path = ""
         if path.is_empty():
-            ui.set_thought(L10n.text("ui.world_save_failed", "The world snapshot could not be saved; the application remains open."))
+            ui.exit_body.text = L10n.text("ui.world_save_failed", "The world snapshot could not be saved; the application remains open.")
             AppLog.info("World snapshot failed; quit cancelled")
             return
         last_world_snapshot_path = path
         AppLog.info("World snapshot saved: %s" % path)
+    tts.stop()
     get_tree().quit()
 
-func _save_world_snapshot() -> String:
-    if not is_instance_valid(sim_world):
-        return ""
+func _save_world(path: String) -> bool:
+    var codec = WorldSave.new()
+    var state: Dictionary = codec.capture(sim_world, swim_camera, SettingsStore.data)
+    state["settings"]["world_size"] = base_world_size
+    state["manual_world_delta"] = manual_world_delta
+    state["sun_rotation"] = sun.rotation
+    state["sun_time"] = auto_sun_time
+    var success: bool = codec.write_file(path, state)
+    if not success: AppLog.info("World save failed: " + codec.last_error)
+    return success
+
+func _world_file_selected(path: String, saving: bool) -> void:
+    if saving:
+        ui.show_file_result(_save_world(path), "ui.world_saved")
+        return
+    var codec = WorldSave.new()
+    var state: Dictionary = codec.read_file(path)
+    if state.is_empty():
+        ui.show_file_result(false, "ui.world_loaded")
+        AppLog.info("World load rejected: " + codec.last_error)
+        return
+    # Construct and validate off screen before replacing any live state.
+    var staged = SimWorldScript.new()
+    staged.process_mode = Node.PROCESS_MODE_DISABLED
+    staged.visible = false
+    add_child(staged)
+    if not codec.restore(staged, state):
+        AppLog.info("World restore failed: " + codec.last_error)
+        staged.queue_free()
+        ui.show_file_result(false, "ui.world_loaded")
+        return
+    var simulation_keys: Array = ["world_size", "habitat_level", "simulation_speed", "simulation_tick_hz", "evolution_rate", "auto_reseed", "minimum_population", "plant_evolution_bias", "auto_reproduce", "organism_cap", "nutrient_count", "nutrient_renewal", "temperature_offset", "visual_cell_cap", "contact_quality", "gravity_scale", "body_rebuild_interval", "mutation_strength", "macro_mutation_rate", "crossover_rate", "viability_threshold", "mate_cooldown", "mating_radius", "social_spacing", "courtship_strength", "group_strength", "predation_strength", "hierarchy_strength"]
+    for key in simulation_keys:
+        if state["settings"].has(key): SettingsStore.data[key] = state["settings"][key]
     SettingsStore.save_settings()
-    var folder: String = ProjectSettings.globalize_path("res://exports/world_saves")
-    if DirAccess.make_dir_recursive_absolute(folder) != OK and not DirAccess.dir_exists_absolute(folder):
-        return ""
-    var timestamp: String = Time.get_datetime_string_from_system(true)
-    var filename: String = "world_%d.json" % int(Time.get_unix_time_from_system())
-    var path: String = folder.path_join(filename)
-    var api = ExperimentAPIScript.new()
-    api.configure(sim_world)
-    var organisms: Array = []
-    for org in sim_world.organisms:
-        if not is_instance_valid(org) or not org.alive:
-            continue
-        var item: Dictionary = api.organism_data(org, true)
-        # Gamete pools contain live Genome objects and are deliberately omitted
-        # from JSON snapshots; the diploid DNA/phenotype remains complete.
-        item.erase("gametes")
-        organisms.append(item)
-    var nutrient_points: Array = []
-    var nutrient_reserves: Array = []
-    if is_instance_valid(sim_world.nutrient_field):
-        for point in sim_world.nutrient_field.points:
-            nutrient_points.append([point.x, point.y, point.z])
-        nutrient_reserves = sim_world.nutrient_field.reserves.duplicate()
-    var camera_data: Dictionary = {}
-    if is_instance_valid(swim_camera):
-        camera_data = {"position": [swim_camera.global_position.x, swim_camera.global_position.y, swim_camera.global_position.z], "rotation": [swim_camera.rotation.x, swim_camera.rotation.y, swim_camera.rotation.z], "fov": swim_camera.camera.fov if is_instance_valid(swim_camera.camera) else 0.0, "follow": is_instance_valid(swim_camera.follow_target)}
-    var payload: Dictionary = {
-        "schema": "arena.world-save/1",
-        "version": VERSION,
-        "saved_at": timestamp,
-        "settings": SettingsStore.data.duplicate(true),
-        "simulation": {"seed": sim_world.run_seed, "step": sim_world.sim_steps, "time": sim_world.elapsed_sim_time, "presentation_time": sim_world.presentation_time, "paused": sim_world.simulation_paused, "habitat_level": sim_world.habitat_level, "world_size": sim_world.half_extent * 2.0, "metrics": sim_world.metrics(), "evolution": sim_world.evolution_report()},
-        "observation": api.observation(),
-        "events": sim_world.event_log.duplicate(true),
-        "organisms": organisms,
-        "nutrients": {"points": nutrient_points, "reserves": nutrient_reserves},
-        "remains": sim_world.remains_snapshot() if sim_world.has_method("remains_snapshot") else [],
-        "camera": camera_data
-    }
-    var file = FileAccess.open(path, FileAccess.WRITE)
-    if not file:
-        return ""
-    file.store_string(JSON.stringify(payload, "  "))
-    file.close()
-    return path
+    swim_camera.follow_target = null
+    last_speaker = null
+    sim_world.queue_free()
+    sim_world = staged
+    sim_world.name = "VolumetricLifeWorld"
+    sim_world.visible = true
+    base_world_size = float(state["settings"].get("world_size", 288.0))
+    manual_world_delta = float(state.get("manual_world_delta", 0.0))
+    habitat_visual.configure(sim_world.habitat_level, sim_world.half_extent * 2.0)
+    # Do not call set_habitat here: it reseeds nutrients and unroots organisms.
+    habitat_visual.model = sim_world.habitat
+    swim_camera.set_habitat(sim_world.habitat)
+    swim_camera.transform = state["camera"].get("transform", Transform3D.IDENTITY)
+    swim_camera.global_position = swim_camera._constrain_free_position(swim_camera.global_position)
+    swim_camera.set_zoom_fov(float(state["camera"].get("fov", 78.0)))
+    sim_world.observer_camera = swim_camera.camera
+    sim_world.set_observer_presence(bool(SettingsStore.get_value("observer_presence", false)))
+    _set_selected(sim_world.reproduction.find_id(sim_world, int(state.get("selected_id", -1))))
+    var followed = sim_world.reproduction.find_id(sim_world, int(state["camera"].get("follow_id", -1)))
+    if followed != null: swim_camera.toggle_follow(followed)
+    if is_instance_valid(ai_gateway):
+        ai_gateway.api.configure(sim_world)
+        ai_gateway.step_owner = ""
+    last_presentation_time = sim_world.presentation_time
+    manual_pause = true
+    _sync_pause_state()
+    sun.rotation = state.get("sun_rotation", sun.rotation)
+    auto_sun_time = float(state.get("sun_time", 0.0))
+    audio_ecosystem.set_habitat_level(sim_world.habitat_level)
+    _apply_textures()
+    habitat_visual.update_remains(sim_world.remains_snapshot())
+    ui.sync_settings()
+    ui.show_file_result(true, "ui.world_loaded")
 
 func _apply_textures() -> void:
     if is_instance_valid(habitat_visual): habitat_visual.apply_textures()
@@ -708,6 +753,9 @@ func _save_screenshot() -> void:
     AppLog.info("Screenshot result=%s path=%s" % [str(err), path])
 
 func _reset_world() -> void:
+    swim_camera.follow_target = null
+    swim_camera.follow_snap_pending = false
+    last_speaker = null
     if is_instance_valid(sim_world):
         sim_world.queue_free()
     sim_world = SimWorldScript.new()
@@ -717,7 +765,11 @@ func _reset_world() -> void:
     sim_world.observer_camera = swim_camera.camera
     if is_instance_valid(habitat_visual):
         sim_world.set_habitat(int(SettingsStore.get_value("habitat_level", 7)), _current_world_size(), habitat_visual.waterline, habitat_visual.ground_y, habitat_visual.model, habitat_visual.resource_positions)
-    if is_instance_valid(ai_gateway): ai_gateway.api.configure(sim_world)
+    if is_instance_valid(ai_gateway):
+        ai_gateway.api.configure(sim_world)
+        ai_gateway.step_owner = ""
+    last_presentation_time = sim_world.presentation_time
+    habitat_visual.update_remains([])
     sim_world.record_event("user_reset", {"seed": sim_world.run_seed})
     ui.set_thought(L10n.text("ui.world_reset", "A new evolutionary world has been generated."))
     _sync_pause_state()

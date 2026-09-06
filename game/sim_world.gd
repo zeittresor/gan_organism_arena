@@ -66,10 +66,16 @@ var perf_peak_usec: int = 0
 var observer_camera = null
 var observer_presence: bool = false
 var remains: Array = []
+var detritus_timer: float = 0.0
+var recycled_energy: float = 0.0
+var scavenging_events: int = 0
 const MAX_REMAINS: int = 128
 
 func initialize(seed_value: int = 1337) -> void:
     remains.clear()
+    detritus_timer = 0.0
+    recycled_energy = 0.0
+    scavenging_events = 0
     contact_quality = clampi(int(_setting("contact_quality", 85)), 0, 100)
     temperature_offset = float(_setting("temperature_offset", 0.0))
     run_seed = seed_value
@@ -232,6 +238,7 @@ func _simulation_tick(dt: float, contacts_ready: bool = false) -> void:
 
         org.think_step(dt, nutrient_pos, social, threat, rng, evolution_rate)
         ecology.act(org, dt, rng)
+        _scavenge(org, dt)
         if nutrient_idx >= 0 and Cycle.stage(org) != "pupa" and org.Navigation.can_feed(org, nutrient_pos):
             org.absorb_nutrient(nutrient_field.consume(nutrient_idx) * (0.75 if org.rooted else 1.0))
 
@@ -323,24 +330,66 @@ func _register_remains(org) -> void:
         return
     var position: Vector3 = org.global_position
     var aquatic: bool = habitat.is_water(position)
-    remains.append({"position": position, "size": Traits.body_scale(org.genome), "age": 0.0, "aquatic": aquatic, "plan": org.body_plan_name()})
+    # Recover only energy previously present/invested in this organism.
+    # Hard tissues form inert substrate; soft tissue is finite scavenger food.
+    var biomass: float = clampf(maxf(0.0, org.energy) + org.growth_investment * 0.65 + org.mitotic_investment * 0.25 + org.surface_food, 0.0, 3.0)
+    var mineral: float = clampf(org.genome.shell_drive * 0.55 + org.genome.armor_drive * 0.30 + org.genome.support_drive * 0.15, 0.0, 1.0)
+    remains.append({"position": position, "size": Traits.body_scale(org.genome), "age": 0.0, "aquatic": aquatic, "plan": org.body_plan_name(), "biomass": biomass, "mineral": mineral})
     while remains.size() > MAX_REMAINS:
         remains.pop_front()
 
 func _age_remains(dt: float) -> void:
+    detritus_timer += dt
+    if detritus_timer < 1.0: return
+    var elapsed: float = detritus_timer
+    detritus_timer = 0.0
     for i in range(remains.size() - 1, -1, -1):
         var item: Dictionary = remains[i]
-        item["age"] = float(item.get("age", 0.0)) + dt
-        # Remains slowly mineralise into reef/stone features. Keep a bounded
-        # record so long runs cannot accumulate unbounded visual or save data.
+        item["age"] = float(item.get("age", 0.0)) + elapsed
+        var p: Vector3 = item["position"]
+        var floor_y: float = habitat.floor_at(p) + 0.08
+        p.y = maxf(floor_y, p.y - elapsed * (0.5 if item["aquatic"] else 4.0))
+        item["position"] = p
+        var decay: float = minf(float(item["biomass"]), elapsed * 0.008)
+        item["biomass"] = maxf(0.0, float(item["biomass"]) - decay)
+        # Decomposers return part of the finite biomass to local food particles;
+        # the rest is lost as metabolic waste. This is not external renewal.
+        if decay > 0.0 and is_instance_valid(nutrient_field):
+            recycled_energy += nutrient_field.deposit(p, decay * 0.60)
         if float(item["age"]) > 720.0:
             remains.remove_at(i)
+
+func _scavenge(org, dt: float) -> void:
+    if org.energy >= 0.90 or org.rooted or org.pair_target_id >= 0 or org.oxygen < 0.65 or Cycle.stage(org) == "pupa": return
+    if org.behavior_state in ["flee", "hide", "seek_water", "seek_land"]: return
+    if maxf(org.genome.predator_drive, org.genome.cleaning_drive) < 0.35: return
+    var best: int = -1
+    var distance: float = pow(10.0 + org.genome.sensory_drive * 12.0, 2.0)
+    for i in range(remains.size()):
+        var item: Dictionary = remains[i]
+        if float(item["biomass"]) < 0.005 or not ecology.reachable(org, item["position"]): continue
+        var d: float = org.global_position.distance_squared_to(item["position"])
+        if d < distance:
+            best = i
+            distance = d
+    if best < 0: return
+    var item: Dictionary = remains[best]
+    var target: Vector3 = item["position"]
+    org.behavior_state = "scavenge"
+    org.steer_towards(target, minf(1.0, dt * 3.0))
+    if org.Navigation.can_feed(org, target):
+        var taken: float = minf(float(item["biomass"]), dt * 0.06)
+        item["biomass"] = maxf(0.0, float(item["biomass"]) - taken)
+        org.absorb_nutrient(taken * 0.80)
+        if taken > 0.0: scavenging_events += 1
 
 func remains_snapshot() -> Array:
     var result: Array = []
     for item in remains:
-        var position: Vector3 = item.get("position", Vector3.ZERO)
-        result.append({"position": [position.x, position.y, position.z], "size": float(item.get("size", 0.5)), "age": float(item.get("age", 0.0)), "aquatic": bool(item.get("aquatic", false)), "plan": str(item.get("plan", "unknown"))})
+        var entry: Dictionary = item.duplicate(true)
+        var position: Vector3 = item["position"]
+        entry["position"] = [position.x, position.y, position.z]
+        result.append(entry)
     return result
 
 func _build_startup_genome_pool() -> Array:
@@ -485,7 +534,9 @@ func metrics() -> Dictionary:
         "embryos": reproduction.reserved_count(),
         "conceptions": reproduction.conceptions,
         "brood_losses": reproduction.losses,
-        "reef_remains": remains.size()
+        "reef_remains": remains.size(),
+        "recycled_energy": recycled_energy,
+        "scavenging_events": scavenging_events
     }
 
 func _setting(key: String, fallback = null):
@@ -535,6 +586,9 @@ func set_simulation_paused(value: bool) -> void:
 
 func reset_experiment(seed_value: int, parameters: Dictionary) -> void:
     remains.clear()
+    detritus_timer = 0.0
+    recycled_energy = 0.0
+    scavenging_events = 0
     for brood in reproduction.broods:
         brood["marker"].queue_free()
     for org in organisms:

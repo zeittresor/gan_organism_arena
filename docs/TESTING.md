@@ -1,20 +1,51 @@
-# Testing — 1.0.0-alpha29 (2026-09-05)
+# Testing — 1.0.0-alpha30 (2026-09-06)
 
-## Current verification
+## Installer hotfix (alpha30-fix1)
 
-- The translated production-source suite passes **11,704 named checks**: pause 13, evolution/inheritance 185, camera 6, navigation 43, posture 868, support 857, locomotion 3,371, interaction 5,458, ecology 60, surface 71, lifecycle 122, biology 629 and experiment API 21. The morphology/genome/language integration check passes too.
-- The native Godot texture suite adds **20 checks** to the installer gate (11,724 expected named checks there). It covers the disabled fast path, unchanged biological RNG, owned child pixels, 50/50 sexual mixing, a 75/25 grandchild, independent clonal copies, parent immutability, survival after parent destruction, all 33 registered source maps, transition lookup and the bounded tissue atlas.
-- Separate pixel/frequency oracles repeat the central texture arithmetic with actual RGB images. All 33 supplied 256×256 PNG files decode, remain below 3 MiB together and have exactly matching opposite edges. The eight terrain maps pass a low macro-landmark energy limit. Runtime source images stay at 128×128; inherited mixing occurs on birth/first use rather than per frame.
-- 55 GDScripts pass the available grammar parser and are registered in the native parse test. All 68 settings/actions have labels and explanatory tooltips in English, German and French.
-- Population rescue from an already empty world, sexual inheritance, macro mutation, plant evolution, follow-camera terrain clearance, persistent navigation, connected posture, body contact, gestation/birth/growth and pause semantics remain covered.
-- Aquatic founder markers keep the first three lineage generations submerged; land capability still requires evolved respiration and locomotor support. Texture loading has an explicit safe fallback for missing or invalid optional assets.
-- Fresh-world initialization builds seven canonical and seven crossover founder genomes, then samples ten without replacement using the simulation RNG; repeated seeds remain reproducible.
-- Production side-by-side docking, courtship, gestation, birth and juvenile development pass with one offspring. Tests assert fixed pair docking points instead of moving head targets. The OBJ writer passes four view transitions with 933, 609, 957 and 933 vertices and no GPU readback. Performance regression passes 42 structural/cache checks. All 15 MCP/VKLP permission and adapter tests pass.
-- The README was compared against every `KEY_`, mouse-button and camera input binding in source. It lists all controls, including F2 HUD visibility and F9 texture reload.
-- Packaging performs a fresh extraction, ZIP CRC check, payload SHA-256 check and file-count comparison. Personal `settings/config.json`, runtime logs and temporary files are excluded.
+The original alpha30 archive mistakenly retained `config/version="1.0.0-alpha29"` in `project.godot`. The Windows installer correctly rejected it before starting Godot. The corrected archive sets alpha30 and regenerates all package checksums.
 
-## Execution limits
+The unchanged `tools/verify_package.ps1` now passes under PowerShell 7.4.6 on Linux. The packaging workflow also runs `python tools/check_release.py` before writing the ZIP; a regression check confirms that the original alpha29/alpha30 mismatch is rejected. This does not substitute for testing the complete installer on Windows.
 
-This environment has no Windows or Godot 4.7.2 executable. The 11,704 source checks execute production GDScript logic through a Python translation harness with substitute engine objects; they do not validate Godot's renderer, Windows TTS or measured FPS. The texture shaders and native `Image`/`ImageTexture` path are source-checked and remain part of the Windows installer's native parse/self-test/smoke gates. Alpha21 is the latest clean native installation evidence supplied by the user.
+## Native verification
 
-The texture feature is disabled by default. Enabled performance depends on GPU/driver and asset replacements, although work is bounded to small images and generated only at birth or first display. The artificial-life model and seven topology grammars remain finite; particular Earth-like outcomes are not guaranteed.
+Executed the production GDScript with **Godot 4.7.2.stable.official.ed1daf0bf, Linux x86_64, headless**. This release is no longer verified solely through the Python translation harness.
+
+**11,824 named native checks passed**, plus the morphology/genome/language integration:
+
+- Texture: 20 checks, 0 failures.
+- Application: 51 checks, 0 failures.
+- Ui: 19 checks, 0 failures.
+- Pause: 13 checks, 0 failures.
+- Evolution: 215 checks, 0 failures.
+- Camera: 6 checks, 0 failures.
+- Navigation: 43 checks, 0 failures.
+- Posture: 868 checks, 0 failures.
+- Support: 857 checks, 0 failures.
+- Locomotion: 3371 checks, 0 failures.
+- Interaction: 5458 checks, 0 failures.
+- Ecology: 60 checks, 0 failures.
+- Surface: 71 checks, 0 failures.
+- Life Cycle: 122 checks, 0 failures.
+- Biology: 629 checks, 0 failures.
+- Experiment: 21 checks, 0 failures.
+
+The application regressions cover resumable checkpoints (DNA, gametes, embryo state, inherited pixel maps, RNG and nutrient positions), corrupted files and write failures, settings recovery, camera spawn/free-look/noclip, founder plant safeguards, finite scavenging and recycling, and bounded seabed features across all five habitats. Proportion regressions compare generated head width with supporting body width and exercise inherited head-size variation. Independently marked parents verify morphological, cognitive and behavioral inheritance and deterministic regional expression without changes to germ-line DNA.
+
+UI regressions instantiate the actual main application: ESC/cancel, pause ownership, blocked shortcuts, English/German/French help, texture toggles/reload, profile camera options, changed world dimensions, saving/loading, selection/follow restoration, invalid load and reset while paused.
+
+- Native MCP stdio → Python TCP client → Godot simulation end-to-end: PASS, including same-seed reset/stepping, 91 diploid loci and evidence export.
+- Native VKLP-only gateway and simultaneous MCP+VKLP configuration: PASS. No remote claim submission is performed by these tests.
+- Python MCP/VKLP adapter/permission suite: 15 tests, PASS.
+- Seeded stability run: 3 seeds × 1,800 ticks, totaling 450 simulation seconds. Check finite body state, population floor/cap and remains limit. This is a stability test, not proof that a particular evolutionary outcome will occur.
+- Grammar/UI coverage: 58 GDScripts; 70 settings/actions with labels and explanatory tooltips in EN/DE/FR.
+- Release archive: fresh extraction, ZIP CRC and each payload SHA-256. Personal configuration, screenshots, runtime sessions, generated logs and engine caches are excluded.
+
+## Reproduce
+
+The Windows installer executes the native parser, SelfTest scene and SmokeTest scene before accepting the installation. Run `run_selftest.bat`, `run_parse_test.bat` or `run_diagnostics.bat` later. Optional live MCP verification: enable MCP in Settings, then run `python tests/live_arena_check.py --godot PATH_TO_GODOT --headless`.
+
+## Limits
+
+Windows PowerShell launch behavior, Windows voices/audio devices and hardware GPU rendering/FPS were not executed on this Linux host. Headless tests exercise real Godot scripts and Image/ImageTexture objects, but do not establish rendered appearance or performance on a user's GPU. The terrain/organism shader code is unchanged in this release. Runtime play-testing on the target PC remains useful.
+
+Checkpoints reconstruct rendering/contact caches; they do not promise frame-exact or cross-version replay. Alpha29 JSON observation exports cannot be loaded as checkpoints. Mutation can help or harm fitness. Seven topology grammars and their continuous developmental variation remain a finite fictional model, rather than a calibrated model of terrestrial species.

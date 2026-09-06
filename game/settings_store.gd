@@ -1,7 +1,7 @@
 extends Node
 
-const VERSION = "1.0.0-alpha29"
-const RELEASE_DATE = "2026-09-05"
+const VERSION = "1.0.0-alpha30"
+const RELEASE_DATE = "2026-09-06"
 
 var defaults = {
     "language": "en",
@@ -91,11 +91,22 @@ func load_settings() -> void:
     var f = FileAccess.open(path, FileAccess.READ)
     if not f:
         return
+    if f.get_length() > 65536:
+        f.close()
+        return
     var parsed = JSON.parse_string(f.get_as_text())
+    f.close()
     if parsed is Dictionary:
+        # Local config needs the same type/range validation as imported profiles.
+        # Recover valid fields individually so one broken option cannot prevent startup.
+        var valid: Dictionary = {}
         for key in parsed:
-            if defaults.has(key):
-                data[key] = parsed[key]
+            var checked: Dictionary = validate_profile({key: parsed[key]})
+            if checked.has("settings"): valid.merge(checked["settings"])
+            elif str(key).ends_with("_schema") and defaults.has(key) and (parsed[key] is int or parsed[key] is float) and is_finite(float(parsed[key])) and float(parsed[key]) >= 0.0:
+                valid[key] = int(parsed[key])
+        parsed = valid
+        for key in parsed: data[key] = parsed[key]
         # One-time migration: double old dimensions; never double again on restart.
         if int(parsed.get("ecology_schema", 0)) < 1:
             data["world_size"] = maxf(144.0, float(parsed.get("world_size", 72.0)) * 2.0)
@@ -142,8 +153,13 @@ func save_settings() -> void:
     var f = FileAccess.open(temporary, FileAccess.WRITE)
     if f:
         f.store_string(JSON.stringify(data, "  "))
+        f.flush()
+        var status: Error = f.get_error()
         f.close()
-        DirAccess.rename_absolute(temporary, path)
+        if status == OK:
+            DirAccess.rename_absolute(temporary, path)
+        else:
+            DirAccess.remove_absolute(temporary)
 
 func get_value(key: String, fallback = null):
     if data.has(key):
@@ -158,11 +174,16 @@ func set_value(key: String, value) -> void:
         save_settings()
 
 func export_profile(destination: String) -> Error:
-    var f = FileAccess.open(destination, FileAccess.WRITE)
+    var temporary: String = destination + ".tmp"
+    var f = FileAccess.open(temporary, FileAccess.WRITE)
     if not f: return FileAccess.get_open_error()
     f.store_string(JSON.stringify({"schema": "arena.settings/1", "settings": data}, "  "))
+    f.flush()
+    var status: Error = f.get_error()
     f.close()
-    return OK
+    if status == OK: status = DirAccess.rename_absolute(temporary, destination)
+    if status != OK: DirAccess.remove_absolute(temporary)
+    return status
 
 func read_profile(source: String) -> Dictionary:
     var f = FileAccess.open(source, FileAccess.READ)

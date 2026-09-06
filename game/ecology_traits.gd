@@ -47,7 +47,7 @@ static func sessile(g, evolution_bias: float = 0.0) -> bool:
     # Anchoring and stationary metabolism are costly transitions. A modest
     # bias makes the plant niche discoverable in ordinary runs without making
     # aquatic founders rooted on spawn or bypassing their founder safeguards.
-    var root_threshold: float = 0.44 - bias * 0.10
+    var root_threshold: float = maxf(0.385, 0.44 - bias * 0.10)
     var food_threshold: float = 0.38 - bias * 0.08
     return float(g.root_drive) > root_threshold and stationary_food > food_threshold
 

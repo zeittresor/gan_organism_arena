@@ -2,7 +2,7 @@ extends RefCounted
 
 const CellCycle = preload("res://game/cell_cycle.gd")
 const Cycle = preload("res://game/life_cycle.gd")
-const MODEL_VERSION: String = "arena-biology-8"
+const MODEL_VERSION: String = "arena-biology-9"
 const PARAM_LIMITS: Dictionary = {"gravity_scale": [0.2, 2.5], "mutation_strength": [0.0, 0.5], "macro_mutation_rate": [0.0, 0.2], "nutrient_renewal": [0.0, 4.0], "temperature_offset": [-12.0, 12.0], "predation_strength": [0.0, 1.0], "group_strength": [0.0, 1.0], "initial_organisms": [2.0, 60.0], "minimum_population": [1.0, 80.0], "plant_evolution_bias": [0.0, 1.0], "organism_cap": [2.0, 80.0], "nutrient_count": [16.0, 1000.0]}
 var world = null
 
@@ -10,7 +10,7 @@ func configure(p_world) -> void:
     world = p_world
 
 func model_description() -> Dictionary:
-    return {"schema": "arena.observation/1", "model": MODEL_VERSION, "version": "1.0.0-alpha29", "step_seconds": 1.0 / 12.0,
+    return {"schema": "arena.observation/1", "model": MODEL_VERSION, "version": "1.0.0-alpha30", "step_seconds": 1.0 / 12.0,
         "units": {"time": "simulation seconds; no real species timescale", "energy": "dimensionless reserve units", "position": "world units", "temperature": "model Celsius"},
         "mechanisms": ["persistent exploration and foraging goals with progress-based replanning", "head-local nutrient capture and stage-aware food sensing", "compatible-partner approach before courtship", "optional continuously checked minimum population with random aquatic hatchling founders", "DNA-encoded topology expression and heritable macro-mutation", "inherited pigment hue, saturation and brightness", "single-homolog regulatory mutations with allele-change provenance", "event-driven bounded genealogy and separated natural/rescue counts", "ploidy-preserving mitotic tissue growth and repair", "reciprocal meiotic tetrads and haploid gamete pools", "facultative clonal/sexual reproduction", "articulated body contacts", "passive vertical joint conformance and fractional-volume buoyancy", "adjustable model gravity", "load-sensitive support pitch and trailing-joint swimming response", "diploid loci", "linked segregation and recombination", "partial dominance", "recessive genetic load", "paid juvenile development", "finite gamete reserves", "embryo energy and temperature dependence", "predation", "finite food particles with measured external renewal"],
         "assumptions": ["Fictional genotype-to-body map and coefficients; not species-calibrated", "Seven finite body-topology grammars with continuous inherited variation; topology novelty is not a species test", "91-locus regulatory map arena.loci/3; pigment mixing is not a calibrated pigment chemistry model", "Gravity baseline is 9.8 world units/s^2; overlapping structural ellipsoids approximate displaced volume, without fluid dynamics or tissue stress simulation", "Basic animal developmental phases are abstractions, not cell simulation", "Resource renewal, light and ecological food production are external inputs; no closed carbon/nitrogen cycle", "Cognitive/complexity scores are model variables, not validated intelligence measures", "Deterministic stepping applies within this engine/build and configuration; cross-platform floating-point equivalence not promised"],
@@ -59,6 +59,7 @@ func organism_data(org, include_genome: bool) -> Dictionary:
             joints.append({"cell": i, "parent": cell["parent"], "mode": cell["joint_mode"], "axis": [axis.x, axis.y, axis.z], "limit_radians": cell["joint_limit"], "angle_radians": cell["joint_angle"], "vertical_limit_radians": cell["vertical_limit"], "vertical_angle_radians": cell["vertical_angle"], "muscle": cell["joint_muscle"]})
         item["joints"] = joints
         item["dna"] = org.genome.dna_document()
+        item["regional_development"] = org.genome.regional_profile()
         item["gametes"] = {"eggs": org.egg_genomes.duplicate(true), "sperm": org.sperm_genomes.duplicate(true)}
         var phenotype: Dictionary = {}
         for locus in org.genome._continuous_gene_names(): phenotype[locus] = org.genome.get(locus)

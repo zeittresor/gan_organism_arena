@@ -152,3 +152,24 @@ func stored_energy() -> float:
     var total: float = 0.0
     for amount in reserves: total += amount
     return total
+
+func deposit(position_value: Vector3, amount: float) -> float:
+    if amount <= 0.0: return 0.0
+    var best: int = -1
+    var distance: float = 144.0
+    var depleted: int = -1
+    for i in range(points.size()):
+        if float(reserves[i]) <= 0.001 and depleted < 0: depleted = i
+        if float(reserves[i]) >= 0.28: continue
+        var d: float = points[i].distance_squared_to(position_value)
+        if d < distance:
+            best = i
+            distance = d
+    if best < 0 and depleted >= 0:
+        best = depleted
+        points[best] = position_value
+    if best < 0: return 0.0
+    var added: float = minf(amount, maxf(0.0, 0.28 - float(reserves[best])))
+    reserves[best] += added
+    _update_one(best)
+    return added

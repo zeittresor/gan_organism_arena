@@ -19,6 +19,20 @@ func _run() -> void:
     if not texture_ok:
         _finish(36)
         return
+    var application_test = preload("res://game/application_test.gd").new()
+    add_child(application_test)
+    var application_ok: bool = application_test.run_all()
+    application_test.queue_free()
+    if not application_ok:
+        _finish(37)
+        return
+    var ui_test = preload("res://game/ui_test.gd").new()
+    add_child(ui_test)
+    var ui_ok: bool = ui_test.run_all()
+    ui_test.queue_free()
+    if not ui_ok:
+        _finish(38)
+        return
     var pause_test = preload("res://game/pause_test.gd").new()
     add_child(pause_test)
     var pause_ok: bool = pause_test.run_all()

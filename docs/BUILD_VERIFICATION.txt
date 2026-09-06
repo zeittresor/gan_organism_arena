@@ -1,35 +1,12 @@
-GAN Organism Arena alpha29 build verification (2026-09-05)
+Alpha30-fix1: corrected project.godot version from alpha29 to alpha30.
+Installer static verification passed in PowerShell 7.4.6 on Linux.
+Release metadata preflight rejects the original version mismatch.
+Full Windows installation was not executed on this host.
 
-Translated production-source suite:
-PAUSE 13; EVOLUTION 185; CAMERA 6; NAVIGATION 43; POSTURE 868;
-SUPPORT 857; LOCOMOTION 3371; INTERACTION 5458; ECOLOGY 60;
-SURFACE 71; LIFE CYCLE 122; BIOLOGY 629; EXPERIMENT 21.
-All 11704 named checks plus the morphology/genome/language integration passed.
-
-Native installer suite additionally contains TEXTURE 20. Expected native named
-check total: 11724. It verifies 50/50 parent-pixel mixing, 75/25 inheritance in
-the next generation, clone copies, parent immutability, survival after parent
-destruction, template replacement, bounded memory, disabled zero-work behavior
-and unchanged biological random results. It also loads all 33 sources, builds
-the bounded specialised atlas and resolves all transition maps. An independent
-RGB pixel oracle and macro-landmark frequency gate passed.
-
-Production docking/courtship/gestation/birth/growth integration: PASS, 1 offspring.
-Aquatic founder medium lock: PASS, founders and first three lineage generations remain aquatic until evolved land traits are present.
-Texture toggle safety: PASS, invalid optional assets fall back to vertex colours without binding incomplete samplers.
-Startup founder pool: PASS, ten distinct initial organisms are sampled from seven canonical plus seven seed-driven crossover forms.
-Performance structural/cache regression: PASS, 42 cases.
-OBJ export regression: PASS, four views, no GPU readback.
-MCP/VKLP unit and permission tests: PASS, 15 tests.
-Grammar/package UI: PASS, 55 GDScripts and 68 fully localized option/action
-tooltips in EN/DE/FR. All 33 seamless 256x256 PNG assets decode successfully,
-remain below 3 MiB, and cover eight terrain, 21 body/tissue and four material maps.
-
-Windows/Godot 4.7.2, GPU output, TTS and FPS were not executable in this build
-environment. Native parse, self-test and smoke gates remain mandatory in the
-Windows installer. Alpha21 remains the latest clean native evidence supplied by
-the user.
-
-Archive verification requires a fresh extraction, CRC, per-payload SHA-256 and
-file-count match. Personal settings, generated logs and temporary files are
-excluded.
+GAN Organism Arena alpha30 — 2026-09-06
+Godot 4.7.2.stable.official.ed1daf0bf Linux headless.
+11824 named native checks, 0 failures; morphology/genome/language integration passed.
+58 GDScripts; 70 localized settings/actions in English, German, French.
+Native MCP roundtrip, native VKLP-only/both-protocol modes; 15 adapter tests passed.
+3-seed stability scenario: 5400 ticks, 450 simulation seconds.
+See TESTING.md for cases and platform limits.

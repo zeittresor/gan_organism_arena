@@ -136,6 +136,10 @@ class GodotBackend:
             raise ArenaError("Godot runtime missing. Run install_windows.bat, or supply --godot with its executable path.")
         # Refuse to launch onto an occupied port; never adopt a different arena.
         with socket.socket() as probe:
+            # A just-closed local connection can leave TIME_WAIT on Unix.
+            # Reuse that state, while an active listener still fails the bind.
+            # Windows has different SO_REUSEADDR semantics; keep its strict probe.
+            if os.name != "nt": probe.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             probe.bind(("127.0.0.1", self.port))
         env = os.environ.copy()
         env.update(ARENA_API_PORT=str(self.port), ARENA_API_TOKEN=self.token)
@@ -225,7 +229,7 @@ STRING = {"type": "string", "minLength": 1, "maxLength": 2000}
 PROVENANCE = obj({"source": STRING, "reference": STRING, "status": STRING})
 PARAMETERS = obj({
     "mutation_strength": NUM(0, .5), "macro_mutation_rate": NUM(0, .2), "nutrient_renewal": NUM(0, 4),
-    "gravity_scale": NUM(.2, 2.5), "temperature_offset": NUM(-12, 12), "predation_strength": NUM(0, 1), "group_strength": NUM(0, 1),
+    "plant_evolution_bias": NUM(0, 1), "gravity_scale": NUM(.2, 2.5), "temperature_offset": NUM(-12, 12), "predation_strength": NUM(0, 1), "group_strength": NUM(0, 1),
     "initial_organisms": INT(2, 60), "minimum_population": INT(1, 80), "organism_cap": INT(2, 80), "nutrient_count": INT(16, 1000),
     "auto_reproduce": {"type": "boolean"}, "auto_reseed": {"type": "boolean"}})
 

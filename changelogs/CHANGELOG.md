@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.0.0-alpha30 — 2026-09-06
+
+- Reduce default head inflation and excessive juvenile allometry. Region-specific inherited regulation produces distinct head, torso, limb and tail proportions from both parental homologs without editing germ-line DNA. Cognitive/behavioral predispositions remain inherited; acquired skills are learned during life. Mutations need not be beneficial.
+- Resumable `.arena` world saves and loads in Settings; ESC save-and-quit now creates a resumable checkpoint. Preserve DNA, gametes, embryos, inherited coat pixels, food, remains, genealogy, camera and RNG state. SHA-256 verification, atomic writes and staged loading protect the current world on failure.
+- ESC again cancels and restores the previous menu/pause state. Window-close uses the same prompt. Menu input no longer changes habitats, creates organisms or toggles world pause inadvertently. Save failures remain visible.
+- Free-look uses the actual camera orientation after spawn/follow. World bounds precede terrain sampling; noclip bypasses terrain while retaining world limits. Camera profile speed/sensitivity and world-size changes apply immediately. Reset clears stale follow/speaker references.
+- Use consistent plant capability rules in settling, rooting and lifecycle/reproduction. The plant-bias maximum no longer unlocks founder rooting. Rooted plants do not choose pollination partners outside their fixed reach. MCP now forwards plant_evolution_bias.
+- Finite edible remains, scavenging, sinking, decomposition and local nutrient recycling. Mineral residue is inert, not spontaneous living coral. Bounded records and one-second decomposition updates limit CPU/storage costs.
+- Seabed features exist in every habitat, sample individual terrain anchors, use thematic rock textures and submit only active MultiMesh instances instead of hiding unused instances far below the world.
+- Validate startup configuration types/ranges; preserve other valid options if one is malformed. Settings profile writes use a temporary file.
+- Correct English/German/French help and add checkpoint explanations. Native application/UI regressions are part of the installer self-test. Validate with Godot 4.7.2 Linux; Windows launch/TTS and hardware rendering require testing on the target machine.
+
 ## 1.0.0-alpha29 — 2026-09-05
 
 - Add a paused Escape exit prompt with localized choices to open settings, save a complete world snapshot and quit, quit without saving, or cancel.

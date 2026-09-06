@@ -162,6 +162,9 @@ func _setting(key: String, fallback):
         return store.get_value(key, fallback)
     return fallback
 
+func sessile_capable() -> bool:
+    return Traits.sessile(genome, float(_setting("plant_evolution_bias", 0.35)))
+
 func initialize(p_id: int, p_genome, spawn: Vector3, visual_cap: int, view_mode: String) -> void:
     organism_id = p_id
     genome = p_genome
@@ -334,7 +337,7 @@ func apply_environment(dt: float, model) -> void:
         medium_timer = 0.0
         last_medium = in_water
     var plant_bias: float = clampf(float(_setting("plant_evolution_bias", 0.35)), 0.0, 1.0)
-    if Traits.sessile(genome, plant_bias) and age_seconds > 8.0 + (1.0 - plant_bias) * 8.0 and grounded:
+    if sessile_capable() and age_seconds > 8.0 + (1.0 - plant_bias) * 8.0 and grounded:
         rooted = true
     stand_upright = not in_water and Navigation.land_capable(self) and not rooted and Traits.upright(genome) and Cycle.locomotor_maturity(self)
     can_fly = Navigation.land_capable(self) and not rooted and model.has_sky() and Traits.flight_body(genome) and Traits.lift(genome) > 0.24 * Support.gravity_scale(self) and Cycle.locomotor_maturity(self) and Cycle.development_fraction(self) >= 0.82

@@ -159,7 +159,7 @@ func act(org, dt: float, rng: RandomNumberGenerator) -> void:
     org.decision_timer = 0.0
     if _observer_action(org, dt):
         return
-    if Traits.sessile(org.genome):
+    if org.sessile_capable():
         org.behavior_state = "settle"
         org.steer_towards(Vector3(org.global_position.x, habitat.floor_at(org.global_position), org.global_position.z), minf(1.0, dt * 4.0))
         return

@@ -32,8 +32,10 @@ func _unhandled_input(event: InputEvent) -> void:
     if not enabled:
         return
     if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED and not is_instance_valid(follow_target):
-        yaw -= event.relative.x * mouse_sensitivity
-        pitch -= event.relative.y * mouse_sensitivity
+        # look_at() also changes the rotation while following/spawning.
+        # Begin every free look from that actual orientation, never stale angles.
+        yaw = rotation.y - event.relative.x * mouse_sensitivity
+        pitch = rotation.x - event.relative.y * mouse_sensitivity
         pitch = clampf(pitch, deg_to_rad(-88.0), deg_to_rad(88.0))
         rotation = Vector3(pitch, yaw, 0.0)
     elif event is InputEventMouseButton and event.pressed:
@@ -99,7 +101,7 @@ func _follow_process(delta: float) -> void:
     # small body steering correction. A newly followed body snaps straight to
     # its safe viewpoint so interpolation cannot travel through a mountain.
     if follow_snap_pending:
-        global_position = desired
+        global_position = _constrain_free_position(desired) if noclip_enabled else desired
         follow_snap_pending = false
     else:
         var stiffness: float = clampf(delta * 3.1, 0.0, 1.0)
@@ -146,16 +148,17 @@ func place_safe_observer_start(model) -> void:
     look_at(focus + Vector3.UP * 0.8, Vector3.UP)
 
 func _constrain_free_position(value: Vector3) -> Vector3:
-    if noclip_enabled or habitat_model == null:
+    if habitat_model == null:
         return value
     var safe: Vector3 = value
-    if habitat_model.has_method("floor_at"):
-        safe.y = maxf(safe.y, float(habitat_model.floor_at(safe)) + OBSERVER_CLEARANCE)
     var extent_value = habitat_model.get("half_extent")
     if extent_value != null:
         var extent: float = float(extent_value) - WORLD_MARGIN
         safe.x = clampf(safe.x, -extent, extent)
         safe.z = clampf(safe.z, -extent, extent)
+    # Clamp horizontal coordinates before sampling the floor at the final point.
+    if not noclip_enabled and habitat_model.has_method("floor_at"):
+        safe.y = maxf(safe.y, float(habitat_model.floor_at(safe)) + OBSERVER_CLEARANCE)
     var bottom_value = habitat_model.get("bottom_y")
     if bottom_value != null:
         safe.y = maxf(safe.y, float(bottom_value) + WORLD_MARGIN)

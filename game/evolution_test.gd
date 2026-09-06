@@ -79,6 +79,26 @@ func run_all() -> bool:
     parent.express_diploid()
     check(is_equal_approx(parent.root_drive, 0.38), "a latent anchoring allele remains additive and cryptic")
 
+    # Independently marked parents must both contribute anatomy and behavioral
+    # potential, even when the child uses the same topology grammar as one.
+    var inherited_loci: Array = ["head_drive", "body_width", "elongation", "limb_length", "limb_thickness", "tail_drive", "muscle_drive", "neural_drive", "curiosity", "cooperation", "affective_plasticity", "sensory_drive"]
+    for locus in inherited_loci:
+        mother.alleles[locus] = [0.15, 0.15]
+        father.alleles[locus] = [0.85, 0.85]
+    mother.express_diploid()
+    father.express_diploid()
+    var mosaic = mother.crossover(father, rng, 0.0, 0.0)
+    var inherited_dna: Dictionary = mosaic.alleles.duplicate(true)
+    for locus in inherited_loci:
+        check(mosaic.alleles[locus] == [0.15, 0.85], "both parental homologs reach offspring: " + locus)
+        check(float(mosaic.get(locus)) > 0.15 and float(mosaic.get(locus)) < 0.85, "offspring potential combines both parents: " + locus)
+    var profile: Dictionary = mosaic.regional_profile()
+    check(profile["head"] > 0.15 and profile["head"] < 0.85 and profile["limb_length"] > 0.15 and profile["limb_length"] < 0.85, "regional anatomy blends both parental variants")
+    check(not is_equal_approx(mosaic.regional_expression("head_drive", 0), mosaic.regional_expression("head_drive", 2)), "regional regulators give distinct expression across tissues")
+    check(mosaic.alleles == inherited_dna and mosaic.regional_profile() == profile, "regional development preserves DNA and is deterministic")
+    var mosaic_clone = mosaic.mutated(rng, 0.0, 0.0)
+    check(mosaic_clone.regional_profile() == profile, "mitotic clone retains regional expression without artificial changes")
+
     var history = History.new()
     var initial: Dictionary = {"reason": "initial", "lineage": _entry(1, "serpentine", false)}
     history.record("founder_injection", initial, 0, 0.0)

@@ -127,6 +127,8 @@ func find_mate(world, parent):
         if score <= 0.0: continue
         var distance: float = parent.global_position.distance_to(other.global_position)
         if distance > world.mating_radius(): continue
+        # Rooted plants cannot close an out-of-range pollination gap.
+        if parent.rooted and other.rooted and Cycle.mode(parent) == "propagule" and not contact(parent, other): continue
         var preference: float = distance / (0.7 + score * 0.3 + other.genome.ornament_drive * other.genome.dimorphism * 0.20)
         if other.organism_id == parent.mate_interest_id: preference *= 0.75
         if preference < best_score:
