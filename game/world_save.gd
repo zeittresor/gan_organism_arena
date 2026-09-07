@@ -15,7 +15,7 @@ func capture(world, camera, settings: Dictionary) -> Dictionary:
         if not is_instance_valid(org): continue
         bodies.append({"state": fields(org, ["visual", "habitat", "support_habitat", "support_heights"]), "transform": org.transform,
             "animation_time": org.visual._animation_time, "gait_phase": org.visual.gait_phase})
-    return {"schema": SCHEMA, "version": "1.0.0-alpha37", "settings": settings.duplicate(true),
+    return {"schema": SCHEMA, "version": "1.0.0-alpha38", "settings": settings.duplicate(true),
         "world": fields(world, ["organisms", "selected", "observer_camera", "habitat", "ecology", "reproduction", "evolution_history", "nutrient_field", "simulation_paused", "experiment_mode"]),
         "organisms": bodies, "nutrients": fields(world.nutrient_field, ["habitat", "multimesh_instance"]),
         "ecology": fields(world.ecology, ["habitat", "population", "id_map", "rooted_counts"]),

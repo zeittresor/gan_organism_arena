@@ -4,11 +4,22 @@ extends RefCounted
 # Mitosis preserves ploidy; meiosis produces haploid gametes, not somatic growth.
 static func strategy(g) -> String:
     if g.asexual_drive >= 0.94: return "mitotic"
-    if g.asexual_drive > 0.78: return "combined"
+    if can_clone(g): return "combined"
     return "meiotic"
 
 static func can_clone(g) -> bool:
-    return g.asexual_drive > 0.78
+    return g.asexual_drive > 0.78 or can_vegetatively_propagate(g)
+
+static func can_vegetatively_propagate(g) -> bool:
+    # Once a lineage has independently assembled anchoring plus a stationary
+    # energy source, runners, fragments or propagules are a plausible second
+    # route.  This does not turn aquatic founders into plants: their expressed
+    # root drive is capped below this gate.  Several inherited traits must
+    # coincide, so ordinary motile animals cannot silently clone themselves.
+    var stationary_food: float = maxf(float(g.photosynthesis), float(g.cleaning_drive) * 0.76)
+    var propagation: float = float(g.root_drive) * 0.35 + stationary_food * 0.30
+    propagation += float(g.branch_drive) * 0.20 + float(g.asexual_drive) * 0.15
+    return float(g.root_drive) > 0.385 and stationary_food > 0.30 and propagation > 0.29
 
 static func can_mate(g) -> bool:
     return g.asexual_drive < 0.94

@@ -505,6 +505,36 @@ func body_plan_name() -> String:
         PLAN_CEPHALOPOD: return "cephalopod"
         _: return "unknown"
 
+func expressed_morphotype() -> String:
+    # The seven body-plan loci are a hereditary grammar, not the final list of
+    # possible creatures. After several real generations, combinations of
+    # existing alleles may switch development into a derived construction. No
+    # form changes randomly during an individual's adult life.
+    if generation < 3 or (aquatic_ancestry and aquatic_steps < 3):
+        return body_plan_name()
+    var hard_cover: float = maxf(armor_drive, maxf(shell_drive, scale_cover))
+    var gel: float = clampf(mucus_cover * 0.36 + membrane_cover * 0.30 + (1.0 - support_drive) * 0.22 + (1.0 - hard_cover) * 0.12, 0.0, 1.0)
+    if gel > 0.62 and branch_drive > 0.50 and support_drive < 0.62:
+        return "medusoid_colony"
+    if elongation > 0.68 and flattening > 0.52 and fin_drive > 0.48:
+        return "ribbon_swimmer"
+    if branch_drive > 0.68 and symmetry > 0.54 and cooperation > 0.45 and head_drive < 0.70:
+        return "colonial_swimmer"
+    return body_plan_name()
+
+func morphotype_signature() -> String:
+    # Coarse visible phenotype bins are more meaningful than counting only the
+    # seven underlying topology codes. Similar siblings still share a signature.
+    var covers: Array[float] = [skin_thickness, scale_cover, feather_cover, fur_cover, mucus_cover, membrane_cover, maxf(shell_drive, armor_drive)]
+    var dominant_cover: int = 0
+    for i in range(1, covers.size()):
+        if covers[i] > covers[dominant_cover]: dominant_cover = i
+    var locomotion: int = 0
+    if terrestrial_drive * sqrt(limb_drive * support_drive) >= 0.18: locomotion |= 1
+    if flight_drive * wing_area * support_drive > 0.16: locomotion |= 2
+    if root_drive > 0.385 and maxf(photosynthesis, cleaning_drive * 0.76) > 0.30: locomotion |= 4
+    return "%s:%d:%d:%d:%d:%d" % [expressed_morphotype(), clampi(int(size_gene * 3.0), 0, 2), clampi(int(elongation * 3.0), 0, 2), clampi(int(body_width * 3.0), 0, 2), dominant_cover, locomotion]
+
 func viability_score() -> float:
     # Viability is not an aesthetic score. It estimates whether the inherited
     # construction has enough metabolism/support to maintain its own costly traits.

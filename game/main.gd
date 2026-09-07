@@ -13,8 +13,8 @@ const WorldSave = preload("res://game/world_save.gd")
 const Cycle = preload("res://game/life_cycle.gd")
 
 const APP_NAME = "GAN Organism Arena"
-const VERSION = "1.0.0-alpha37"
-const RELEASE_DATE = "2026-09-06"
+const VERSION = "1.0.0-alpha38"
+const RELEASE_DATE = "2026-09-07"
 
 var ai_gateway = null
 var sim_world = null
@@ -269,7 +269,7 @@ func _process(delta: float) -> void:
     if perf_timer >= 10.0:
         perf_timer = 0.0
         var m: Dictionary = sim_world.metrics()
-        AppLog.info("perf fps=%.1f organisms=%d steps=%d visual_cells=%d forms=%d cross_births=%d mutation_births=%d failed_dev=%d max_complexity=%.2f max_intelligence=%.3f renderer=%s" % [Performance.get_monitor(Performance.TIME_FPS), int(m["organisms"]), int(m["steps"]), int(m["visual_cells"]), int(m["body_plan_count"]), int(m["crossover_births"]), int(m["mutation_births"]), int(m["failed_developments"]), float(m["max_complexity"]), float(m["max_intelligence"]), str(SettingsStore.get_value("renderer", "forward_plus"))])
+        AppLog.info("perf fps=%.1f organisms=%d steps=%d visual_cells=%d morphotypes=%d topologies=%d rooted=%d land=%d highest_gen=%d cross_births=%d mutation_births=%d failed_dev=%d max_complexity=%.2f max_intelligence=%.3f renderer=%s" % [Performance.get_monitor(Performance.TIME_FPS), int(m["organisms"]), int(m["steps"]), int(m["visual_cells"]), int(m["body_plan_count"]), int(m["topology_count"]), int(m["rooted_count"]), int(m["land_count"]), int(m["highest_generation"]), int(m["crossover_births"]), int(m["mutation_births"]), int(m["failed_developments"]), float(m["max_complexity"]), float(m["max_intelligence"]), str(SettingsStore.get_value("renderer", "forward_plus"))])
         var p: Dictionary = sim_world.take_performance()
         AppLog.info("navigation moving=%d motile=%d mean_speed=%.3f feeding_events=%d replans=%d goals=%s" % [p["moving"], p["motile"], p["mean_speed"], p["feeding_events"], p["replans"], str(p["goals"])])
         AppLog.info("perf_detail motion_ms=%.3f biology_ms=%.3f contacts_ms=%.3f peak_world_ms=%.3f frame_ms=%.3f draw_calls=%d primitives=%d ground_detail=%d ground_fast=%d ground_cached=%d envelopes=%d uploads=%d skipped_uploads=%d contact_quality=%d" % [p["motion_ms"], p["biology_ms"], p["contacts_ms"], p["peak_world_ms"], Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0, int(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)), int(Performance.get_monitor(Performance.RENDER_TOTAL_PRIMITIVES_IN_FRAME)), p["ground_detail"], p["ground_fast"], p["ground_cached"], p["envelopes"], p["render_uploads"], p["skipped_uploads"], p["quality"]])

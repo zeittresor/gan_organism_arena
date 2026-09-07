@@ -245,14 +245,19 @@ func _develop_body(complexity: float) -> void:
     elif g.size_gene < 0.28 and g.limb_drive > 0.55 and g.armor_drive > 0.45:
         _develop_crustacean(g, growth)
     else:
-        match plan:
-            1: _develop_fusiform(g, growth)
-            2: _develop_radial(g, growth)
-            3: _develop_ray(g, growth)
-            4: _develop_branching(g, growth)
-            5: _develop_crustacean(g, growth)
-            6: _develop_cephalopod(g, growth)
-            _: _develop_serpentine(g, growth)
+        match str(g.expressed_morphotype()):
+            "medusoid_colony": _develop_medusoid_colony(g, growth)
+            "ribbon_swimmer": _develop_ribbon_swimmer(g, growth)
+            "colonial_swimmer": _develop_colonial_swimmer(g, growth)
+            _:
+                match plan:
+                    1: _develop_fusiform(g, growth)
+                    2: _develop_radial(g, growth)
+                    3: _develop_ray(g, growth)
+                    4: _develop_branching(g, growth)
+                    5: _develop_crustacean(g, growth)
+                    6: _develop_cephalopod(g, growth)
+                    _: _develop_serpentine(g, growth)
     visual_cap = budget if owner_life.rooted else maxi(32, int(budget * 0.78))
     if not founder_baseline and not owner_life.rooted and Cycle.locomotor_maturity(owner_life):
         _add_adaptive_structures(g, growth)
@@ -274,7 +279,7 @@ func _develop_body(complexity: float) -> void:
     body_size_hint *= size_scale
 
 func phenotype_key() -> String:
-    return "%s:%s:%s:%s:%d:%d:%d" % [owner_life.rooted, owner_life.stand_upright, owner_life.in_water, Cycle.stage(owner_life), int(Cycle.development_fraction(owner_life) * 8.0), owner_life.carrying_count, int(owner_life.reproduction_progress * 4.0)]
+    return "%s:%s:%s:%s:%s:%d:%d:%d" % [owner_life.genome.expressed_morphotype(), owner_life.rooted, owner_life.stand_upright, owner_life.in_water, Cycle.stage(owner_life), int(Cycle.development_fraction(owner_life) * 8.0), owner_life.carrying_count, int(owner_life.reproduction_progress * 4.0)]
 
 func _develop_rooted(g, growth: float) -> void:
     var tree: bool = not owner_life.in_water and g.wood_drive > 0.60 and g.support_drive > 0.55
@@ -325,6 +330,11 @@ func _build_rig() -> void:
         var cell: Dictionary = body_cells[i]
         if not cell.has("parent"):
             cell["parent"] = _nearest_anchor(cell["p"], i)
+        # Procedural builders may be truncated by the selected visual budget.
+        # Never retain an attachment to a cell which was not actually emitted.
+        var parent: int = int(cell.get("parent", -1))
+        if parent < -1 or parent >= i:
+            cell["parent"] = _nearest_anchor(cell["p"], i)
         Rig.configure(cell, owner_life.genome, owner_life.rooted)
         anatomy_counts[cell["joint_mode"]] += 1
         if cell["joint"] and float(cell["joint_muscle"]) > 0.0: anatomy_counts["active"] += 1
@@ -367,7 +377,7 @@ func _pose_body(delta: float = 0.0) -> void:
         var p: Vector3 = rest
         var frame: Basis = Basis.IDENTITY
         var support_frame: Basis = Basis.IDENTITY
-        if parent >= 0:
+        if parent >= 0 and parent < i:
             var base: Dictionary = body_cells[parent]
             var offset: Vector3 = rest - base["p"]
             frame = posed_bases[parent]
@@ -621,6 +631,87 @@ func _develop_cephalopod(g, growth: float) -> void:
     rear_anchor_local = mantle_center + Vector3(0.0, 0.0, head_radius * 1.25)
     focus_anchor_local = face
     body_size_hint = maxf(head_radius * 1.7, tentacle_len * 0.45)
+
+func _develop_medusoid_colony(g, growth: float) -> void:
+    var bell: float = 0.70 + g.regional_expression("body_width", 1) * 0.82 + growth * 0.06
+    _add_cell(Vector3.ZERO, Tissue.GEL, bell, Vector3(1.55, 0.48, 1.55))
+    _add_cell(Vector3(0.0, bell * 0.18, -bell * 0.18), Tissue.NEURAL, bell * 0.22)
+    var lobes: int = clampi(4 + int(g.symmetry * 4.0), 4, 8)
+    for i in range(lobes):
+        if body_cells.size() >= visual_cap: break
+        var angle: float = TAU * float(i) / float(lobes)
+        var rim: Vector3 = Vector3(cos(angle), -0.08, sin(angle)) * bell * 0.72
+        var rim_index: int = body_cells.size()
+        _add_cell(rim, Tissue.GEL, bell * 0.30, Vector3(1.15, 0.42, 1.15))
+        if body_cells.size() <= rim_index: break
+        body_cells[rim_index]["parent"] = 0
+        var length: float = bell * (1.5 + g.regional_expression("limb_length", 2) * 2.4)
+        var tip: Vector3 = rim + Vector3(cos(angle) * bell * 0.30, -length, sin(angle) * bell * 0.30)
+        _add_chain(rim, tip, clampi(4 + int(growth * 0.8), 4, 10), Tissue.NEMATOCYST if Traits.nematocyst_score(g) > 0.67 else Tissue.GEL, bell * 0.075)
+    var focus: Vector3 = Vector3(0.0, bell * 0.05, -bell * 0.92)
+    var focus_index: int = body_cells.size()
+    _add_cell(focus, Tissue.SENSOR, bell * 0.16)
+    if body_cells.size() > focus_index: body_cells[focus_index]["parent"] = 0
+    focus_anchor_local = focus
+    rear_anchor_local = Vector3(0.0, 0.0, bell * 0.95)
+    body_size_hint = bell * 1.8
+
+func _develop_ribbon_swimmer(g, growth: float) -> void:
+    var length: float = 4.0 + g.regional_expression("elongation", 1) * 4.8 + growth * 0.65
+    var half_width: float = 0.55 + g.regional_expression("body_width", 1) * 1.05
+    var segments: int = clampi(9 + int(growth * 1.3), 9, 18)
+    var spine: Array[Vector3] = []
+    for i in range(segments):
+        if body_cells.size() >= visual_cap: break
+        var t: float = float(i) / float(maxi(1, segments - 1))
+        var p: Vector3 = Vector3(sin(t * TAU * 1.5 + float(g.seed % 29)) * half_width * 0.18, sin(t * TAU) * half_width * 0.10, lerpf(-length * 0.50, length * 0.50, t))
+        var taper: float = 0.45 + sin(t * PI) * 0.65
+        var body_index: int = body_cells.size()
+        _add_cell(p, Tissue.BODY, half_width * taper, Vector3(1.65, 0.30 + (1.0 - g.flattening) * 0.18, 0.70))
+        if body_cells.size() <= body_index: break
+        spine.append(p)
+        for side_value in [-1.0, 1.0]:
+            if body_cells.size() >= visual_cap: break
+            var fin_index: int = body_cells.size()
+            _add_cell(p + Vector3(side_value * half_width * taper * 0.72, 0.0, 0.0), Tissue.FIN, half_width * taper * 0.42, Vector3(1.45, 0.16, 0.72))
+            if body_cells.size() > fin_index: body_cells[fin_index]["parent"] = body_index
+    if spine.is_empty():
+        spine.append(Vector3.ZERO)
+    var head: Vector3 = spine[0] + Vector3(0.0, half_width * 0.08, -half_width * 0.42)
+    _make_head(g, head, _head_radius(g, half_width, 0.62), growth)
+    focus_anchor_local = head
+    rear_anchor_local = spine[spine.size() - 1]
+    body_size_hint = length * 0.54
+
+func _develop_colonial_swimmer(g, growth: float) -> void:
+    var core: float = 0.42 + g.regional_expression("body_width", 1) * 0.48
+    var axis_length: float = 2.4 + g.regional_expression("elongation", 1) * 2.5 + growth * 0.32
+    var colonies: int = clampi(4 + int(g.branch_drive * 4.0), 4, 8)
+    var centers: Array[Vector3] = []
+    var colony_indices: Array[int] = []
+    for i in range(colonies):
+        if body_cells.size() >= visual_cap: break
+        var t: float = float(i) / float(maxi(1, colonies - 1))
+        var center: Vector3 = Vector3(sin(t * TAU + float(g.seed % 13)) * core * 0.45, cos(t * TAU * 1.4) * core * 0.28, lerpf(-axis_length * 0.48, axis_length * 0.48, t))
+        var colony_index: int = body_cells.size()
+        _add_cell(center, Tissue.BODY, core * (0.82 + sin(t * PI) * 0.38), Vector3(1.15, 0.92, 1.10))
+        if body_cells.size() <= colony_index: break
+        centers.append(center)
+        if not colony_indices.is_empty(): body_cells[colony_index]["parent"] = colony_indices.back()
+        colony_indices.append(colony_index)
+        var rays: int = 3 + int(g.symmetry * 3.0)
+        for ray in range(rays):
+            var angle: float = TAU * float(ray) / float(rays) + float(i) * 0.7
+            var root: Vector3 = center + Vector3(cos(angle), sin(angle) * 0.55, 0.0) * core * 0.55
+            var tip: Vector3 = center + Vector3(cos(angle), sin(angle) * 0.55, sin(angle * 0.5) * 0.35).normalized() * core * (1.3 + g.limb_length * 1.4)
+            _add_chain(root, tip, 3, Tissue.FIN if g.fin_drive > 0.55 else Tissue.BODY, core * 0.12)
+    if centers.is_empty():
+        centers.append(Vector3.ZERO)
+    var head: Vector3 = centers[0] + Vector3(0.0, core * 0.12, -core * 0.72)
+    _make_head(g, head, _head_radius(g, core, 0.55), growth)
+    focus_anchor_local = head
+    rear_anchor_local = centers[centers.size() - 1]
+    body_size_hint = axis_length * 0.62 + core
 
 
 func _add_adaptive_structures(g, growth: float) -> void:

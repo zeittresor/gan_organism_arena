@@ -2,6 +2,7 @@ extends RefCounted
 
 const Traits = preload("res://game/ecology_traits.gd")
 const Cycle = preload("res://game/life_cycle.gd")
+const Navigation = preload("res://game/navigation.gd")
 var habitat = null
 var predation_strength: float = 0.45
 var group_strength: float = 0.55
@@ -141,9 +142,21 @@ func act(org, dt: float, rng: RandomNumberGenerator) -> void:
     if not org.in_water and org.moisture < 0.35 and org.genome.moisture_need > 0.45:
         leave_medium = true
         want_water = true
+    # A descendant that has accumulated several generations of suitable lungs,
+    # support and limbs must actually test the shore before selection can act on
+    # those traits. Trials begin only after maturity and a long, healthy dwell in
+    # water. Marginal air breathers automatically retreat through the respiration
+    # rule above instead of receiving free terrestrial competence.
+    var land_exists: bool = habitat.has_land() if habitat != null and habitat.has_method("has_land") else false
+    var shore_trial: bool = org.in_water and land_exists and Navigation.land_capable(org)
+    shore_trial = shore_trial and int(org.genome.aquatic_steps) >= 3 and org.energy > 0.58 and org.oxygen > 0.72
+    shore_trial = shore_trial and org.genome.curiosity > 0.34 and org.medium_timer > 34.0 + (1.0 - org.genome.curiosity) * 58.0
+    if shore_trial:
+        leave_medium = true
+        want_water = false
     # Amphibious individuals revisit shore/water according to their own
     # moisture budget and exploratory preference, with a minimum dwell time.
-    if Traits.amphibious(org.genome) and Cycle.locomotor_maturity(org) and org.medium_timer > 24.0 + (1.0 - org.genome.curiosity) * 45.0:
+    if Navigation.land_capable(org) and Traits.amphibious(org.genome) and Cycle.locomotor_maturity(org) and org.medium_timer > 24.0 + (1.0 - org.genome.curiosity) * 45.0:
         leave_medium = true
     if org.can_fly and habitat.has_sky() and org.in_water and org.age_seconds > 18.0 and org.energy > 0.65:
         leave_medium = true

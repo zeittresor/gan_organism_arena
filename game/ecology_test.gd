@@ -29,6 +29,13 @@ func creature(g, p: Vector3 = Vector3.ZERO):
     org.energy = 1.0
     return org
 
+func parent_graph_is_bounded(org) -> bool:
+    for i in range(org.visual.body_cells.size()):
+        var parent: int = int(org.visual.body_cells[i].get("parent", -1))
+        if parent < -1 or parent >= i:
+            return false
+    return true
+
 func run_all() -> bool:
     var model = Habitat.new()
     model.configure(5, 288.0)
@@ -67,6 +74,44 @@ func run_all() -> bool:
     amphibian.global_position = land
     for i in range(12): amphibian.apply_environment(0.5, model)
     check(amphibian.oxygen > 0.99, "amphibian breathes on land")
+
+    var trial_g = Genome.new()
+    trial_g.aquatic_ancestry = true
+    trial_g.aquatic_steps = 4
+    trial_g.gill_drive = 0.85
+    trial_g.lung_drive = 0.34
+    trial_g.terrestrial_drive = 0.78
+    trial_g.limb_drive = 0.78
+    trial_g.support_drive = 0.78
+    trial_g.curiosity = 0.90
+    var shore_explorer = creature(trial_g, water)
+    shore_explorer.development_progress = 1.0
+    shore_explorer.apply_environment(0.1, model)
+    shore_explorer.medium_timer = 120.0
+    shore_explorer.energy = 1.0
+    shore_explorer.oxygen = 1.0
+    var transition_ecology = Ecology.new()
+    var no_resources: Array[Vector3] = []
+    transition_ecology.configure(model, no_resources)
+    transition_ecology.begin_tick([shore_explorer], 0.1)
+    transition_ecology.act(shore_explorer, 0.1, RandomNumberGenerator.new())
+    check(shore_explorer.behavior_state == "seek_land" and model.floor_at(shore_explorer.refuge) > model.waterline, "multi-generation viable swimmer deliberately tests a real shore")
+    var guarded_g = Genome.new()
+    guarded_g.aquatic_ancestry = true
+    guarded_g.aquatic_steps = 0
+    guarded_g.gill_drive = 0.85
+    guarded_g.lung_drive = 0.90
+    guarded_g.terrestrial_drive = 0.90
+    guarded_g.limb_drive = 0.90
+    guarded_g.support_drive = 0.90
+    guarded_g.curiosity = 1.0
+    var guarded_founder = creature(guarded_g, water)
+    guarded_founder.development_progress = 1.0
+    guarded_founder.apply_environment(0.1, model)
+    guarded_founder.medium_timer = 120.0
+    transition_ecology.begin_tick([guarded_founder], 0.1)
+    transition_ecology.act(guarded_founder, 0.1, RandomNumberGenerator.new())
+    check(guarded_founder.behavior_state != "seek_land", "aquatic ancestry gate still prevents an immediate founder landfall")
 
     var flyer_genome = Genome.new()
     flyer_genome.flight_drive = 1.0
@@ -205,6 +250,64 @@ func run_all() -> bool:
             plant_emerged = true
             break
     check(plant_emerged, "ordinary inherited variation can cross the sessile plant threshold")
+
+    var ancestral_shape = Genome.new()
+    ancestral_shape.body_plan = Genome.PLAN_SERPENTINE
+    ancestral_shape.elongation = 0.92
+    ancestral_shape.flattening = 0.88
+    ancestral_shape.fin_drive = 0.84
+    ancestral_shape.generation = 0
+    ancestral_shape.aquatic_ancestry = true
+    ancestral_shape.aquatic_steps = 0
+    check(ancestral_shape.expressed_morphotype() == "serpentine", "founder presentation remains its coherent ancestral construction")
+    ancestral_shape.generation = 5
+    ancestral_shape.aquatic_steps = 5
+    check(ancestral_shape.expressed_morphotype() == "ribbon_swimmer", "inherited multi-generation trait combination opens a derived body construction")
+    var ribbon = creature(ancestral_shape, water)
+    ribbon.development_progress = 1.0
+    ribbon.visual.set_visual_cap(48)
+    ribbon.visual.rebuild(true)
+    var ribbon_fins: int = 0
+    for cell in ribbon.visual.body_cells:
+        if int(cell["t"]) == 5: ribbon_fins += 1
+    check(ribbon_fins >= 8 and ribbon.morphotype_signature().contains("ribbon_swimmer"), "derived ribbon construction is visibly expressed and counted as a phenotype")
+    check(ribbon.visual.body_cells.size() <= 48 and parent_graph_is_bounded(ribbon), "derived ribbon remains connected when the visual budget truncates it")
+
+    var medusoid_g = Genome.new()
+    medusoid_g.generation = 5
+    medusoid_g.aquatic_ancestry = true
+    medusoid_g.aquatic_steps = 5
+    medusoid_g.mucus_cover = 1.0
+    medusoid_g.membrane_cover = 1.0
+    medusoid_g.support_drive = 0.1
+    medusoid_g.branch_drive = 0.9
+    medusoid_g.armor_drive = 0.0
+    medusoid_g.shell_drive = 0.0
+    medusoid_g.scale_cover = 0.0
+    check(medusoid_g.expressed_morphotype() == "medusoid_colony", "soft inherited traits open a medusoid construction")
+    var medusoid = creature(medusoid_g, water)
+    medusoid.development_progress = 1.0
+    medusoid.visual.set_visual_cap(48)
+    check(medusoid.visual.body_cells.size() <= 48 and parent_graph_is_bounded(medusoid), "derived medusoid remains connected when the visual budget truncates it")
+
+    var colonial_g = Genome.new()
+    colonial_g.generation = 5
+    colonial_g.aquatic_ancestry = true
+    colonial_g.aquatic_steps = 5
+    colonial_g.support_drive = 0.9
+    colonial_g.branch_drive = 0.9
+    colonial_g.symmetry = 0.9
+    colonial_g.cooperation = 0.9
+    colonial_g.head_drive = 0.2
+    colonial_g.elongation = 0.3
+    colonial_g.flattening = 0.3
+    colonial_g.mucus_cover = 0.0
+    colonial_g.membrane_cover = 0.0
+    check(colonial_g.expressed_morphotype() == "colonial_swimmer", "cooperative inherited traits open a colonial construction")
+    var colonial = creature(colonial_g, water)
+    colonial.development_progress = 1.0
+    colonial.visual.set_visual_cap(48)
+    check(colonial.visual.body_cells.size() <= 48 and parent_graph_is_bounded(colonial), "derived colony remains connected when the visual budget truncates it")
     var upright_g = Genome.new()
     upright_g.terrestrial_drive = 1.0
     upright_g.support_drive = 1.0

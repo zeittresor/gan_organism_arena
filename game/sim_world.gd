@@ -512,6 +512,10 @@ func metrics() -> Dictionary:
     var avg_complexity: float = 0.0
     var cells: int = 0
     var plans: Dictionary = {}
+    var morphotypes: Dictionary = {}
+    var rooted_count: int = 0
+    var land_count: int = 0
+    var highest_generation: int = 0
     var min_stability: float = 1.0
     for org in organisms:
         if not is_instance_valid(org):
@@ -522,6 +526,11 @@ func metrics() -> Dictionary:
         min_stability = minf(min_stability, float(org.development_stability))
         var plan_name: String = str(org.body_plan_name())
         plans[plan_name] = int(plans.get(plan_name, 0)) + 1
+        var morphotype: String = str(org.morphotype_signature())
+        morphotypes[morphotype] = int(morphotypes.get(morphotype, 0)) + 1
+        if org.rooted: rooted_count += 1
+        if not org.in_water: land_count += 1
+        highest_generation = maxi(highest_generation, int(org.genome.generation))
         if is_instance_valid(org.visual):
             cells += int(org.visual.body_cells.size())
     if not organisms.is_empty():
@@ -535,7 +544,13 @@ func metrics() -> Dictionary:
         "max_intelligence": max_intelligence,
         "visual_cells": cells,
         "nutrients": nutrient_field.points.size() if is_instance_valid(nutrient_field) else 0,
-        "body_plan_count": plans.size(),
+        # UI "forms" reports expressed, coarse visible phenotypes. Keep the
+        # hereditary seven-grammar count separately for protocol consumers.
+        "body_plan_count": morphotypes.size(),
+        "topology_count": plans.size(),
+        "rooted_count": rooted_count,
+        "land_count": land_count,
+        "highest_generation": highest_generation,
         "min_stability": min_stability,
         "crossover_births": crossover_births,
         "mutation_births": mutation_births,

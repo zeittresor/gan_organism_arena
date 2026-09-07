@@ -91,6 +91,12 @@ func floor_at(p: Vector3) -> float:
 func has_sky() -> bool:
     return level >= 7
 
+func has_land() -> bool:
+    for height in heights:
+        if float(height) > waterline + 0.10:
+            return true
+    return false
+
 func is_water(p: Vector3) -> bool:
     return p.y < waterline and floor_at(p) < waterline
 

@@ -5,6 +5,7 @@ const ThoughtLanguage = preload("res://game/thought_language.gd")
 const Contact = preload("res://game/body_contact.gd")
 const Navigation = preload("res://game/navigation.gd")
 const Locomotion = preload("res://game/locomotion.gd")
+const CellCycle = preload("res://game/cell_cycle.gd")
 const TRAUMA_COLLAPSE_THRESHOLD: float = 0.85
 var contact_quality: int = 100
 var heading_yaw: float = 0.0
@@ -498,15 +499,27 @@ func can_reproduce() -> bool:
     return alive and mate_cooldown <= 0.0 and carrying_count == 0 and Cycle.stage(self) in ["adult", "senescent"] and energy > 0.65 and Physiology.reproductive_ready(self) and genome.reproduction > 0.28 and genome.fertility_factor > 0.15 and development_stability >= threshold
 
 func reproduction_probability(dt: float) -> float:
-    return dt * (0.012 + genome.reproduction * 0.065) * clampf(energy - 0.45, 0.0, 1.0) * genome.fertility_factor / (1.0 + senescence)
+    var chance: float = dt * (0.012 + genome.reproduction * 0.065) * clampf(energy - 0.45, 0.0, 1.0) * genome.fertility_factor / (1.0 + senescence)
+    # Sessile lineages cannot search for mates. Once they have evolved a
+    # coherent vegetative route, permit several seasonal propagule attempts
+    # within one compressed lifetime instead of usually dying childless.
+    if rooted and CellCycle.can_vegetatively_propagate(genome):
+        chance *= 3.0
+    return chance
 
 func body_plan_name() -> String:
     if genome != null and genome.has_method("body_plan_name"):
         return str(genome.body_plan_name())
     return "unknown"
 
+func morphotype_signature() -> String:
+    if genome == null or not genome.has_method("morphotype_signature"):
+        return body_plan_name()
+    var lifestyle: String = "rooted" if rooted else ("upright" if stand_upright else ("airborne" if airborne else ("water" if in_water else "land")))
+    return lifestyle + ":" + str(genome.morphotype_signature())
+
 func lineage_summary() -> Dictionary:
-    return {"id": organism_id, "parents": [parent_a, parent_b], "family": genome.family_id, "generation": genome.generation, "plan": body_plan_name(), "mutations": genome.mutation_events, "macro_mutations": genome.macro_mutation_events, "crossovers": genome.crossover_events, "pigment": {"hue": genome.hue, "saturation": genome.pigment_saturation, "value": genome.pigment_value}, "coat": genome.skin_pattern.summary(), "genetic_health": genome.genetic_health()}
+    return {"id": organism_id, "parents": [parent_a, parent_b], "family": genome.family_id, "generation": genome.generation, "plan": body_plan_name(), "morphotype": morphotype_signature(), "mutations": genome.mutation_events, "macro_mutations": genome.macro_mutation_events, "crossovers": genome.crossover_events, "pigment": {"hue": genome.hue, "saturation": genome.pigment_saturation, "value": genome.pigment_value}, "coat": genome.skin_pattern.summary(), "genetic_health": genome.genetic_health()}
 
 func follow_camera_data() -> Dictionary:
     var rear: Vector3 = global_position + global_transform.basis.z * 1.5

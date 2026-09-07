@@ -1,7 +1,7 @@
 extends Node
 
-const VERSION = "1.0.0-alpha37"
-const RELEASE_DATE = "2026-09-06"
+const VERSION = "1.0.0-alpha38"
+const RELEASE_DATE = "2026-09-07"
 
 var defaults = {
     "language": "en",

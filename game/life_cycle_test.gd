@@ -2,6 +2,7 @@ extends Node
 const World = preload("res://game/reproduction_test_world.gd")
 const Genome = preload("res://game/genome.gd")
 const Cycle = preload("res://game/life_cycle.gd")
+const CellCycle = preload("res://game/cell_cycle.gd")
 const Traits = preload("res://game/ecology_traits.gd")
 const Navigation = preload("res://game/navigation.gd")
 const Visual = preload("res://game/organism_visual.gd")
@@ -123,6 +124,17 @@ func run_all() -> bool:
     check(child.flight_skill == 0.0 and child.tool_skill == 0.0 and child.hunting_skill == 0.0, "learned parental skills are not inherited")
     check(child.parent_a == a.organism_id and child.parent_b == b.organism_id and a.children == 1 and b.children == 1, "birth records both parents")
     check(child.energy < 0.50, "hatching does not mint default initialization energy")
+    w.queue_free()
+
+    w = make_world()
+    a = make_parent(w, 2)
+    b = make_parent(w, 3)
+    var egg_parent = a if Cycle.produces_eggs(a) and a.egg_reserve >= 0.26 else b
+    var sperm_parent = b if egg_parent == a else a
+    var gamete_site: Vector3 = (w.reproduction._reproductive_anchor_world(egg_parent) + w.reproduction._reproductive_anchor_world(sperm_parent)) * 0.5
+    check(w.reproduction._release_spawn_cloud(w, egg_parent, sperm_parent, gamete_site), "paired external spawner releases eggs at the anatomical contact site")
+    w.reproduction._advance_spawn_clouds(w, 0.1)
+    check(w.reproduction.conceptions == 1 and w.reproduction.broods.size() == 1 and w.reproduction.spawn_clouds.is_empty(), "nearby partner fertilizes anatomical spawn before the pair drifts apart")
     w.queue_free()
 
     for route in ["live_birth", "retained_egg", "egg"]:
@@ -294,6 +306,25 @@ func run_all() -> bool:
     a = make_parent(w, 2)
     a.genome.asexual_drive = 1.0
     check(w.reproduction._conceive(w, a, null) and w.reproduction.reserved_count() == 1, "clonal reproduction requires its own inherited capability")
+    w.queue_free()
+
+    w = make_world()
+    a = make_parent(w, 12)
+    var plant_loci: Dictionary = {"root_drive": 0.58, "photosynthesis": 0.62, "branch_drive": 0.72, "asexual_drive": 0.08}
+    for locus in plant_loci:
+        a.genome.alleles[locus] = [plant_loci[locus], plant_loci[locus]]
+    a.genome.express_diploid()
+    a.rooted = false
+    var mobile_attempt_rate: float = a.reproduction_probability(1.0)
+    a.rooted = true
+    a.global_position.y = w.habitat.floor_at(a.global_position) + 0.30
+    var parent_site: Vector3 = a.global_position
+    check(CellCycle.can_vegetatively_propagate(a.genome), "a coherent rooted lineage can form vegetative propagules without an extreme clone allele")
+    check(a.reproduction_probability(1.0) >= mobile_attempt_rate * 2.99, "a sessile propagator gets repeated reproductive opportunities within one lifetime")
+    check(w.reproduction._conceive(w, a, null) and str(w.reproduction.broods[0]["route"]) == "propagule", "a lone evolved plant can reserve a propagule brood")
+    check(Vector2(w.reproduction.broods[0]["position"].x, w.reproduction.broods[0]["position"].z).distance_to(Vector2(parent_site.x, parent_site.z)) > 2.0, "propagule disperses beyond the crowded parent patch")
+    w.reproduction._develop_broods(w, 30.0)
+    check(w.organisms.size() == 2 and w.organisms[1].parent_a == a.organism_id and w.organisms[1].parent_b == -1, "dispersed propagule develops into a heritable descendant")
     w.queue_free()
 
     # Population rescue is evaluated even if no new death was observed. It

@@ -202,7 +202,8 @@ func step(world, dt: float, allow_new: bool) -> void:
         if external:
             if touching:
                 var egg_parent = a if Cycle.produces_eggs(a) and a.egg_reserve >= 0.26 else b
-                if _release_spawn_cloud(world, egg_parent):
+                var sperm_parent = b if egg_parent == a else a
+                if _release_spawn_cloud(world, egg_parent, sperm_parent, pair["site"]):
                     a.reproduction_state = "spawning"
                     b.reproduction_state = "spawning"
                     a.reproduction_event_timer = 2.0
@@ -270,7 +271,7 @@ func step(world, dt: float, allow_new: bool) -> void:
             partner.pair_target_id = parent.organism_id
             pairs.append({"a": parent.organism_id, "b": partner.organism_id, "contact": 0.0, "elapsed": 0.0})
             mating_events += 1
-        elif parent.genome.asexual_drive > 0.78:
+        elif CellCycle.can_clone(parent.genome):
             _conceive(world, parent, null)
 
 func _courtship_approach(parent, partner, model) -> Vector3:
@@ -280,7 +281,7 @@ func _courtship_approach(parent, partner, model) -> Vector3:
     # contains the correct anatomical offset and side-of-pair sign.
     return pair["target_a"]
 
-func _release_spawn_cloud(world, parent) -> bool:
+func _release_spawn_cloud(world, parent, preferred_donor = null, release_site: Vector3 = Vector3.INF) -> bool:
     if parent == null or not parent.alive or not parent.in_water or Cycle.mode(parent) != "spawn" or not Cycle.produces_eggs(parent): return false
     if parent.egg_reserve < 0.26 or available_slots(world) <= 0: return false
     CellCycle.sync_gametes(parent)
@@ -292,10 +293,16 @@ func _release_spawn_cloud(world, parent) -> bool:
     var payment: float = 0.26 * count
     parent.egg_reserve -= payment
     parent.mate_cooldown = world.mate_delay()
-    var marker = _make_marker(world, parent.global_position, "spawn")
+    var position: Vector3 = release_site
+    if position == Vector3.INF:
+        position = _reproductive_anchor_world(parent)
+        if preferred_donor != null:
+            position = (position + _reproductive_anchor_world(preferred_donor)) * 0.5
+    var marker = _make_marker(world, position, "spawn")
     spawn_clouds.append({"eggs": eggs, "maternal_genome": parent.genome, "a": parent.organism_id, "age": 0.0,
-        "position": parent.global_position, "energy": payment * 0.85, "protection": parent.genome.egg_protection, "marker": marker})
-    world.record_event("spawn_release", {"mother": parent.organism_id, "eggs": count, "position": parent.global_position})
+        "preferred_donor": preferred_donor.organism_id if preferred_donor != null else -1,
+        "position": position, "energy": payment * 0.85, "protection": parent.genome.egg_protection, "marker": marker})
+    world.record_event("spawn_release", {"mother": parent.organism_id, "eggs": count, "position": position, "near_donor": preferred_donor.organism_id if preferred_donor != null else -1})
     parent._remember("released external eggs")
     return true
 
@@ -308,10 +315,13 @@ func _advance_spawn_clouds(world, dt: float) -> void:
         cloud["position"] = p
         if is_instance_valid(cloud.get("marker")): cloud["marker"].global_position = p
         var fertilized: bool = false
-        for donor in world.organisms:
+        var donors: Array = world.organisms.duplicate()
+        var preferred_id: int = int(cloud.get("preferred_donor", -1))
+        donors.sort_custom(func(left, right): return left.organism_id == preferred_id and right.organism_id != preferred_id)
+        for donor in donors:
             if not donor.alive or donor.organism_id == int(cloud["a"]) or not donor.in_water or Cycle.mode(donor) != "spawn": continue
             if not Cycle.produces_sperm(donor) or donor.sperm_reserve < 0.055 or not donor.can_reproduce(): continue
-            if donor.global_position.distance_to(p) > 1.0 + donor.genome.reach_drive: continue
+            if _reproductive_anchor_world(donor).distance_to(p) > 1.0 + donor.genome.reach_drive: continue
             var maternal_genome = cloud["maternal_genome"]
             var compatibility_score: float = Cycle.genetic_compatibility(maternal_genome, donor.genome)
             if compatibility_score < 0.48: continue
@@ -361,14 +371,14 @@ func _release_pair(a, b) -> void:
 func _conceive(world, a, b) -> bool:
     if not a.can_reproduce() or available_slots(world) <= 0: return false
     var clonal: bool = b == null
-    if clonal and a.genome.asexual_drive <= 0.78: return false
+    if clonal and not CellCycle.can_clone(a.genome): return false
     if not clonal and (compatibility(a, b) <= 0.0 or not contact(a, b)): return false
     var carrier = a
     var donor = b
     if not clonal and (not Cycle.produces_eggs(a) or a.egg_reserve < 0.26 or b.sperm_reserve < 0.055):
         carrier = b
         donor = a
-    var route: String = "bud" if clonal else Cycle.mode(carrier)
+    var route: String = ("propagule" if CellCycle.can_vegetatively_propagate(carrier.genome) else "bud") if clonal else Cycle.mode(carrier)
     if route == "spawn" and (not carrier.in_water or not donor.in_water): return false
     var count: int = mini(1 + int(carrier.genome.brood_size * 2.5), available_slots(world))
     var unit_cost: float = 0.32 if clonal else 0.26
@@ -414,7 +424,7 @@ func _conceive(world, a, b) -> bool:
         genomes.append(child)
     var internal: bool = route in ["live_birth", "retained_egg", "egg"]
     var duration: float = Cycle.embryo_duration(carrier.genome)
-    var p: Vector3 = carrier.global_position
+    var p: Vector3 = _propagule_site(world, carrier, donor) if route == "propagule" else carrier.global_position
     var marker = _make_marker(world, p, route)
     marker.visible = not internal
     broods.append({"genomes": genomes, "a": carrier.organism_id, "b": donor.organism_id if donor != null else -1,
@@ -430,6 +440,23 @@ func _conceive(world, a, b) -> bool:
     world.record_event("conception", {"mother": carrier.organism_id, "father": donor.organism_id if donor != null else -1, "route": route, "embryos": count, "compatibility": compatibility_score})
     conceptions += count
     return true
+
+func _propagule_site(world, carrier, donor = null) -> Vector3:
+    # A seed, runner fragment or drifting propagule must establish away from
+    # the parent's crowded 8 m patch. The simulation RNG keeps replay/save
+    # behaviour deterministic. Medium choice remains conservative: colonising
+    # dry land still requires an independently viable terrestrial lineage.
+    var origin: Vector3 = carrier.global_position
+    if donor != null:
+        origin = (origin + donor.global_position) * 0.5
+    var angle: float = world.rng.randf_range(0.0, TAU)
+    var distance: float = 4.5 + world.rng.randf_range(0.0, 5.0 + float(carrier.genome.branch_drive) * 7.0)
+    var proposed: Vector3 = origin + Vector3(cos(angle), 0.0, sin(angle)) * distance
+    proposed.x = clampf(proposed.x, -world.half_extent + 0.5, world.half_extent - 0.5)
+    proposed.z = clampf(proposed.z, -world.half_extent + 0.5, world.half_extent - 0.5)
+    var site: Vector3 = world.habitat.nearest_medium(proposed, carrier.in_water, 0.30)
+    site.y = world.habitat.floor_at(site) + 0.30
+    return site
 
 func _make_marker(world, p: Vector3, route: String):
     var marker = MeshInstance3D.new()
