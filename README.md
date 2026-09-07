@@ -12,7 +12,7 @@ A 3D artificial-life world for watching organisms feed, grow, reproduce and evol
 
 <img width="1920" height="1080" alt="646529057-bb9b0e14-66b8-4403-ab44-4ba09e8e1f62" src="https://github.com/user-attachments/assets/28618a0f-0c28-4542-a875-53412452eb23" />
 
-**Windows · Portable · 1.0.0-alpha37**  
+**Windows · Portable · 1.0.0-alpha38**  
 Interface and speech settings: English, German and French.
 
 ## Start playing
