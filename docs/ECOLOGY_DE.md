@@ -29,7 +29,7 @@ Beim Übernehmen einer alten `settings/config.json` wird die horizontale Breite 
 | Putzer | Kleine, spezialisierte Wesen entfernen Aufwuchs und Parasiten von größeren Wirten. Das ist von schädigendem Parasitismus getrennt. |
 | Parasitismus | Kontakt zu einem größeren Wirt ermöglicht Energieentzug, belastet aber den Wirt und kann ihn töten. |
 | Sesshafte Formen | Eine gemeinsam ausreichende Verwurzelungsneigung plus Photosynthese oder Filtration. Aquatische Gründer bleiben unter der Schwelle; Vererbung, Rekombination oder Mutation können sie bei Nachkommen überschreiten. Der Körper sucht dann den tatsächlichen Boden, verwurzelt sich erst bei Kontakt und driftet nicht mehr. |
-| Pflanzen und Bäume | Verbundene Wurzeln und Blatt-/Filterstrukturen; getrennte Wasserpflanzen, nicht verholzte Landpflanzen und bei ausreichenden Holz-/Stützanlagen Bäume. Licht, Wassertiefe und lokale Konkurrenz beeinflussen den Ertrag. Pflanzen können abgeweidet werden. |
+| Pflanzen und Bäume | Verbundene Wurzeln und Blatt-/Filterstrukturen; getrennte Wasserpflanzen, nicht verholzte Landpflanzen und bei ausreichenden Holz-/Stützanlagen Bäume. Licht, Wassertiefe und lokale Konkurrenz beeinflussen den Ertrag. Pflanzen können abgeweidet werden. Kohärente sessile Linien können Samen, Ausläufer oder Fragmente auf einem entfernten Bodenplatz desselben Mediums etablieren. |
 
 Diese Eigenschaften sind kombinierbar. „Insektenartig“ oder „baumartig“ bezeichnet hier eine sichtbare Ähnlichkeit, keine feste irdische Art oder wissenschaftliche Abstammungslinie. Individuelles Lernen und genetische Evolution sind getrennt: Nachkommen erben Anlagen; erlernte Jagd-, Flug- und Werkzeugfertigkeiten beginnen neu.
 
@@ -60,7 +60,9 @@ Die Darstellung verwendet stilisierte, skalierte 3D-Zellen, keine fotorealistisc
 - **Rechte Maustaste:** folgen. **Mausrad:** zoomen. **Shift + Mausrad:** Beobachtergeschwindigkeit.
 - **F10:** Optionen. **F1:** Hilfe. **G:** ein neues Zufallswesen einsetzen.
 
-Automatisches Nachbesetzen ist standardmäßig ausgeschaltet. Aussterben bleibt möglich. Wer den bisherigen Rettungsmechanismus möchte, kann ihn in den Optionen aktivieren. An der Populationsgrenze werden keine Wesen anhand von Intelligenz oder Komplexität zwangsweise aussortiert: Nachwuchs braucht einen freien Platz nach natürlichen Todesfällen. Der Grenzwert ist weiterhin ein Leistungsbudget.
+Automatisches Nachbesetzen ist standardmäßig eingeschaltet und hält mindestens fünf lebende Wesen; beide Werte sind in den Optionen veränderbar. Wird es ausgeschaltet, bleibt vollständiges Aussterben möglich. An der Populationsgrenze werden keine Wesen anhand von Intelligenz oder Komplexität zwangsweise aussortiert: Nachwuchs braucht einen freien Platz nach natürlichen Todesfällen. Der Grenzwert ist weiterhin ein Leistungsbudget.
+
+Ab der dritten vererbten aquatischen Übergangsstufe können passende Genkombinationen zusätzlich zu den sieben Grundgrammatiken neue Entwicklungsprogramme ausdrücken: gallertartige Kolonien, bandförmige Schwimmer und kooperative Kolonialkörper. Das ist keine Mutation während des Erwachsenenlebens; die Konstruktion wird beim Nachkommen aus dessen DNA entwickelt. Die Anzeige **Formen** zählt grobe sichtbare Morphotypen, während Diagnose/API die zugrunde liegenden Topologien weiterhin getrennt melden.
 
 ## Technische Grenzen
 

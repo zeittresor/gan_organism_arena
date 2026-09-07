@@ -1,8 +1,8 @@
 @echo off
 setlocal EnableExtensions
 cd /d "%~dp0"
-set "APP_VERSION=1.0.0-alpha37"
-set "RELEASE_DATE=2026-09-06"
+set "APP_VERSION=1.0.0-alpha38"
+set "RELEASE_DATE=2026-09-07"
 
 echo ============================================================
 echo   GAN Organism Arena v%APP_VERSION% ^(%RELEASE_DATE%^)

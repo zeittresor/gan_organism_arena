@@ -1,7 +1,7 @@
 $ErrorActionPreference = 'Stop'
 $Root = Split-Path -Parent $PSScriptRoot
-$ExpectedVersion = '1.0.0-alpha37'
-$ExpectedDate = '2026-09-06'
+$ExpectedVersion = '1.0.0-alpha38'
+$ExpectedDate = '2026-09-07'
 
 function Require-File([string]$RelativePath) {
     $Path = Join-Path $Root $RelativePath

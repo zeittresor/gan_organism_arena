@@ -1,4 +1,4 @@
 GAN Organism Arena
-Version: 1.0.0-alpha37
-Release date: 2026-09-06
+Version: 1.0.0-alpha38
+Release date: 2026-09-07
 Engine target: Godot 4.7.2 stable

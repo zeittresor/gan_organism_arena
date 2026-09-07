@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.0-alpha38 — 2026-09-07
+
+- Correct a long-run reproduction blockade for external spawners: egg clouds are now released and fertilized at the pair's anatomical contact site instead of comparing a donor's body origin with a distant egg-parent origin. This restores actual descent instead of repeated population-rescue founders.
+- Let viable multi-generation aquatic descendants deliberately test real shore positions when inherited air breathing, support, limbs, curiosity, energy and oxygen permit it. Generation-0 aquatic founders retain the three-step ancestry safeguard.
+- Give coherent sessile lineages a reachable vegetative route. Seeds, runners or fragments establish on same-medium substrate away from the parent's crowded patch, with repeated opportunities during a compressed plant lifetime.
+- Add inherited `medusoid_colony`, `ribbon_swimmer` and `colonial_swimmer` developmental constructions after at least three descendant steps. The HUD/API now count coarse visible morphotypes separately from the seven underlying topology grammars.
+- Add bounded-parent safeguards for procedurally truncated bodies. All three derived constructions are tested at the minimum 48-cell visual budget.
+- Add a deterministic optional 30,000-step ecology probe. The release run reached 30 natural births, generation 5, derived forms, shore use and four clonal plant births with two rooted survivors; the normal population cap was not the observed bottleneck.
+
 ## 1.0.0-alpha37 — 2026-09-06
 
 - Enable the supplied PNG terrain and organism textures by default while retaining the F10 switch for users who prefer simpler or faster materials.
@@ -7,7 +16,7 @@
 - Add a framed, categorized F10 settings panel with clearer spacing and a localized **Show wireframe world boundary** option. Hiding the guide geometry never changes world limits or collision/support calculations.
 - Keep the existing texture inheritance, generated fallback, population and aquatic-founder safeguards intact; no third-party asset was added in this release.
 
-## 1.0.0-alpha37 — 2026-09-06
+## 1.0.0-alpha36 — 2026-09-06
 
 - Expand the coherent aquatic founder pool from 14 to 42 seed-driven forms (seven canonical topologies plus 35 zero-mutation crossover mixtures) while keeping the default starting population at ten. New worlds therefore sample a much broader baseline without flooding the simulation with extra organisms.
 

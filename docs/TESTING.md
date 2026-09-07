@@ -1,14 +1,14 @@
-# Testing — 1.0.0-alpha37 (2026-09-06)
+# Testing — 1.0.0-alpha38 (2026-09-07)
 
 ## Release focus
 
-Alpha37 keeps the 42-form coherent generation-0 aquatic pool while enabling the supplied textures by default, replacing point-like water highlights with continuous procedural wave bands, and adding a framed, categorized settings panel plus a world-wireframe visibility option. Alpha36's founder-expression and alpha35's side-by-side reproductive docking fixes remain enabled. Release metadata and payload hashes are regenerated together. This does not substitute for testing the complete installer on Windows.
+Alpha38 targets the observed long-run evolutionary blockade. Anatomical external spawning now produces real descendants, coherent plants can disperse propagules, viable multi-generation descendants test shore niches, and inherited trait combinations can select three genuinely derived developmental constructions. Visible morphotypes and underlying topology grammars are reported separately. Release metadata and payload hashes are regenerated together. This does not substitute for testing the complete installer on Windows.
 
 ## Native verification
 
 Executed the production GDScript with **Godot 4.7.2.stable.official.ed1daf0bf, Linux x86_64, headless**. This release is no longer verified solely through the Python translation harness.
 
-**11,849 named native checks passed**, plus the morphology/genome/language integration:
+**11,863 named native checks passed**, plus the morphology/genome/language integration:
 
 - Texture: 20 checks, 0 failures.
 - Application: 51 checks, 0 failures.
@@ -21,9 +21,9 @@ Executed the production GDScript with **Godot 4.7.2.stable.official.ed1daf0bf, L
 - Support: 857 checks, 0 failures.
 - Locomotion: 3371 checks, 0 failures.
 - Interaction: 5458 checks, 0 failures.
-- Ecology: 60 checks, 0 failures.
+- Ecology: 70 checks, 0 failures.
 - Surface: 71 checks, 0 failures.
-- Life Cycle: 122 checks, 0 failures.
+- Life Cycle: 129 checks, 0 failures.
 - Biology: 629 checks, 0 failures.
 - Experiment: 21 checks, 0 failures.
 - Ecological cycle: 19 checks, 0 failures.
@@ -39,6 +39,7 @@ UI regressions instantiate the actual main application: ESC/cancel, pause owners
 - Native VKLP-only gateway and simultaneous MCP+VKLP configuration: PASS. No remote claim submission is performed by these tests.
 - Python MCP/VKLP adapter/permission suite: 15 tests, PASS.
 - Seeded stability run: 3 seeds × 1,800 ticks, totaling 450 simulation seconds. Check finite body state, population floor/cap and remains limit. This is a stability test, not proof that a particular evolutionary outcome will occur.
+- Seeded 30,000-step ecology probe: 30 natural births/conceptions, generation 5, four clonal plant births, two rooted survivors, shore samples and derived morphotype samples. It also runs the minimum 48-cell visual budget without invalid attachment indices. A stochastic probe demonstrates reachability for its seed, not certainty in every world.
 - Grammar/UI coverage: 60 GDScripts; 70 settings/actions with labels and explanatory tooltips in EN/DE/FR.
 - Release archive: fresh extraction, ZIP CRC and each payload SHA-256. Personal configuration, screenshots, runtime sessions, generated logs and engine caches are excluded.
 
@@ -48,6 +49,6 @@ The Windows installer executes the native parser, SelfTest scene and SmokeTest s
 
 ## Limits
 
-Windows PowerShell launch behavior, Windows voices/audio devices and hardware GPU rendering/FPS were not executed on this Linux host. Headless tests exercise real Godot scripts and Image/ImageTexture objects, but do not establish rendered appearance or performance on a user's GPU. The terrain/organism shader code is unchanged in this release. Runtime play-testing on the target PC remains useful.
+Windows PowerShell launch behavior, Windows voices/audio devices and hardware GPU rendering/FPS were not executed on this Linux host. Headless tests exercise real Godot scripts and Image/ImageTexture objects, but do not establish rendered appearance or performance on a user's GPU. Runtime play-testing on the target PC remains useful.
 
-Checkpoints reconstruct rendering/contact caches; they do not promise frame-exact or cross-version replay. Alpha29 JSON observation exports cannot be loaded as checkpoints. Mutation can help or harm fitness. Seven topology grammars and their continuous developmental variation remain a finite fictional model, rather than a calibrated model of terrestrial species.
+Checkpoints reconstruct rendering/contact caches; they do not promise frame-exact or cross-version replay. Alpha29 JSON observation exports cannot be loaded as checkpoints. Mutation can help or harm fitness. Seven inherited topology grammars plus three currently implemented derived developmental constructions remain a finite fictional model, rather than a calibrated model of terrestrial species.
